@@ -20,5 +20,8 @@ Zero-overhead, local-first adaptive fitness coaching app.
 ## Architecture
 This first release is intentionally static and local-first so there is no required monthly hosting/database bill. The next milestone is free-tier authentication/database sync and a coach dashboard.
 
+## Deployment
+GitHub Pages deployment is configured through `.github/workflows/pages.yml` and publishes automatically from `main`.
+
 ## Important
 PhysiqueOS is educational fitness software, not medical care. Energy-expenditure and macro targets are estimates that should become more individualized as longitudinal data accumulates. The app does not diagnose or treat injuries.
