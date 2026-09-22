@@ -22,6 +22,10 @@ state.dayMealPrefs=state.dayMealPrefs||{};
 state.activeTimer=state.activeTimer||null;
 state.trainingFlags=Array.isArray(state.trainingFlags)?state.trainingFlags:[];
 state.trainingDrafts=state.trainingDrafts||{};
+state.favoriteFoods=Array.isArray(state.favoriteFoods)?state.favoriteFoods:[];
+state.foodDayTemplates=Array.isArray(state.foodDayTemplates)?state.foodDayTemplates:[];
+state.foodWeekTemplates=Array.isArray(state.foodWeekTemplates)?state.foodWeekTemplates:[];
+state.workoutFavorites=Array.isArray(state.workoutFavorites)?state.workoutFavorites:[];
 
 const FAQ_LIBRARY={
 'Getting started':[
@@ -641,6 +645,30 @@ function logWorkout(di){
   delete state.trainingDrafts[workoutDraftKey(di)];save();renderTraining();renderCoachChat();alert(draft.sessionStatus==='ended'?'Partial/ended workout saved with the reason and modifications.':'Workout logged. PhysiqueOS updated your progression and modification history.');
 }
 
+function saveWorkoutFavorite(di){
+  saveWorkoutDraft(di);
+  const d=state.trainingPlan[di];if(!d)return;
+  const name=(prompt('Name this favorite workout:',d.name)||'').trim();if(!name)return;
+  const draft=getWorkoutDraft(di);
+  const template={id:Date.now()+'_'+Math.random(),name,sourceName:d.name,items:JSON.parse(JSON.stringify(d.items)),presetSets:JSON.parse(JSON.stringify(draft.sets||{}))};
+  state.workoutFavorites.push(template);save();renderTraining();
+}
+function loadWorkoutFavorite(di){
+  const id=el('workoutFavorite_'+di)?.value;if(!id)return alert('Choose a favorite workout first.');
+  const f=state.workoutFavorites.find(x=>x.id===id);if(!f)return;
+  if(!confirm('Load "'+f.name+'" into this workout slot?'))return;
+  const preferredDay=state.trainingPlan[di]?.preferredDay||'';
+  state.trainingPlan[di]={name:f.name,preferredDay,items:JSON.parse(JSON.stringify(f.items))};
+  const key=workoutDraftKey(di);state.trainingDrafts[key]={pre:{},post:{},exercises:{},sets:JSON.parse(JSON.stringify(f.presetSets||{})),sessionStatus:'active',coachResponse:'Loaded favorite workout: '+f.name};
+  save();renderTraining();
+}
+function deleteWorkoutFavorite(di){
+  const id=el('workoutFavorite_'+di)?.value;if(!id)return;
+  state.workoutFavorites=state.workoutFavorites.filter(x=>x.id!==id);save();renderTraining();
+}
+function favoriteWorkoutOptions(){
+  return '<option value="">Favorite workouts…</option>'+state.workoutFavorites.map(x=>'<option value="'+x.id+'">'+escapeHtml(x.name)+'</option>').join('');
+}
 function renderTraining(){
   renderReadiness();
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
@@ -660,7 +688,7 @@ function renderTraining(){
     }).join('');
     const post='<details class="trainingCheck postCheck" '+((draft.post?.severity||draft.post?.notes)?'open':'')+'><summary><strong>Post-workout body check</strong><span>Anything to carry into the next session?</span></summary><div class="issueGrid"><label>Area<select id="postArea_'+di+'" onchange="saveWorkoutDraft('+di+')">'+areas.map(x=>'<option '+(draft.post?.area===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Feeling<select id="postSensation_'+di+'" onchange="saveWorkoutDraft('+di+')">'+sensations.map(x=>'<option '+(draft.post?.sensation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Severity 0–10<input id="postSeverity_'+di+'" type="number" min="0" max="10" value="'+(draft.post?.severity||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label class="issueNote">Carry-forward note<textarea id="postNotes_'+di+'" onblur="saveWorkoutDraft('+di+')" placeholder="What should the coach remember or modify next time?">'+escapeHtml(draft.post?.notes||'')+'</textarea></label></div></details>';
     const finish='<div class="workoutFinish"><div><span class="kicker">POST-WORKOUT</span><h4>How hard was the whole session?</h4><p>Session RPE is separate from set RIR. Rate the overall workout after you finish.</p></div><label><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" value="'+escapeHtml(draft.sessionRpe??'')+'" placeholder="1–10"></label></div><label class="sessionNote">General session notes<input id="sessionNotes_'+di+'" value="'+escapeHtml(draft.sessionNotes??'')+'" placeholder="Performance, pumps, technique, energy, anything unusual..."></label>';
-    return'<div class="workout"><div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div></div>'+coachBanner+pre+exercises+post+finish+'<button class="primary fullBtn" onclick="logWorkout('+di+')">'+(ended?'Log partial / ended session':'Finish & log '+d.name)+'</button></div>';
+    return'<div class="workout"><div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div><div class="workoutFavoriteControls"><button onclick="saveWorkoutFavorite('+di+')">★ Save favorite</button><select id="workoutFavorite_'+di+'">'+favoriteWorkoutOptions()+'</select><button onclick="loadWorkoutFavorite('+di+')">Load</button><button onclick="deleteWorkoutFavorite('+di+')">Delete</button></div></div>'+coachBanner+pre+exercises+post+finish+'<button class="primary fullBtn" onclick="logWorkout('+di+')">'+(ended?'Log partial / ended session':'Finish & log '+d.name)+'</button></div>';
   }).join('');
   const flags=[...state.trainingFlags].reverse().slice(0,10);
   el('workoutHistory').innerHTML=(flags.length?'<div class="flagHistory"><h4>Recent body / modification notes</h4>'+flags.map(f=>'<div class="flagItem '+(f.severity>=7?'highFlag':f.severity>=4?'midFlag':'')+'"><strong>'+f.date+' • '+(f.exercise||f.workout||f.phase)+'</strong><span>'+[f.area,f.sensation,f.severity?f.severity+'/10':'',f.notes].filter(Boolean).map(escapeHtml).join(' • ')+'</span></div>').join('')+'</div>':'')+(state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><div class="row"><strong>'+w.date+' • '+w.workout+'</strong><span class="pill">'+(w.sessionRpe?'RPE '+w.sessionRpe:'Logged')+'</span></div>'+(w.volume?'<div class="muted">Volume '+Math.round(w.volume).toLocaleString()+' • readiness '+(w.readiness??'—')+'</div>':'')+(w.notes?'<div class="muted">'+escapeHtml(w.notes)+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong>'+(x.issue&&(x.issue.pain||x.issue.note||x.issue.mod!=='as prescribed')?'<div class="issueHistory">'+[x.issue.mod,x.issue.pain?x.issue.pain+'/10':'',x.issue.note].filter(Boolean).map(escapeHtml).join(' • ')+'</div>':'')+'<div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+(s.rir!=null?' @ '+s.rir+' RIR':'')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>');
@@ -688,8 +716,11 @@ function syncFoodToDailyLog(date=selectedFoodDate()){
   state.logs=state.logs.filter(x=>x.date!==date);state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));
 }
 function setFoodLogMode(mode,btn){
-  el('foodDbLogger').classList.toggle('hidden',mode!=='database');el('customFoodLogger').classList.toggle('hidden',mode!=='custom');
+  el('foodDbLogger').classList.toggle('hidden',mode!=='database');
+  el('customFoodLogger').classList.toggle('hidden',mode!=='custom');
+  if(el('savedFoodLogger'))el('savedFoodLogger').classList.toggle('hidden',mode!=='saved');
   document.querySelectorAll('.foodLogTabs button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');
+  if(mode==='saved')renderSavedNutrition();
 }
 function addDatabaseFood(){
   const idx=+el('foodSelect').value,f=FOOD_DB[idx],g=+el('foodGrams').value||0;if(!f||g<=0)return alert('Choose a food and enter an amount.');
@@ -715,7 +746,7 @@ function macroBar(label,value,target,unit='g'){
   return'<div class="macroLine"><div class="row"><span>'+label+'</span><strong>'+Math.round(value)+' / '+Math.round(target||0)+' '+unit+'</strong></div><div class="progressTrack"><span class="'+(over?'over':'')+'" style="width:'+Math.min(100,pct)+'%"></span></div></div>';
 }
 function copyYesterdayFood(){
-  const date=selectedFoodDate(),d=new Date(date+'T12:00:00');d.setDate(d.getDate()-1);const prev=d.toISOString().slice(0,10),entries=dayFoodEntries(prev);
+  const date=selectedFoodDate(),d=new Date(date+'T12:00:00');d.setDate(d.getDate()-1);const prev=localDate(d),entries=dayFoodEntries(prev);
   if(!entries.length)return alert('No food entries found for the previous day.');
   entries.forEach(x=>state.foodLogs.push({...x,id:Date.now()+'_'+Math.random(),date}));
   syncFoodToDailyLog(date);save();renderAll();
@@ -723,6 +754,56 @@ function copyYesterdayFood(){
 function clearFoodDay(){
   const date=selectedFoodDate();if(!confirm('Clear all food entries for '+date+'?'))return;
   state.foodLogs=state.foodLogs.filter(x=>x.date!==date);syncFoodToDailyLog(date);save();renderAll();
+}
+function cleanFoodTemplateEntry(x){return{meal:x.meal,name:x.name,grams:x.grams||null,calories:+x.calories||0,protein:+x.protein||0,carbs:+x.carbs||0,fat:+x.fat||0,source:x.source||'saved'}}
+function favoriteFood(id){
+  const x=state.foodLogs.find(v=>v.id===id);if(!x)return;
+  const exists=state.favoriteFoods.some(v=>v.name===x.name&&v.meal===x.meal&&Math.round(v.calories)===Math.round(x.calories)&&Math.round(v.grams||0)===Math.round(x.grams||0));
+  if(exists)return alert('That entry is already in Favorites.');
+  state.favoriteFoods.push({id:Date.now()+'_'+Math.random(),...cleanFoodTemplateEntry(x)});save();renderAll();
+}
+function addFavoriteFood(id){
+  const x=state.favoriteFoods.find(v=>v.id===id);if(!x)return;
+  state.foodLogs.push({...cleanFoodTemplateEntry(x),id:Date.now()+'_'+Math.random(),date:selectedFoodDate(),source:'favorite'});
+  syncFoodToDailyLog();save();renderAll();
+}
+function deleteFavoriteFood(id){state.favoriteFoods=state.favoriteFoods.filter(x=>x.id!==id);save();renderSavedNutrition()}
+function saveCurrentDayTemplate(){
+  const entries=dayFoodEntries(selectedFoodDate());if(!entries.length)return alert('Log food for this day first.');
+  const name=(prompt('Name this repeat day:','My standard day')||'').trim();if(!name)return;
+  state.foodDayTemplates.push({id:Date.now()+'_'+Math.random(),name,entries:entries.map(cleanFoodTemplateEntry)});save();renderSavedNutrition();
+}
+function applyDayTemplate(id){
+  const t=state.foodDayTemplates.find(x=>x.id===id);if(!t)return;
+  const date=selectedFoodDate();if(dayFoodEntries(date).length&&!confirm('This date already has food logged. Add the saved day anyway?'))return;
+  t.entries.forEach(x=>state.foodLogs.push({...x,id:Date.now()+'_'+Math.random(),date,source:'day-template'}));
+  syncFoodToDailyLog(date);save();renderAll();
+}
+function deleteDayTemplate(id){state.foodDayTemplates=state.foodDayTemplates.filter(x=>x.id!==id);save();renderSavedNutrition()}
+function startOfWeek(dateStr=selectedFoodDate()){
+  const d=new Date(dateStr+'T12:00:00'),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d;
+}
+function saveCurrentWeekTemplate(){
+  const start=startOfWeek(),days=[];
+  for(let n=0;n<7;n++){const d=new Date(start);d.setDate(d.getDate()+n);const date=localDate(d),entries=dayFoodEntries(date);days.push({offset:n,entries:entries.map(cleanFoodTemplateEntry)})}
+  if(!days.some(d=>d.entries.length))return alert('There are no food logs in this Monday–Sunday week to save.');
+  const name=(prompt('Name this weekly food template:','My normal week')||'').trim();if(!name)return;
+  state.foodWeekTemplates.push({id:Date.now()+'_'+Math.random(),name,days});save();renderSavedNutrition();
+}
+function applyWeekTemplate(id){
+  const t=state.foodWeekTemplates.find(x=>x.id===id);if(!t)return;
+  const start=startOfWeek(),dates=t.days.map(d=>{const x=new Date(start);x.setDate(x.getDate()+d.offset);return localDate(x)});
+  if(dates.some(date=>dayFoodEntries(date).length)&&!confirm('Some dates this week already contain food. Add the saved week anyway?'))return;
+  t.days.forEach(day=>{const d=new Date(start);d.setDate(d.getDate()+day.offset);const date=localDate(d);day.entries.forEach(x=>state.foodLogs.push({...x,id:Date.now()+'_'+Math.random(),date,source:'week-template'}));syncFoodToDailyLog(date)});
+  save();renderAll();
+}
+function deleteWeekTemplate(id){state.foodWeekTemplates=state.foodWeekTemplates.filter(x=>x.id!==id);save();renderSavedNutrition()}
+function renderSavedNutrition(){
+  if(!el('savedNutrition'))return;
+  const fav=state.favoriteFoods.map(x=>'<div class="savedItem"><div><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml(x.meal)+' • '+Math.round(x.calories)+' kcal • '+Math.round(x.protein)+'P '+Math.round(x.carbs)+'C '+Math.round(x.fat)+'F'+(x.grams?' • '+Math.round(x.grams)+'g':'')+'</small></div><div class="savedActions"><button class="primary" onclick="addFavoriteFood(\''+x.id+'\')">Add</button><button onclick="deleteFavoriteFood(\''+x.id+'\')">Delete</button></div></div>').join('');
+  const days=state.foodDayTemplates.map(x=>'<div class="savedItem"><div><strong>'+escapeHtml(x.name)+'</strong><small>Full day • '+x.entries.length+' entries • '+Math.round(x.entries.reduce((s,v)=>s+v.calories,0))+' kcal</small></div><div class="savedActions"><button class="primary" onclick="applyDayTemplate(\''+x.id+'\')">Load day</button><button onclick="deleteDayTemplate(\''+x.id+'\')">Delete</button></div></div>').join('');
+  const weeks=state.foodWeekTemplates.map(x=>'<div class="savedItem"><div><strong>'+escapeHtml(x.name)+'</strong><small>Weekly template • '+x.days.reduce((s,d)=>s+d.entries.length,0)+' logged items</small></div><div class="savedActions"><button class="primary" onclick="applyWeekTemplate(\''+x.id+'\')">Load week</button><button onclick="deleteWeekTemplate(\''+x.id+'\')">Delete</button></div></div>').join('');
+  el('savedNutrition').innerHTML='<div class="savedSection"><h4>Favorite foods / meals</h4>'+(fav||'<div class="emptyState">Tap ★ beside a logged food or meal to save it here.</div>')+'</div><div class="savedSection"><h4>Repeat days</h4>'+(days||'<div class="emptyState">Save a fully logged day to reuse it later.</div>')+'</div><div class="savedSection"><h4>Repeat weeks</h4>'+(weeks||'<div class="emptyState">Save a Monday–Sunday eating pattern and preload it into another week.</div>')+'</div>';
 }
 function renderRecentFoods(){
   if(!el('recentFoods'))return;const seen=[],recent=[...state.foodLogs].reverse().filter(x=>x.source==='database').filter(x=>{if(seen.includes(x.name))return false;seen.push(x.name);return true}).slice(0,5);
@@ -735,7 +816,7 @@ function renderFoodDiary(){
   if(!el('foodDiary'))return;const date=selectedFoodDate(),entries=dayFoodEntries(date),tot=dayFoodTotals(date),m=state.macro;
   el('macroProgress').innerHTML=(m?'<div class="nutritionRings"><div><strong>'+Math.round(tot.cal)+'</strong><small>of '+m.calories+' kcal</small></div><div><strong>'+Math.round(Math.max(0,m.calories-tot.cal))+'</strong><small>remaining</small></div></div>'+macroBar('Protein',tot.p,m.protein)+macroBar('Carbs',tot.c,m.carbs)+macroBar('Fat',tot.f,m.fat):'<div class="notice">Complete your profile to see macro targets.</div>')+'<div class="diaryActions"><button onclick="copyYesterdayFood()">Copy yesterday</button><button onclick="clearFoodDay()">Clear day</button></div>';
   const groups={};entries.forEach(x=>(groups[x.meal]??=[]).push(x));
-  el('foodDiary').innerHTML=entries.length?Object.entries(groups).map(([meal,arr])=>'<div class="diaryMeal"><div class="row"><h4>'+meal+'</h4><span>'+Math.round(arr.reduce((s,x)=>s+x.calories,0))+' kcal</span></div>'+arr.map(x=>'<div class="diaryEntry"><div><strong>'+escapeHtml(x.name)+'</strong><small>'+Math.round(x.calories)+' kcal • '+Math.round(x.protein)+'P '+Math.round(x.carbs)+'C '+Math.round(x.fat)+'F'+(x.grams?' • '+Math.round(x.grams)+'g':'')+'</small></div><button onclick="deleteFoodLog(\''+x.id+'\')">×</button></div>').join('')+'</div>').join(''):'<div class="emptyState">Nothing logged for this day yet. Add food above or log a meal from your generated plan.</div>';
+  el('foodDiary').innerHTML=entries.length?Object.entries(groups).map(([meal,arr])=>'<div class="diaryMeal"><div class="row"><h4>'+meal+'</h4><span>'+Math.round(arr.reduce((s,x)=>s+x.calories,0))+' kcal</span></div>'+arr.map(x=>'<div class="diaryEntry"><div><strong>'+escapeHtml(x.name)+'</strong><small>'+Math.round(x.calories)+' kcal • '+Math.round(x.protein)+'P '+Math.round(x.carbs)+'C '+Math.round(x.fat)+'F'+(x.grams?' • '+Math.round(x.grams)+'g':'')+'</small></div><div class="diaryEntryActions"><button title="Save favorite" onclick="favoriteFood(\''+x.id+'\')">★</button><button title="Delete" onclick="deleteFoodLog(\''+x.id+'\')">×</button></div></div>').join('')+'</div>').join(''):'<div class="emptyState">Nothing logged for this day yet. Add food above or log a meal from your generated plan.</div>';
 }
 function loadDailyMetrics(){
   if(!el('dailyWeight'))return;const date=selectedFoodDate(),x=state.logs.find(v=>v.date===date),metric=state.profile.units==='metric';
@@ -1030,14 +1111,14 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 async function resetAll(){
   if(!confirm('Erase ALL local PhysiqueOS data on this device, including progress photos? This cannot be undone.'))return;
   localStorage.removeItem('physiqueOS');
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=24').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=25').catch(()=>{});
