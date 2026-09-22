@@ -4,6 +4,10 @@ const today=()=>localDate(new Date());
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
 const fmt=n=>Number.isFinite(n)?Math.round(n):'—';
+function rangeTouched(id,outId){const input=el(id);if(!input)return;input.dataset.empty='0';const out=el(outId);if(out)out.textContent=input.value}
+function setRangeValue(id,outId,value,fallback){const input=el(id);if(!input)return;const has=value!==null&&value!==undefined&&value!=='';input.value=has?value:fallback;input.dataset.empty=has?'0':'1';const out=el(outId);if(out)out.textContent=has?input.value:'—'}
+function smartVal(id){const x=el(id);if(!x||x.value==='')return null;if(x.type==='range'&&x.dataset.empty==='1')return null;const n=+x.value;return Number.isFinite(n)?n:null}
+function syncRangeOutputs(){document.querySelectorAll('input[type="range"]').forEach(x=>{const out=el(x.id+'Out');if(out)out.textContent=x.dataset.empty==='1'?'—':x.value})}
 
 let state=JSON.parse(localStorage.getItem('physiqueOS')||'null')||{};
 state.profile=state.profile||{};
@@ -822,12 +826,12 @@ function loadDailyMetrics(){
   if(!el('dailyWeight'))return;const date=selectedFoodDate(),x=state.logs.find(v=>v.date===date),metric=state.profile.units==='metric';
   el('dailyWeight').value=x?.weight?(metric?(x.weight/2.20462).toFixed(1):x.weight):'';
   el('dailyWaist').value=x?.waist?(metric?(x.waist*2.54).toFixed(1):x.waist):'';
-  el('dailySteps').value=x?.steps||'';el('dailyWater').value=x?.water?(metric?(x.water/33.814).toFixed(1):x.water):'';el('dailySleep').value=x?.sleep||'';el('dailyRhr').value=x?.rhr||'';
-  el('dailyCalories').value=x?.calories||'';el('dailyAdherence').value=x?.adherence??'';el('dailyHunger').value=x?.hunger||'';el('dailyEnergy').value=x?.energy||'';el('dailyStress').value=x?.stress||'';el('dailyRecovery').value=x?.recovery||'';el('dailyDigestion').value=x?.digestion||'';el('dailySoreness').value=x?.soreness||'';el('dailyNotes').value=x?.notes||'';
+  el('dailySteps').value=x?.steps||'';el('dailyWater').value=x?.water?(metric?(x.water/33.814).toFixed(1):x.water):'';setRangeValue('dailySleep','dailySleepOut',x?.sleep,7.5);el('dailyRhr').value=x?.rhr||'';
+  el('dailyCalories').value=x?.calories||'';setRangeValue('dailyAdherence','dailyAdherenceOut',x?.adherence,85);setRangeValue('dailyHunger','dailyHungerOut',x?.hunger,5);setRangeValue('dailyEnergy','dailyEnergyOut',x?.energy,5);setRangeValue('dailyStress','dailyStressOut',x?.stress,5);setRangeValue('dailyRecovery','dailyRecoveryOut',x?.recovery,5);setRangeValue('dailyDigestion','dailyDigestionOut',x?.digestion,5);setRangeValue('dailySoreness','dailySorenessOut',x?.soreness,5);el('dailyNotes').value=x?.notes||'';
   renderDailyMetricSummary(x);
 }
 function saveDailyMetrics(){
-  const date=selectedFoodDate(),existing=state.logs.find(x=>x.date===date)||{date},metric=state.profile.units==='metric',val=id=>el(id).value!==''?+el(id).value:null;
+  const date=selectedFoodDate(),existing=state.logs.find(x=>x.date===date)||{date},metric=state.profile.units==='metric',val=id=>smartVal(id);
   const next={...existing,date},w=val('dailyWeight'),waist=val('dailyWaist'),water=val('dailyWater');
   if(w!=null)next.weight=metric?w*2.20462:w;if(waist!=null)next.waist=metric?waist/2.54:waist;if(water!=null)next.water=metric?water*33.814:water;
   for(const [id,key] of [['dailySteps','steps'],['dailySleep','sleep'],['dailyRhr','rhr'],['dailyHunger','hunger'],['dailyEnergy','energy'],['dailyStress','stress'],['dailyRecovery','recovery'],['dailyDigestion','digestion'],['dailySoreness','soreness']]){const v=val(id);if(v!=null)next[key]=v}
@@ -867,7 +871,7 @@ function saveQuickMetrics(){
 }
 function logStreak(){
   if(!state.logs.length)return 0;const dates=new Set(state.logs.map(x=>x.date));let d=new Date(),n=0;
-  for(let i=0;i<365;i++){const k=d.toISOString().slice(0,10);if(dates.has(k)){n++;d.setDate(d.getDate()-1)}else if(i===0){d.setDate(d.getDate()-1)}else break}return n;
+  for(let i=0;i<365;i++){const k=localDate(d);if(dates.has(k)){n++;d.setDate(d.getDate()-1)}else if(i===0){d.setDate(d.getDate()-1)}else break}return n;
 }
 function dailyScore(){
   const x=currentLog();if(!x)return 0;let pts=0,total=0;
@@ -879,7 +883,7 @@ function dailyScore(){
 function saveLog(){
   const metric=state.profile.units==='metric',rawWeight=+el('logWeight').value||null,rawWater=+el('logWater').value||null;
   const measure=id=>{const v=+el(id).value||null;return v?(metric?v/2.54:v):null};
-  const x={date:el('logDate').value||today(),weight:rawWeight?(metric?rawWeight*2.20462:rawWeight):null,bodyFat:+el('logBodyFat').value||null,neck:measure('logNeck'),shoulders:measure('logShoulders'),chest:measure('logChest'),waist:measure('logWaist'),hips:measure('logHips'),armL:measure('logArmL'),armR:measure('logArmR'),thighL:measure('logThighL'),thighR:measure('logThighR'),calfL:measure('logCalfL'),calfR:measure('logCalfR'),steps:+el('logSteps').value||null,water:rawWater?(metric?rawWater*33.814:rawWater):null,sleep:+el('logSleep').value||null,calories:+el('logCalories').value||null,adherence:+el('logAdherence').value||null,hunger:+el('logHunger').value||null,energy:+el('logEnergy').value||null,stress:+el('logStress').value||null,recovery:+el('logRecovery').value||null,soreness:+el('logSoreness').value||null,digestion:+el('logDigestion').value||null,performance:el('logPerformance').value,notes:el('logNotes').value};
+  const x={date:el('logDate').value||today(),weight:rawWeight?(metric?rawWeight*2.20462:rawWeight):null,bodyFat:+el('logBodyFat').value||null,neck:measure('logNeck'),shoulders:measure('logShoulders'),chest:measure('logChest'),waist:measure('logWaist'),hips:measure('logHips'),armL:measure('logArmL'),armR:measure('logArmR'),thighL:measure('logThighL'),thighR:measure('logThighR'),calfL:measure('logCalfL'),calfR:measure('logCalfR'),steps:+el('logSteps').value||null,water:rawWater?(metric?rawWater*33.814:rawWater):null,sleep:smartVal('logSleep'),calories:+el('logCalories').value||null,adherence:smartVal('logAdherence'),hunger:smartVal('logHunger'),energy:smartVal('logEnergy'),stress:smartVal('logStress'),recovery:smartVal('logRecovery'),soreness:smartVal('logSoreness'),digestion:smartVal('logDigestion'),performance:el('logPerformance').value,notes:el('logNotes').value};
   state.logs=state.logs.filter(a=>a.date!==x.date);state.logs.push(x);state.logs.sort((a,b)=>a.date.localeCompare(b.date));save();renderAll();
 }
 function renderHistory(){
@@ -1118,7 +1122,7 @@ async function resetAll(){
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=25').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=26').catch(()=>{});
