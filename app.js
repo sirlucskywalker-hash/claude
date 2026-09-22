@@ -16,12 +16,12 @@ function eventLocalDateTime(date,time){return date.replaceAll('-','')+'T'+(time|
 function addMinutesToTime(date,time,minutes){const d=new Date(date+'T'+time+':00');d.setMinutes(d.getMinutes()+minutes);return {date:localDate(d),time:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}}
 function escapeICS(v){return String(v||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
 function saveSchedule(){
-  state.schedule={checkin:el('scheduleCheckin').value||'08:00',workout:el('scheduleWorkout').value||'17:30',meal:el('scheduleMeal').value||'08:00',mealGap:+el('scheduleMealGap').value||4,reminder:+el('scheduleReminder').value||0};
+  state.schedule={wake:el('scheduleWake').value||'07:00',checkin:el('scheduleCheckin').value||'07:15',meal:el('scheduleMeal').value||'08:00',workout:el('scheduleWorkout').value||'17:30',bed:el('scheduleBed').value||'23:00',mealGap:+el('scheduleMealGap').value||4,mode:el('scheduleMode').value||'lifestyle',reminder:+el('scheduleReminder').value||0};
   state.timezone=deviceTimezone();save();renderSchedule();alert('Routine saved in '+state.timezone+'. Calendar exports will use your current device timezone.');
 }
 function loadSchedule(){
   if(!el('scheduleCheckin'))return;const s=state.schedule||{};
-  el('scheduleCheckin').value=s.checkin||'08:00';el('scheduleWorkout').value=s.workout||'17:30';el('scheduleMeal').value=s.meal||'08:00';el('scheduleMealGap').value=String(s.mealGap||4);el('scheduleReminder').value=String(s.reminder??15);
+  el('scheduleWake').value=s.wake||'07:00';el('scheduleCheckin').value=s.checkin||'07:15';el('scheduleWorkout').value=s.workout||'17:30';el('scheduleMeal').value=s.meal||'08:00';el('scheduleBed').value=s.bed||'23:00';el('scheduleMealGap').value=String(s.mealGap||4);el('scheduleMode').value=s.mode||'lifestyle';el('scheduleReminder').value=String(s.reminder??15);
 }
 function scheduleEventsForDate(date){
   const s=state.schedule||{},events=[],day=dayType(date),mealCount=(state.dayMealPrefs?.[(new Date(date+'T12:00:00').getDay()+6)%7]?.meals||state.mealPrefs?.meals||state.profile.meals||4)+(state.dayMealPrefs?.[(new Date(date+'T12:00:00').getDay()+6)%7]?.snacks||state.mealPrefs?.snacks||0);
@@ -57,14 +57,107 @@ function adherenceTasks(){
   else tasks.push({title:'Recovery / activity',detail:day.type==='rest'?'Protect recovery':'Complete planned cardio/recovery',tab:'dailylog',done:state.recoveryLogs.some(r=>r.date===today())||state.activityLogs.some(r=>r.date===today())});
   return tasks;
 }
+function runwayRecommendation(){
+  const s=state.schedule||{},goal=state.profile.goal||'maintain',day=dayType(today()),wake=s.wake||'07:00',bed=s.bed||'23:00';
+  const wakeMin=minutesFromTime(wake),bedMin=minutesFromTime(bed),workMin=minutesFromTime(s.workout||'17:30');
+  const checkin=timeFromMinutes(wakeMin+15);
+  const firstMeal=timeFromMinutes(wakeMin+60);
+  let workout=s.workout||'17:30';
+  if(s.mode==='performance'){
+    const earliest=wakeMin+180, latest=(bedMin>wakeMin?bedMin:bedMin+1440)-180;
+    const preferred=Math.min(Math.max(workMin,earliest),latest);
+    workout=timeFromMinutes(preferred);
+  }
+  const preMeal=timeFromMinutes(minutesFromTime(workout)-120);
+  const notes=[
+    'Check-in is suggested shortly after waking so weight/recovery data is more consistent.',
+    'Meal timing is flexible; daily calories, protein and adherence matter more than chasing a perfect clock.',
+    day.type==='training'?'A pre-training meal about 1.5–3 hours before lifting is a practical starting window for performance and comfort.':'On a non-lifting day, consistency and recovery take priority over precise meal timing.',
+    'Bedtime is treated as a consistency anchor, not a guarantee of sleep quality.'
+  ];
+  if(goal==='gain')notes.push('For muscle gain, regular protein-containing meals can make it easier to hit intake without oversized meals.');
+  if(goal==='fatloss')notes.push('For fat loss, meal timing should mainly reduce hunger and make the calorie target easier to sustain.');
+  return{wake,bed,checkin,firstMeal,workout,preMeal,notes};
+}
+function applyRecommendedRunway(){
+  const r=runwayRecommendation();el('scheduleCheckin').value=r.checkin;el('scheduleMeal').value=r.firstMeal;el('scheduleWorkout').value=r.workout;saveSchedule();
+}
+function dateDiffDays(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/86400000)}
+function recentDates(n){const out=[];for(let k=0;k<n;k++){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-k);out.push(localDate(d))}return out}
+function lastLoggedDate(){const dates=[...state.logs.map(x=>x.date),...state.foodLogs.map(x=>x.date),...state.workoutLogs.map(x=>x.date),...state.activityLogs.map(x=>x.date)].filter(Boolean).sort();return dates.length?dates[dates.length-1]:null}
+function driftAnalysis(){
+  if(!state.profile.age)return{score:0,level:'setup',label:'Set up',signals:[{severity:1,title:'Profile incomplete',detail:'Finish onboarding so drift monitoring has a baseline.'}],action:'Complete your profile first.'};
+  const c=state.driftControls||{},dates=recentDates(7),signals=[],minAdh=+c.adherence||85,sens=c.sensitivity||'balanced';
+  const logDays=dates.filter(d=>state.logs.some(x=>x.date===d)||state.foodLogs.some(x=>x.date===d)).length;
+  const foodDays=dates.filter(d=>state.foodLogs.some(x=>x.date===d)).length;
+  const adhVals=state.logs.filter(x=>dates.includes(x.date)&&Number.isFinite(x.adherence)).map(x=>x.adherence),avgAdh=adhVals.length?avg(adhVals):null;
+  const planned=Math.max(1,normalizedTrainingDays().length),workouts=state.workoutLogs.filter(x=>dates.includes(x.date)).length,trainingPct=Math.min(100,workouts/planned*100);
+  const last=lastLoggedDate(),gap=last?Math.max(0,dateDiffDays(last,today())):99;
+  if(gap>=(+c.gap||2))signals.push({severity:gap>=4?3:2,title:'Logging gap',detail:gap+' days since meaningful data was logged.'});
+  if(logDays<4)signals.push({severity:logDays<=2?3:2,title:'Check-in consistency slipping',detail:'Only '+logDays+' of the last 7 days have body or nutrition data.'});
+  if(foodDays<4)signals.push({severity:foodDays<=2?3:2,title:'Nutrition visibility fading',detail:'Food was logged on '+foodDays+' of the last 7 days.'});
+  if(avgAdh!=null&&avgAdh<minAdh)signals.push({severity:avgAdh<minAdh-15?3:2,title:'Adherence below your floor',detail:'Recent adherence averages '+Math.round(avgAdh)+'% vs your '+minAdh+'% floor.'});
+  if(trainingPct<70)signals.push({severity:trainingPct<40?3:2,title:'Training completion slipping',detail:workouts+' of ~'+planned+' planned weekly sessions were logged.'});
+  const t=trend(),stallDays=+c.stall||21;
+  if(t&&t.days>=stallDays){
+    const goal=state.profile.goal,weekly=Math.abs(t.weekly||0),stalled=(goal==='fatloss'&&weekly<.15)||(goal==='gain'&&weekly<.1)||(goal==='recomp'&&weekly<.05);
+    if(stalled&&avgAdh!=null&&avgAdh>=minAdh)signals.push({severity:2,title:'Progress may be stagnant',detail:'Execution looks adequate, but the multi-week weight trend is barely moving. Review the prescription instead of adding random effort.'});
+    else if(stalled&&avgAdh!=null&&avgAdh<minAdh)signals.push({severity:2,title:'Stall looks execution-related',detail:'The trend is flat, but adherence is below target. Tighten execution before changing calories or training.'});
+  }
+  const rec=state.logs.filter(x=>dates.includes(x.date)&&Number.isFinite(x.recovery)).map(x=>x.recovery),sleep=state.logs.filter(x=>dates.includes(x.date)&&Number.isFinite(x.sleep)).map(x=>x.sleep);
+  if(rec.length>=3&&avg(rec)<=4.5)signals.push({severity:2,title:'Recovery trending low',detail:'Average recovery is '+avg(rec).toFixed(1)+'/10. Adding more work is unlikely to fix this.'});
+  if(sleep.length>=3&&avg(sleep)<(state.profile.sleepGoal||7.5)-1)signals.push({severity:2,title:'Sleep is becoming a constraint',detail:'Recent sleep averages '+avg(sleep).toFixed(1)+' hours.'});
+  let score=signals.reduce((s,x)=>s+x.severity,0);if(sens==='strict')score=Math.ceil(score*1.25);if(sens==='relaxed')score=Math.floor(score*.75);
+  const level=score>=7?'high':score>=4?'medium':score>=1?'low':'good',label=level==='high'?'Drifting':level==='medium'?'Watch closely':level==='low'?'Minor drift':'On track';
+  let action='Keep the plan boring and repeatable. No intervention needed.';
+  if(level==='high')action='Reduce friction immediately: use saved meals, schedule the next workout, complete one check-in today, and use Rescue Mode instead of trying to make up missed work.';
+  else if(level==='medium')action='Correct the smallest failing behavior today before changing the program. One clean day is the priority.';
+  else if(level==='low')action='One signal is moving the wrong way. Address it today while the correction is still small.';
+  return{score,level,label,signals,action};
+}
+function saveDriftControls(){state.driftControls={sensitivity:el('driftSensitivity').value,adherence:+el('driftAdherence').value||85,gap:+el('driftGap').value||2,stall:+el('driftStall').value||21};save();renderDriftMonitor()}
+function loadDriftControls(){if(!el('driftSensitivity'))return;const c=state.driftControls||{};el('driftSensitivity').value=c.sensitivity||'balanced';el('driftAdherence').value=String(c.adherence||85);el('driftGap').value=String(c.gap||2);el('driftStall').value=String(c.stall||21)}
+function activateRescueMode(){
+  const start=today(),end=new Date();end.setDate(end.getDate()+2);state.rescueMode={start,end:localDate(end)};
+  state.driftDismissedUntil=null;save();renderDriftMonitor();renderSchedule();
+}
+function dismissDrift(){const d=new Date();d.setDate(d.getDate()+3);state.driftDismissedUntil=localDate(d);state.rescueMode=null;save();renderDriftMonitor()}
+function rescueEvents(){
+  const out=[],s=state.schedule||{},base=new Date();
+  for(let n=0;n<3;n++){const d=new Date(base);d.setHours(12,0,0,0);d.setDate(d.getDate()+n);const date=localDate(d);
+    out.push({title:'PhysiqueOS Rescue • 5-minute check-in',date,time:s.checkin||'07:15',minutes:10,desc:'Log the minimum useful data. Do not wait for a perfect day.'});
+    out.push({title:'PhysiqueOS Rescue • movement',date,time:'12:30',minutes:15,desc:'Short walk or your easiest realistic movement target.'});
+    if(dayType(date).type==='training')out.push({title:'PhysiqueOS Rescue • training',date,time:s.workout||'17:30',minutes:Math.min(45,state.profile.sessionLength||45),desc:'Complete the highest-value programmed work. Do not make up missed sessions.'});
+    out.push({title:'PhysiqueOS Rescue • tomorrow setup',date,time:timeFromMinutes(minutesFromTime(s.bed||'23:00')-30),minutes:10,desc:'Preload meals, review tomorrow and remove one point of friction.'});
+  }return out;
+}
+function downloadRescueCalendar(){
+  if(!state.rescueMode)activateRescueMode();const events=rescueEvents(),body=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PhysiqueOS//Rescue//EN','CALSCALE:GREGORIAN','X-WR-CALNAME:PhysiqueOS 3-Day Rescue',...events.map(icsEvent),'END:VCALENDAR'].join('\r\n');
+  const blob=new Blob([body],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='PhysiqueOS_3_Day_Rescue.ics';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function renderDriftMonitor(){
+  if(!el('driftStatus'))return;const d=driftAnalysis(),dismissed=state.driftDismissedUntil&&state.driftDismissedUntil>=today(),rescue=state.rescueMode&&state.rescueMode.end>=today();
+  el('driftStatus').className='driftStatus '+d.level;el('driftStatus').innerHTML='<strong>'+d.label+'</strong><small>risk '+d.score+'</small>';
+  el('driftSignals').innerHTML=d.signals.length?d.signals.map(x=>'<div class="driftSignal s'+x.severity+'"><strong>'+escapeHtml(x.title)+'</strong><span>'+escapeHtml(x.detail)+'</span></div>').join(''):'<div class="driftSignal good"><strong>No meaningful drift detected</strong><span>Your recent behaviors are giving the plan a fair chance to work.</span></div>';
+  let msg=d.action;
+  if(dismissed)msg='Drift alerts are snoozed through '+state.driftDismissedUntil+'. The monitor still analyzes your data in the background.';
+  if(rescue)msg='3-day Rescue Mode is active through '+state.rescueMode.end+'. The goal is minimum effective consistency, not catching up.';
+  el('driftIntervention').innerHTML='<strong>'+(rescue?'RESCUE MODE':'COACH INTERVENTION')+'</strong><p>'+escapeHtml(msg)+'</p>';
+}
 function renderSchedule(){
   if(!el('timezoneStatus'))return;
   const tz=deviceTimezone();if(state.timezone!==tz){state.timezone=tz;save()}
   el('timezoneStatus').innerHTML='<strong>'+formatLocalClock()+'</strong><small>'+escapeHtml(tz)+'</small>';
-  const events=scheduleEventsForDate(today()).sort((a,b)=>a.time.localeCompare(b.time));
-  el('dailyRunway').innerHTML=events.map(e=>'<div class="runwayItem"><span>'+e.time+'</span><div><strong>'+escapeHtml(e.title.replace('PhysiqueOS • ',''))+'</strong><small>'+escapeHtml(e.desc)+'</small></div></div>').join('');
+  const events=scheduleEventsForDate(today()).sort((a,b)=>a.time.localeCompare(b.time)),rec=runwayRecommendation();
+  el('runwayCoachNote').innerHTML='<strong>Your schedule wins.</strong> Coach timing is a recommendation layer, not a command. '+(state.schedule?.mode==='performance'?'Performance-biased mode nudges timing toward repeatable recovery and pre-training fueling windows.':'Lifestyle-first mode preserves your preferred times unless there is a clear friction point.');
+  el('dailyRunway').innerHTML=events.map(e=>{
+    const kind=e.title.includes('check-in')?'checkin':e.title.includes('Meal')||e.title.includes('Snack')?'meal':e.title.includes('Recovery')||e.title.includes('Cardio')?'workout':'workout';
+    const suggested=kind==='checkin'?rec.checkin:kind==='workout'?rec.workout:null;
+    return '<div class="runwayItem"><span>'+e.time+'</span><div><strong>'+escapeHtml(e.title.replace('PhysiqueOS • ',''))+'</strong><small>'+escapeHtml(e.desc)+'</small>'+(suggested&&suggested!==e.time?'<em>Coach window: around '+suggested+'</em>':'')+'</div></div>';
+  }).join('');
   const tasks=adherenceTasks(),next=tasks.find(x=>!x.done);
   el('adherenceNudge').innerHTML=next?'<div class="nudgeHero"><span class="pulseDot"></span><div><strong>'+escapeHtml(next.title)+'</strong><p>'+escapeHtml(next.detail)+'</p></div></div><button class="primary fullBtn" onclick="showTab(\''+next.tab+'\')">Do this now</button>':'<div class="nudgeComplete"><strong>100% of today’s core actions are covered.</strong><p>Keep the rest of the day simple. Consistency beats adding unnecessary work.</p></div>';
+  el('runwayRecommendations').innerHTML='<strong>Coach timing notes</strong><div>'+rec.notes.slice(0,3).map(x=>'<p>• '+escapeHtml(x)+'</p>').join('')+'</div>';
 }
 
 let state=JSON.parse(localStorage.getItem('physiqueOS')||'null')||{};
@@ -88,8 +181,11 @@ state.favoriteFoods=Array.isArray(state.favoriteFoods)?state.favoriteFoods:[];
 state.foodDayTemplates=Array.isArray(state.foodDayTemplates)?state.foodDayTemplates:[];
 state.foodWeekTemplates=Array.isArray(state.foodWeekTemplates)?state.foodWeekTemplates:[];
 state.workoutFavorites=Array.isArray(state.workoutFavorites)?state.workoutFavorites:[];
-state.schedule=state.schedule||{checkin:'08:00',workout:'17:30',meal:'08:00',mealGap:4,reminder:15};
+state.schedule=state.schedule||{wake:'07:00',checkin:'07:15',meal:'08:00',workout:'17:30',bed:'23:00',mealGap:4,mode:'lifestyle',reminder:15};
 state.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time';
+state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};
+state.rescueMode=state.rescueMode||null;
+state.driftDismissedUntil=state.driftDismissedUntil||null;
 
 const FAQ_LIBRARY={
 'Getting started':[
@@ -1127,7 +1223,7 @@ function renderAdjustment(){
   el('adjustmentPanel').innerHTML=html;el('coachAdjustment').innerHTML=html;
 }
 function renderDashboard(){
-  renderSchedule();
+  renderSchedule();renderDriftMonitor();
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome, '+state.profile.name+'.':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore'))el('dailyScore').textContent=dailyScore();if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+' • '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
@@ -1176,15 +1272,15 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{checkin:'08:00',workout:'17:30',meal:'08:00',mealGap:4,reminder:15};state.timezone=deviceTimezone();save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{wake:'07:00',checkin:'07:15',meal:'08:00',workout:'17:30',bed:'23:00',mealGap:4,mode:'lifestyle',reminder:15};state.timezone=deviceTimezone();state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};state.rescueMode=state.rescueMode||null;state.driftDismissedUntil=state.driftDismissedUntil||null;save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 async function resetAll(){
   if(!confirm('Erase ALL local PhysiqueOS data on this device, including progress photos? This cannot be undone.'))return;
   localStorage.removeItem('physiqueOS');
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();loadSchedule();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();loadSchedule();loadDriftControls();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule()},60000);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=27').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=28').catch(()=>{});
