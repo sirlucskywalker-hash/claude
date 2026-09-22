@@ -237,6 +237,8 @@ state.mealPlan=Array.isArray(state.mealPlan)?state.mealPlan:[];
 state.trainingPlan=Array.isArray(state.trainingPlan)?state.trainingPlan:[];
 state.workoutLogs=Array.isArray(state.workoutLogs)?state.workoutLogs:[];
 state.pendingAdjustment=state.pendingAdjustment||null;
+state.macroAutomation=state.macroAutomation||{enabled:true,lastReview:null,lastAdjustment:null,history:[]};
+state.macroAutomation.history=Array.isArray(state.macroAutomation.history)?state.macroAutomation.history:[];
 state.coachMessages=Array.isArray(state.coachMessages)?state.coachMessages:[];
 state.foodLogs=Array.isArray(state.foodLogs)?state.foodLogs:[];
 state.activityLogs=Array.isArray(state.activityLogs)?state.activityLogs:[];
@@ -388,6 +390,8 @@ function saveProfile(){
   };
   if(!p.age||!p.weight||!p.heightCm)return alert('Enter age, height and weight.');
   state.profile=p;
+  state.macroAutomation=state.macroAutomation||{enabled:true,lastReview:null,lastAdjustment:null,history:[]};
+  state.macroAutomation.lastReview=null;
   const blockers=safetyBlockers(p);
   state.macro=blockers.length?null:calcMacro(p);
   if(blockers.length){state.mealPlan=[];state.pendingAdjustment=null}
@@ -407,55 +411,145 @@ function loadProfile(){
   if(el('waterGoal'))el('waterGoal').value=p.units==='metric'?((p.waterGoalOz||100)/33.814).toFixed(1):(p.waterGoalOz||100);
   toggleUnits();
 }
+function logsBetween(start,end){
+  return state.logs.filter(x=>x.date>=start&&x.date<=end);
+}
+function averageWeight(logs){
+  const v=logs.map(x=>x.weight).filter(x=>Number.isFinite(x)&&x>0);return v.length?avg(v):null;
+}
+function latestBodyStats(){
+  const weights=state.logs.filter(x=>Number.isFinite(x.weight)&&x.weight>0).sort((x,y)=>x.date.localeCompare(y.date));
+  const bfs=state.logs.filter(x=>Number.isFinite(x.bodyFat)&&x.bodyFat>0).sort((x,y)=>x.date.localeCompare(y.date));
+  const recent=weights.filter(x=>x.date>=dateDaysAgo(6));
+  return{
+    weight:recent.length?avg(recent.map(x=>x.weight)):(weights.length?weights[weights.length-1].weight:state.profile.weight),
+    bodyFat:bfs.length?bfs[bfs.length-1].bodyFat:(state.profile.bf||null)
+  };
+}
+function rollingTrend(){
+  const thisStart=dateDaysAgo(6),prevStart=dateDaysAgo(13),prevEnd=dateDaysAgo(7);
+  const recent=logsBetween(thisStart,today()),prior=logsBetween(prevStart,prevEnd);
+  const recentW=averageWeight(recent),priorW=averageWeight(prior);
+  const vals=(logs,k)=>logs.map(x=>x[k]).filter(x=>Number.isFinite(x));
+  const adhVals=vals(recent,'adherence'),steps=vals(recent,'steps'),sleep=vals(recent,'sleep'),hunger=vals(recent,'hunger'),recovery=vals(recent,'recovery');
+  if(recentW==null||priorW==null)return null;
+  const weeklyChange=recentW-priorW;
+  const pct=priorW?weeklyChange/priorW*100:0;
+  return{
+    recentWeight:recentW,priorWeight:priorW,weeklyChange,pct,
+    recentWeightDays:recent.filter(x=>Number.isFinite(x.weight)&&x.weight>0).length,
+    priorWeightDays:prior.filter(x=>Number.isFinite(x.weight)&&x.weight>0).length,
+    adherence:adhVals.length?avg(adhVals):null,
+    steps:steps.length?avg(steps):null,
+    sleep:sleep.length?avg(sleep):null,
+    hunger:hunger.length?avg(hunger):null,
+    recovery:recovery.length?avg(recovery):null
+  };
+}
 function trend(){
+  const t=rollingTrend();
+  if(t)return{weekly:-t.weeklyChange,pct:-t.pct,days:14,adh:t.adherence,steps:t.steps,sleep:t.sleep,hunger:t.hunger,recovery:t.recovery};
   const a=state.logs.filter(x=>x.weight).sort((x,y)=>x.date.localeCompare(y.date));if(a.length<2)return null;
   const first=a[0],last=a[a.length-1],days=Math.max(1,(new Date(last.date)-new Date(first.date))/86400000),weekly=(first.weight-last.weight)/(days/7);
-  const recent=state.logs.slice(-7);
-  const vals=k=>recent.map(x=>x[k]).filter(x=>Number.isFinite(x));
+  const recent=state.logs.slice(-7),vals=k=>recent.map(x=>x[k]).filter(x=>Number.isFinite(x));
   return{weekly,pct:weekly/first.weight*100,days,adh:avg(vals('adherence')),steps:avg(vals('steps')),sleep:avg(vals('sleep')),hunger:avg(vals('hunger')),energy:avg(vals('energy')),stress:avg(vals('stress')),recovery:avg(vals('recovery')),soreness:avg(vals('soreness'))};
+}
+function macroTargetsForCalories(calories,bodyStats=latestBodyStats()){
+  const p=state.profile,weight=bodyStats.weight||p.weight,goalWeight=p.goalWeight||weight;
+  let protein=Math.round(Math.max(goalWeight*.9,Math.min(weight,goalWeight)*1.0));
+  if(bodyStats.bodyFat){const lbm=weight*(1-bodyStats.bodyFat/100);protein=Math.max(protein,Math.round(lbm*.9))}
+  let fat=Math.round(Math.max(goalWeight*.3,calories*.22/9));
+  let carbs=Math.max(40,Math.round((calories-protein*4-fat*9)/4));
+  const actual=Math.round(protein*4+carbs*4+fat*9);
+  return{protein,fat,carbs,calories:actual};
+}
+function reanchorMacroBodyStats(){
+  if(!state.macro||!state.profile.age)return false;
+  const stats=latestBodyStats(),working={...state.profile,weight:stats.weight||state.profile.weight,bf:stats.bodyFat||state.profile.bf};
+  const fresh=calcMacro(working),targets=macroTargetsForCalories(state.macro.calories,stats);
+  const changed=state.macro.protein!==targets.protein||state.macro.fat!==targets.fat||state.macro.carbs!==targets.carbs||state.macro.bmr!==fresh.bmr||state.macro.tdee!==fresh.tdee;
+  state.macro.bmr=fresh.bmr;state.macro.tdee=fresh.tdee;state.macro.floor=fresh.floor;
+  state.macro.protein=targets.protein;state.macro.fat=targets.fat;state.macro.carbs=targets.carbs;state.macro.calories=targets.calories;
+  return changed;
 }
 function getAdjustment(){
   if(!state.macro||safetyBlockers(state.profile).length)return null;
-  const t=trend(),p=state.profile;if(!t||t.days<14||!t.adh||t.adh<85)return null;
+  const t=rollingTrend(),p=state.profile;
+  if(!t||t.recentWeightDays<4||t.priorWeightDays<4||t.adherence==null||t.adherence<85)return null;
   let delta=0,reason='';
+  const changePct=t.pct; // negative = loss, positive = gain
   if(p.goal==='fatloss'){
-    const target={conservative:.5,moderate:.75,aggressive:1}[p.aggr]||.75;
-    if(t.pct<target-.25){delta=-125;reason='Weight trend is slower than target with high adherence.'}
-    if(t.pct>target+.35||t.hunger>=8||t.recovery&&t.recovery<=4){delta=125;reason='Loss/recovery signals suggest the current deficit may be too aggressive.'}
+    const target={conservative:-.5,moderate:-.75,aggressive:-1}[p.aggr]||-.75;
+    if(changePct>target+.25){delta=-125;reason='Two-week weight averages are moving slower than the selected fat-loss pace with strong adherence.'}
+    if(changePct<target-.35||(t.hunger!=null&&t.hunger>=8)||(t.recovery!=null&&t.recovery<=4)){delta=125;reason='Weight loss or recovery signals suggest the current deficit may be more aggressive than needed.'}
   }else if(p.goal==='gain'){
-    if(t.weekly<=0){delta=125;reason='Bodyweight is not rising despite high adherence.'}
-    if(t.pct>0.6){delta=-100;reason='Rate of gain is faster than the beta target.'}
+    const target={conservative:.1,moderate:.25,aggressive:.4}[p.aggr]||.25;
+    if(changePct<target-.1){delta=125;reason='Two-week weight averages are rising slower than the selected gaining pace with strong adherence.'}
+    if(changePct>target+.25){delta=-100;reason='Weight is rising faster than the selected gaining pace.'}
+  }else if(p.goal==='recomp'){
+    if(Math.abs(changePct)<.15&&t.adherence>=90)return null;
   }
   if(!delta)return null;
   const next=Math.max(state.macro.floor||0,state.macro.calories+delta);
   if(next===state.macro.calories)return null;
-  return{delta:next-state.macro.calories,next,reason};
+  return{delta:next-state.macro.calories,next,reason,trend:t};
+}
+function applyMacroCalories(nextCalories,reason,source='automatic'){
+  const before={calories:state.macro.calories,protein:state.macro.protein,carbs:state.macro.carbs,fat:state.macro.fat};
+  const stats=latestBodyStats(),targets=macroTargetsForCalories(nextCalories,stats);
+  state.macro.protein=targets.protein;state.macro.carbs=targets.carbs;state.macro.fat=targets.fat;state.macro.calories=targets.calories;
+  reanchorMacroBodyStats();
+  const after={calories:state.macro.calories,protein:state.macro.protein,carbs:state.macro.carbs,fat:state.macro.fat};
+  state.macroAutomation.history.unshift({date:today(),source,reason,before,after,weight:stats.weight,bodyFat:stats.bodyFat||null});
+  state.macroAutomation.history=state.macroAutomation.history.slice(0,20);
+  state.macroAutomation.lastAdjustment=today();state.pendingAdjustment=null;
+  state.mealPlan=[];state.mealPlanSchema=3;
+}
+function autoMacroReview(force=false){
+  if(!state.macroAutomation?.enabled||!state.macro||safetyBlockers(state.profile).length)return false;
+  const last=state.macroAutomation.lastReview;
+  if(!force&&last&&dateDiffDays(last,today())<7)return false;
+  state.macroAutomation.lastReview=today();
+  const bodyChanged=reanchorMacroBodyStats(),adj=getAdjustment();
+  if(adj){
+    const lastAdj=state.macroAutomation.lastAdjustment;
+    if(force||!lastAdj||dateDiffDays(lastAdj,today())>=7)applyMacroCalories(adj.next,adj.reason,'automatic');
+  }else if(bodyChanged){
+    state.mealPlan=[];state.mealPlanSchema=3;
+  }
+  save();return !!adj||bodyChanged;
 }
 function applyAdjustment(){
-  const a=getAdjustment()||state.pendingAdjustment;if(!a)return alert('No eligible adjustment right now.');
-  const m=state.macro,delta=a.next-m.calories;
-  let carbs=Math.round(m.carbs+delta/4);carbs=Math.max(40,carbs);
-  m.carbs=carbs;m.calories=Math.round(m.protein*4+m.carbs*4+m.fat*9);
-  state.pendingAdjustment=null;state.mealPlan=[];save();renderAll();alert('New target applied. Regenerate the meal plan to match it.');
+  const adj=getAdjustment()||state.pendingAdjustment;if(!adj)return alert('No eligible adjustment right now.');
+  applyMacroCalories(adj.next,adj.reason||'Manual adaptive review','manual');save();renderAll();alert('New calories and macros applied from your progress data. Regenerate the meal plan to match.');
 }
 function adaptive(){
   const blockers=safetyBlockers(state.profile);if(blockers.length)return blockers.join(' ');
   if(!state.macro)return'Complete onboarding first.';
-  const t=trend();if(!t||t.days<7)return'Starting target: '+state.macro.calories+' kcal. Log at least 7–14 days before making a meaningful adjustment.';
-  let s='Observed trend: '+Math.abs(t.weekly).toFixed(2)+' lb/week '+(t.weekly>=0?'down':'up')+'. Recent adherence: '+(t.adh?t.adh.toFixed(0):'—')+'%. ';
-  if(t.adh&&t.adh<80)s+='Execution is the priority before changing calories. ';
-  else{s+=getAdjustment()?'A target adjustment is available below. ':'Current data does not justify a calorie change yet. '}
-  if(t.steps&&t.steps<7000)s+='Steps are averaging '+Math.round(t.steps)+'; daily movement is an available lever. ';
-  if(t.sleep&&t.sleep<6.5)s+='Sleep is averaging '+t.sleep.toFixed(1)+' h; recovery may be limiting progress. ';
-  if(t.hunger>=8)s+='Hunger is elevated. ';if(t.stress>=8)s+='Stress is elevated. ';if(t.recovery&&t.recovery<=4)s+='Recovery is low. ';
+  const t=rollingTrend();if(!t)return'Starting target: '+state.macro.calories+' kcal. Log weight and adherence consistently for about 2 weeks so automatic adjustments can use trend data.';
+  let s='7-day average weight: '+t.recentWeight.toFixed(1)+' lb vs '+t.priorWeight.toFixed(1)+' lb the week before. ';
+  s+='Recent adherence: '+(t.adherence!=null?t.adherence.toFixed(0):'—')+'%. ';
+  if(t.adherence!=null&&t.adherence<85)s+='Targets stay stable until execution is consistent enough to judge the prescription. ';
+  else s+=getAdjustment()?'The automatic review has identified an eligible target adjustment. ':'Current progress is within the adjustment guardrails. ';
   return s;
 }
+function renderMacroAutomation(){
+  if(!el('macroAutomationPanel'))return;
+  const auto=state.macroAutomation||{},last=auto.history?.[0],next=auto.lastReview?dateDaysFrom(auto.lastReview,7):'After enough data';
+  const status=auto.enabled?'Automatic adjustments on':'Automatic adjustments off';
+  el('macroAutomationPanel').innerHTML='<div class="macroAutoHead"><div><span class="kicker">ADAPTIVE MACROS</span><strong>'+status+'</strong><small>Uses rolling weight averages, adherence, body weight/body-fat entries, hunger and recovery. Changes are limited and spaced out.</small></div><label class="autoToggle"><input type="checkbox" '+(auto.enabled?'checked':'')+' onchange="toggleMacroAutomation(this.checked)"><span></span></label></div>'+
+    (last?'<div class="macroChange"><strong>Last change • '+last.date+'</strong><span>'+last.before.calories+' → '+last.after.calories+' kcal • '+last.after.protein+'P '+last.after.carbs+'C '+last.after.fat+'F</span><small>'+escapeHtml(last.reason)+'</small></div>':'<div class="macroChange muted"><span>No automatic calorie change yet. PhysiqueOS is collecting enough trend data first.</span></div>');
+}
+function dateDaysFrom(date,n){const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+n);return localDate(d)}
+function toggleMacroAutomation(on){state.macroAutomation.enabled=!!on;save();if(on)autoMacroReview(true);renderNutrition();renderMacroAutomation()}
 function renderNutrition(){
   const blockers=safetyBlockers(state.profile);
+  if(!blockers.length&&state.macro)autoMacroReview();
   if(blockers.length){el('nutritionOut').innerHTML='<div class="notice dangerNotice"><strong>Automation paused.</strong><br>'+blockers.join('<br>')+'</div>';return}
   if(!state.macro){el('nutritionOut').innerHTML='<div class="notice">Complete onboarding first.</div>';return}
   const m=state.macro;
   el('nutritionOut').innerHTML='<div class="metrics"><div class="card"><small>BMR estimate</small><strong>'+m.bmr+'</strong></div><div class="card"><small>TDEE estimate</small><strong>'+m.tdee+'</strong></div><div class="card"><small>Daily calories</small><strong>'+m.calories+'</strong></div></div><div class="card"><table><tr><th>Protein</th><th>Carbs</th><th>Fat</th></tr><tr><td>'+m.protein+'g</td><td>'+m.carbs+'g</td><td>'+m.fat+'g</td></tr></table></div><div class="notice">'+adaptive()+'</div>';
+  renderMacroAutomation();
 }
 
 function tokens(v){return(v||'').toLowerCase().split(/[,;\n]/).map(x=>x.trim()).filter(Boolean)}
@@ -1224,7 +1318,7 @@ function saveQuickMetrics(){
   const next={...existing,date:today()};
   const steps=val('quickSteps'),water=val('quickWater'),sleep=val('quickSleep'),weight=val('quickWeight'),calories=val('quickCalories'),adherence=val('quickAdherence'),hunger=val('quickHunger'),energy=val('quickEnergy');
   if(steps!=null)next.steps=steps;if(water!=null)next.water=metric?water*33.814:water;if(sleep!=null)next.sleep=sleep;if(weight!=null)next.weight=metric?weight*2.20462:weight;if(calories!=null)next.calories=calories;if(adherence!=null)next.adherence=adherence;if(hunger!=null)next.hunger=hunger;if(energy!=null)next.energy=energy;
-  state.logs=state.logs.filter(x=>x.date!==today());state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));save();renderAll();
+  state.logs=state.logs.filter(x=>x.date!==today());state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));save();autoMacroReview(true);renderAll();
 }
 function logStreak(){
   if(!state.logs.length)return 0;const dates=new Set(state.logs.map(x=>x.date));let d=new Date(),n=0;
@@ -1241,7 +1335,7 @@ function saveLog(){
   const metric=state.profile.units==='metric',rawWeight=+el('logWeight').value||null,rawWater=+el('logWater').value||null;
   const measure=id=>{const v=+el(id).value||null;return v?(metric?v/2.54:v):null};
   const x={date:el('logDate').value||today(),weight:rawWeight?(metric?rawWeight*2.20462:rawWeight):null,bodyFat:+el('logBodyFat').value||null,neck:measure('logNeck'),shoulders:measure('logShoulders'),chest:measure('logChest'),waist:measure('logWaist'),hips:measure('logHips'),armL:measure('logArmL'),armR:measure('logArmR'),thighL:measure('logThighL'),thighR:measure('logThighR'),calfL:measure('logCalfL'),calfR:measure('logCalfR'),steps:+el('logSteps').value||null,water:rawWater?(metric?rawWater*33.814:rawWater):null,sleep:smartVal('logSleep'),calories:+el('logCalories').value||null,adherence:smartVal('logAdherence'),hunger:smartVal('logHunger'),energy:smartVal('logEnergy'),stress:smartVal('logStress'),recovery:smartVal('logRecovery'),soreness:smartVal('logSoreness'),digestion:smartVal('logDigestion'),performance:el('logPerformance').value,notes:el('logNotes').value};
-  state.logs=state.logs.filter(a=>a.date!==x.date);state.logs.push(x);state.logs.sort((a,b)=>a.date.localeCompare(b.date));save();renderAll();
+  state.logs=state.logs.filter(a=>a.date!==x.date);state.logs.push(x);state.logs.sort((a,b)=>a.date.localeCompare(b.date));save();autoMacroReview(true);renderAll();
 }
 function renderHistory(){
   el('history').innerHTML='<table><tr><th>Date</th><th>Weight</th><th>Waist</th><th>Steps</th><th>Sleep</th><th>Adh.</th><th>Hunger</th><th>Recovery</th></tr>'+[...state.logs].reverse().map(x=>'<tr><td>'+x.date+'</td><td>'+(x.weight||'—')+'</td><td>'+(x.waist||'—')+'</td><td>'+(x.steps||'—')+'</td><td>'+(x.sleep||'—')+'</td><td>'+(x.adherence!=null?x.adherence+'%':'—')+'</td><td>'+(x.hunger||'—')+'</td><td>'+(x.recovery||'—')+'</td></tr>').join('')+'</table>';
@@ -1540,4 +1634,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=43').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=44').then(r=>r.update()).catch(()=>{});
