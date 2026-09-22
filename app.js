@@ -18,6 +18,7 @@ state.activityLogs=Array.isArray(state.activityLogs)?state.activityLogs:[];
 state.recoveryLogs=Array.isArray(state.recoveryLogs)?state.recoveryLogs:[];
 state.mealPrefs=state.mealPrefs||{meals:Number(state.profile.meals)||4,snacks:1,distribution:'balanced'};
 state.dayMealPrefs=state.dayMealPrefs||{};
+state.activeTimer=state.activeTimer||null;
 
 function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
 function showTab(id){
@@ -367,42 +368,98 @@ function progression(name,min,max,targetRir){
   if(previous.length&&total>prevTotal)return'Progressing. Keep the load and continue adding total reps across the sets.';
   return'Hold the load and beat total reps, RIR, or execution quality next session.';
 }
-function syncEffort(di,ei,si,source){
-  const rpeEl=el('rpe_'+di+'_'+ei+'_'+si),rirEl=el('rir_'+di+'_'+ei+'_'+si);if(!rpeEl||!rirEl)return;
-  if(source==='rpe'&&rpeEl.value!==''){const rpe=clamp(+rpeEl.value,1,10);rirEl.value=Math.max(0,(10-rpe)).toFixed(rpe%1?1:0)}
-  if(source==='rir'&&rirEl.value!==''){const rir=clamp(+rirEl.value,0,9);rpeEl.value=Math.max(1,10-rir).toFixed(rir%1?1:0)}
+function readinessScore(){
+  const x=currentLog()||{},sleepGoal=state.profile.sleepGoal||7.5;
+  const inputs=[
+    x.sleep?clamp(x.sleep/sleepGoal*100,0,110):null,
+    x.energy?x.energy*10:null,
+    x.recovery?x.recovery*10:null,
+    x.soreness?110-x.soreness*10:null,
+    x.stress?110-x.stress*10:null
+  ].filter(v=>v!=null);
+  return inputs.length?Math.round(avg(inputs)):null;
+}
+function readinessAdvice(){
+  const score=readinessScore(),x=currentLog()||{},day=dayType(today());
+  if(score==null)return{level:'unknown',score:null,title:'Readiness not logged',text:'Log sleep, energy, recovery, soreness and stress in Log for a coach-adjusted session recommendation.'};
+  if(score>=82)return{level:'high',score,title:'High readiness',text:day.type==='training'?'Run the programmed session as written. Push progression where technique stays clean and the prescribed RIR is there.':'Recovery is strong. Keep the planned cardio/rest day instead of adding random lifting volume.'};
+  if(score>=65)return{level:'medium',score,title:'Moderate readiness',text:day.type==='training'?'Train, but earn the progression. Keep 1 extra rep in reserve on compounds if warm-ups feel unusually heavy.':'Keep cardio moderate and avoid turning recovery work into a hard session.'};
+  return{level:'low',score,title:'Low readiness',text:day.type==='training'?'Use a readiness-adjusted session: keep the main lifts, reduce load ~5–10% or remove 1 accessory set, and stay farther from failure. If pain or illness is present, do not force it.':'Choose full rest or easy active recovery. Today is not the day to chase calorie burn.'};
+}
+function renderReadiness(){
+  if(!el('readinessPanel'))return;const r=readinessAdvice();
+  el('readinessPanel').innerHTML='<div class="readinessCard '+r.level+'"><div><span class="kicker">COACH READINESS</span><h3>'+r.title+'</h3><p>'+r.text+'</p></div><div class="readinessScore">'+(r.score==null?'—':r.score)+'</div></div>';
+}
+function lastPerformance(name){
+  const logs=lastExerciseLogs(name);if(!logs.length)return null;const last=logs[logs.length-1],sets=normalizeSetResults(last);return{date:last.date||'',sets};
+}
+function previousSetText(name,si){
+  const p=lastPerformance(name);if(!p||!p.sets[si])return'No previous set';
+  const s=p.sets[si];return s.weight+' × '+s.reps+(s.rir!=null?' @ '+s.rir+' RIR':'');
+}
+function fillPrevious(di,ei){
+  const item=state.trainingPlan[di]?.items?.[ei],p=item&&lastPerformance(item.name);if(!p)return alert('No previous performance saved for this exercise.');
+  p.sets.slice(0,item.sets).forEach((s,si)=>{if(el('w_'+di+'_'+ei+'_'+si))el('w_'+di+'_'+ei+'_'+si).value=s.weight||'';if(el('r_'+di+'_'+ei+'_'+si))el('r_'+di+'_'+ei+'_'+si).value=s.reps||'';if(el('rir_'+di+'_'+ei+'_'+si))el('rir_'+di+'_'+ei+'_'+si).value=s.rir??'';liveSetCue(di,ei,si)});
+}
+function liveSetCue(di,ei,si){
+  const item=state.trainingPlan[di]?.items?.[ei],out=el('cue_'+di+'_'+ei+'_'+si);if(!item||!out)return;
+  const reps=+el('r_'+di+'_'+ei+'_'+si).value||0,rir=el('rir_'+di+'_'+ei+'_'+si).value===''?null:+el('rir_'+di+'_'+ei+'_'+si).value;const dr=el('derived_'+di+'_'+ei+'_'+si);if(dr&&rir!=null)dr.textContent=Math.max(1,10-rir).toFixed(rir%1?1:0);
+  if(!reps||rir==null){out.textContent='Log reps + RIR for live coaching.';out.className='setCue';return}
+  let msg='',cls='setCue';
+  if(rir<0||rir>9){msg='RIR should be 0–9.';cls+=' warn'}
+  else if(reps>item.maxReps&&rir>=item.rir){msg='Too easy for this range. Add load next set.';cls+=' up'}
+  else if(reps>=item.maxReps&&rir>=item.rir){msg='Top of range with room left. Small load increase is appropriate.';cls+=' up'}
+  else if(reps<item.minReps&&rir<=1){msg='Load is too aggressive today. Reduce slightly next set.';cls+=' down'}
+  else if(rir<Math.max(0,item.rir-1)){msg='Harder than prescribed. Keep load or reduce slightly; protect later-set quality.';cls+=' warn'}
+  else if(rir>item.rir+1){msg='Easier than prescribed. Add reps or a small amount of load.';cls+=' up'}
+  else{msg='On target. Keep the load and execute the next set.';cls+=' good'}
+  out.textContent=msg;out.className=cls;
 }
 function changeSetCount(di,ei,delta){
   const item=state.trainingPlan[di]?.items?.[ei];if(!item)return;item.sets=clamp((item.sets||3)+delta,1,8);save();renderTraining();
 }
+let timerInterval=null;
+function startRestTimer(seconds){
+  clearInterval(timerInterval);let left=seconds;state.activeTimer={seconds,left};renderFloatingTimer();
+  timerInterval=setInterval(()=>{left--;state.activeTimer={seconds,left};renderFloatingTimer();if(left<=0){clearInterval(timerInterval);state.activeTimer=null;renderFloatingTimer();if(navigator.vibrate)navigator.vibrate([150,80,150])}},1000);
+}
+function stopRestTimer(){clearInterval(timerInterval);state.activeTimer=null;renderFloatingTimer()}
+function renderFloatingTimer(){
+  let box=el('floatingTimer');if(!box){box=document.createElement('div');box.id='floatingTimer';box.className='floatingTimer';document.body.appendChild(box)}
+  if(!state.activeTimer){box.classList.remove('show');box.innerHTML='';return}
+  const left=Math.max(0,state.activeTimer.left),m=Math.floor(left/60),s=String(left%60).padStart(2,'0');
+  box.innerHTML='<div><small>REST</small><strong>'+m+':'+s+'</strong></div><button onclick="stopRestTimer()">×</button>';box.classList.add('show');
+}
+function workoutVolume(exercises){return exercises.reduce((sum,e)=>sum+e.results.reduce((s,x)=>s+(x.weight||0)*(x.reps||0),0),0)}
 function logWorkout(di){
   const day=state.trainingPlan[di];if(!day)return;
   const exercises=day.items.map((x,ei)=>{
     const results=[];
     for(let si=0;si<x.sets;si++){
-      const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0;
-      let rpe=el('rpe_'+di+'_'+ei+'_'+si).value!==''?+el('rpe_'+di+'_'+ei+'_'+si).value:null,rir=el('rir_'+di+'_'+ei+'_'+si).value!==''?+el('rir_'+di+'_'+ei+'_'+si).value:null;
-      if(rpe!=null&&rir==null)rir=Math.max(0,10-rpe);if(rir!=null&&rpe==null)rpe=Math.max(1,10-rir);
-      if(reps>0)results.push({set:si+1,weight,reps,rpe,rir});
+      const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0,rir=el('rir_'+di+'_'+ei+'_'+si).value!==''?+el('rir_'+di+'_'+ei+'_'+si).value:null;
+      if(reps>0)results.push({set:si+1,weight,reps,rir,rpe:rir!=null?Math.max(1,10-rir):null});
     }
     return{name:x.name,results};
   }).filter(x=>x.results.length);
   if(!exercises.length)return alert('Enter at least one completed set.');
-  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe:+el('sessionRpe_'+di).value||null,notes:el('sessionNotes_'+di).value||'',exercises});save();renderTraining();alert('Workout logged. Set-by-set effort and progression guidance updated.');
+  const sessionRpe=+el('sessionRpe_'+di).value||null;
+  if(!sessionRpe&&!confirm('No session RPE entered. Save the workout anyway?'))return;
+  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe,notes:el('sessionNotes_'+di).value||'',volume:workoutVolume(exercises),readiness:readinessScore(),exercises});save();renderTraining();renderCoachChat();alert('Workout logged. PhysiqueOS updated your progression history.');
 }
 function renderTraining(){
+  renderReadiness();
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
   el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>{
-    const sessionHeader='<div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div><label class="sessionRpeTop"><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" placeholder="1–10"></label></div>';
     const exercises=d.items.map((x,ei)=>{
-      const targetRpe=Math.max(1,10-(x.rir??3));
-      const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setRow effortRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric"></label><label>RPE<input id="rpe_'+di+'_'+ei+'_'+si+'" type="number" min="1" max="10" step=".5" inputmode="decimal" oninput="syncEffort('+di+','+ei+','+si+',\'rpe\')"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="9" step=".5" inputmode="decimal" oninput="syncEffort('+di+','+ei+','+si+',\'rir\')"></label></div>').join('');
-      return'<div class="exerciseCard"><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+targetRpe+' RPE / '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="changeSetCount('+di+','+ei+',-1)">− set</button><button onclick="changeSetCount('+di+','+ei+',1)">+ set</button><button onclick="swapExercise('+di+','+ei+')">Swap</button></div></div><div class="setRows">'+setRows+'</div></div>';
+      const targetRpe=Math.max(1,10-(x.rir??3)),prev=lastPerformance(x.name);
+      const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setBlock"><div class="setRow coachSetRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal" placeholder="'+(prev?.sets?.[si]?.weight??'')+'"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric" placeholder="'+(prev?.sets?.[si]?.reps??'')+'" oninput="liveSetCue('+di+','+ei+','+si+')"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="9" step=".5" inputmode="decimal" placeholder="'+(prev?.sets?.[si]?.rir??x.rir)+'" oninput="liveSetCue('+di+','+ei+','+si+')"></label><div class="derivedRpe">RPE ≈ <span id="derived_'+di+'_'+ei+'_'+si+'">'+targetRpe+'</span></div></div><div id="cue_'+di+'_'+ei+'_'+si+'" class="setCue">Previous: '+previousSetText(x.name,si)+'</div></div>').join('');
+      return'<div class="exerciseCard"><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR (≈ '+targetRpe+' RPE)</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="fillPrevious('+di+','+ei+')">Last workout</button><button onclick="changeSetCount('+di+','+ei+',-1)">− set</button><button onclick="changeSetCount('+di+','+ei+',1)">+ set</button><button onclick="swapExercise('+di+','+ei+')">Swap</button></div></div><div class="restButtons"><span>Rest timer</span><button onclick="startRestTimer(60)">1:00</button><button onclick="startRestTimer(90)">1:30</button><button onclick="startRestTimer(120)">2:00</button><button onclick="startRestTimer(180)">3:00</button></div><div class="setRows">'+setRows+'</div></div>';
     }).join('');
-    return'<div class="workout">'+sessionHeader+exercises+'<label class="sessionNote">Session notes<input id="sessionNotes_'+di+'" placeholder="Energy, pain, performance, technique notes..."></label><button class="primary fullBtn" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>';
+    const finish='<div class="workoutFinish"><div><span class="kicker">POST-WORKOUT</span><h4>How hard was the whole session?</h4><p>Session RPE is separate from set RIR. Rate the overall workout after you finish.</p></div><label><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" placeholder="1–10"></label></div><label class="sessionNote">Coach notes<input id="sessionNotes_'+di+'" placeholder="Performance, pain, pumps, technique, energy, anything unusual..."></label>';
+    return'<div class="workout"><div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div></div>'+exercises+finish+'<button class="primary fullBtn" onclick="logWorkout('+di+')">Finish & log '+d.name+'</button></div>';
   }).join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+(w.sessionRpe?'<div class="muted">Session RPE '+w.sessionRpe+(w.notes?' • '+escapeHtml(w.notes):'')+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+(s.rpe!=null?s.rpe+' RPE / ':'')+(s.rir!=null?s.rir+' RIR':'—')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><div class="row"><strong>'+w.date+' • '+w.workout+'</strong><span class="pill">'+(w.sessionRpe?'RPE '+w.sessionRpe:'Logged')+'</span></div>'+(w.volume?'<div class="muted">Volume '+Math.round(w.volume).toLocaleString()+' • readiness '+(w.readiness??'—')+'</div>':'')+(w.notes?'<div class="muted">'+escapeHtml(w.notes)+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+(s.rir!=null?' @ '+s.rir+' RIR':'')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
 function shiftLogDate(delta){
@@ -712,10 +769,10 @@ function renderDashboard(){
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function coachContext(){
   const t=trend(),x=currentLog(),m=state.macro,p=state.profile,work=todaysWorkout(),food=dayFoodTotals(today()),day=dayType(today()),activityKcal=activityCalories(today());
-  return{t,x,m,p,work,food,day,activityKcal};
+  return{t,x,m,p,work,food,day,activityKcal,readiness:readinessAdvice(),lastWorkout:state.workoutLogs[state.workoutLogs.length-1]||null};
 }
 function coachReply(q){
-  const {t,x,m,p,work,food,day,activityKcal}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
+  const {t,x,m,p,work,food,day,activityKcal,readiness,lastWorkout}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
   if(s.includes('chest pain')||s.includes('faint')||s.includes('passed out')||s.includes('severe pain'))return'I don’t want to coach through that symptom. Stop the session and get appropriate medical evaluation, especially for chest pain, fainting, trouble breathing, or severe/unusual symptoms.';
   if(s.includes('hungry')||s.includes('hunger'))return'Your hunger'+name+' should be interpreted with adherence and recovery, not in isolation. '+(x?.hunger>=8?'You logged high hunger today. ':'')+(t?.sleep&&t.sleep<6.5?'Sleep has also been low, which can amplify appetite. ':'')+'Keep protein on target, use high-volume produce and lean protein, distribute meals around the hardest part of your day, and don’t cut calories further just because hunger is present.';
   if(s.includes('stall')||s.includes('plateau')||s.includes('scale'))return t?'Your current trend is '+Math.abs(t.weekly).toFixed(2)+' lb/week '+(t.weekly>=0?'down':'up')+' with roughly '+(t.adh?t.adh.toFixed(0):'unknown')+'% adherence. '+(t.days<14?'That is not enough time for a confident plateau call yet. Keep collecting data.':t.adh<85?'I would fix execution before changing the prescription.':getAdjustment()?'Your data qualifies for a small target adjustment. Review the recommendation above.':'I would hold the plan right now; the data does not justify a change.'):'I need at least 7–14 days of weight and adherence data before calling a plateau.';
@@ -728,12 +785,15 @@ function coachReply(q){
   if(s.includes('meal')||s.includes('food')||s.includes('macro')||s.includes('protein'))return m?'Your target is '+m.calories+' kcal with '+m.protein+'g protein, '+m.carbs+'g carbs and '+m.fat+'g fat. Today you have logged '+Math.round(food.cal)+' kcal, '+Math.round(food.p)+'g protein, '+Math.round(food.c)+'g carbs and '+Math.round(food.f)+'g fat. '+(food.cal<m.calories?'You have about '+Math.max(0,Math.round(m.calories-food.cal))+' kcal remaining. ':'You are at or above the calorie target, so focus on accuracy rather than forcing extra food.')+' Use the Log tab for actual intake and the Meals tab for planning.':'Complete your profile first so I can coach against an actual calorie and macro target.';
   if(s.includes('travel')||s.includes('restaurant'))return'For travel, simplify the hierarchy: protein first, stay reasonably near calories, keep steps up, hydrate, and choose meals you can estimate. One imperfect travel meal matters far less than turning the entire trip into an untracked stretch.';
   if(s.includes('adjust')||s.includes('calorie')||s.includes('change plan')){const adj=getAdjustment();return adj?'Based on your logged trend and adherence, I’d propose '+(adj.delta>0?'+':'')+adj.delta+' kcal/day, bringing you to about '+adj.next+' kcal. You can apply that recommendation above.':'I would not adjust calories yet. The current data does not meet the beta’s threshold for a justified change.'}
+  if(s.includes('ready')||s.includes('readiness')||s.includes('train today'))return readiness.title+': '+readiness.text;
+  if(s.includes('rpe')||s.includes('rir'))return'Use RIR set by set because effort drifts as fatigue accumulates. For hypertrophy, the useful question is “how many clean reps were left?” PhysiqueOS converts that to approximate RPE automatically. Then rate one Session RPE after the workout to capture total difficulty. That gives useful detail without making you enter two redundant effort scores for every set.';
+  if(s.includes('next set')||s.includes('add weight'))return lastWorkout?'Use the live cue beneath each set. In general: if you hit the top of the rep range at or above target RIR, add a small amount of load; if you fall below the range near failure, reduce slightly; otherwise hold and beat reps or execution.':'Log a baseline workout first and I can anchor progression to your prior sets.';
   if(s.includes('progress')||s.includes('review')||s.includes('how am i doing'))return adaptive();
   return'Here’s how I’d think about it'+name+': anchor the decision to your current target, adherence, weight trend, training performance, steps, sleep, hunger and recovery rather than reacting to one day. Ask me something specific like “Should I change calories?”, “What should I do about hunger?”, “How are my steps?”, or “What should I train today?”';
 }
 function renderCoachChat(){
   if(!el('coachChat'))return;
-  if(!state.coachMessages.length)state.coachMessages=[{role:'coach',text:'I’m your PhysiqueOS coach. I can use the data you’ve logged here to help you interpret progress, nutrition, training, recovery, steps and hydration.'}];
+  if(!state.coachMessages.length){const r=readinessAdvice();state.coachMessages=[{role:'coach',text:'I’m your PhysiqueOS coach. I’m watching your nutrition, training, recovery, steps, hydration and trends together. '+(r.score!=null?'Today’s readiness is '+r.score+'/100. '+r.text:'Log today’s recovery metrics and I’ll start adjusting the day around you.')}];}
   el('coachChat').innerHTML=state.coachMessages.slice(-40).map(m=>'<div class="chatMsg '+m.role+'"><div class="chatMeta">'+(m.role==='coach'?'PHYSIQUEOS':'YOU')+'</div>'+escapeHtml(m.text)+'</div>').join('');
   el('coachChat').scrollTop=el('coachChat').scrollHeight;save();
 }
@@ -750,7 +810,7 @@ function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
 function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=20').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=21').catch(()=>{});
