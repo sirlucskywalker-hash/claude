@@ -415,7 +415,7 @@ function loadDailyMetrics(){
   el('dailyWeight').value=x?.weight?(metric?(x.weight/2.20462).toFixed(1):x.weight):'';
   el('dailyWaist').value=x?.waist?(metric?(x.waist*2.54).toFixed(1):x.waist):'';
   el('dailySteps').value=x?.steps||'';el('dailyWater').value=x?.water?(metric?(x.water/33.814).toFixed(1):x.water):'';el('dailySleep').value=x?.sleep||'';el('dailyRhr').value=x?.rhr||'';
-  el('dailyHunger').value=x?.hunger||'';el('dailyEnergy').value=x?.energy||'';el('dailyStress').value=x?.stress||'';el('dailyRecovery').value=x?.recovery||'';el('dailyDigestion').value=x?.digestion||'';el('dailySoreness').value=x?.soreness||'';el('dailyNotes').value=x?.notes||'';
+  el('dailyCalories').value=x?.calories||'';el('dailyAdherence').value=x?.adherence??'';el('dailyHunger').value=x?.hunger||'';el('dailyEnergy').value=x?.energy||'';el('dailyStress').value=x?.stress||'';el('dailyRecovery').value=x?.recovery||'';el('dailyDigestion').value=x?.digestion||'';el('dailySoreness').value=x?.soreness||'';el('dailyNotes').value=x?.notes||'';
   renderDailyMetricSummary(x);
 }
 function saveDailyMetrics(){
@@ -423,7 +423,9 @@ function saveDailyMetrics(){
   const next={...existing,date},w=val('dailyWeight'),waist=val('dailyWaist'),water=val('dailyWater');
   if(w!=null)next.weight=metric?w*2.20462:w;if(waist!=null)next.waist=metric?waist/2.54:waist;if(water!=null)next.water=metric?water*33.814:water;
   for(const [id,key] of [['dailySteps','steps'],['dailySleep','sleep'],['dailyRhr','rhr'],['dailyHunger','hunger'],['dailyEnergy','energy'],['dailyStress','stress'],['dailyRecovery','recovery'],['dailyDigestion','digestion'],['dailySoreness','soreness']]){const v=val(id);if(v!=null)next[key]=v}
-  next.notes=el('dailyNotes').value;const tot=dayFoodTotals(date);if(tot.cal)next.calories=Math.round(tot.cal);if(state.macro?.calories&&tot.cal)next.adherence=Math.round(clamp(100-Math.abs(tot.cal-state.macro.calories)/state.macro.calories*100,0,100));
+  next.notes=el('dailyNotes').value;const tot=dayFoodTotals(date),manualCalories=val('dailyCalories'),manualAdherence=val('dailyAdherence');
+  if(manualCalories!=null)next.calories=Math.round(manualCalories);else if(tot.cal)next.calories=Math.round(tot.cal);
+  if(manualAdherence!=null)next.adherence=clamp(Math.round(manualAdherence),0,100);else if(state.macro?.calories&&next.calories)next.adherence=Math.round(clamp(100-Math.abs(next.calories-state.macro.calories)/state.macro.calories*100,0,100));
   state.logs=state.logs.filter(x=>x.date!==date);state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));save();renderAll();
 }
 function renderDailyMetricSummary(x){
@@ -509,6 +511,22 @@ function todaysWorkout(){
   const pref=(state.profile.preferredDays||'').toLowerCase().split(',').map(x=>x.trim().slice(0,3));
   const idx=pref.indexOf(day);return idx>=0?state.trainingPlan[idx%state.trainingPlan.length]:state.trainingPlan[(new Date().getDay()+6)%state.trainingPlan.length];
 }
+function renderTodayMetricsSnapshot(){
+  if(!el('todayMetricsSnapshot'))return;
+  const x=currentLog()||{},metric=state.profile.units==='metric',food=dayFoodTotals(today());
+  const calories=x.calories??(food.cal?Math.round(food.cal):null);
+  const items=[
+    ['Steps',x.steps?x.steps.toLocaleString():'—'],
+    ['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—'],
+    ['Sleep',x.sleep?x.sleep+' h':'—'],
+    ['Weight',x.weight?(metric?(x.weight/2.20462).toFixed(1)+' kg':x.weight.toFixed(1)+' lb'):'—'],
+    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—'],
+    ['Adherence',x.adherence!=null?Math.round(x.adherence)+'%':'—'],
+    ['Hunger',x.hunger?x.hunger+'/10':'—'],
+    ['Energy',x.energy?x.energy+'/10':'—']
+  ];
+  el('todayMetricsSnapshot').innerHTML=items.map(v=>'<div class="snapshotMetric"><span>'+v[0]+'</span><strong>'+v[1]+'</strong></div>').join('');
+}
 function renderToday(){
   if(!state.profile.age){el('todayPanel').innerHTML='<div class="notice">Start with your profile. Once onboarding is complete, this becomes your personalized daily plan.</div>';return}
   const log=currentLog(),work=todaysWorkout(),dayIdx=(new Date().getDay()+6)%7,mealDay=state.mealPlan[dayIdx%Math.max(1,state.mealPlan.length)],meal=mealDay?.meals?.[0],food=dayFoodTotals(today());
@@ -532,7 +550,7 @@ function renderAdjustment(){
 function renderDashboard(){
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome, '+state.profile.name+'.':'Build your baseline';
-  const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore'))el('dailyScore').textContent=dailyScore();if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+' • '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderAdjustment();loadQuickMetrics();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
+  const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore'))el('dailyScore').textContent=dailyScore();if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+' • '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
 }
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function coachContext(){
@@ -576,4 +594,4 @@ function resetAll(){if(confirm('Erase all local coaching data? Progress photos s
 function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();loadDailyMetrics();renderCoachChat();renderAdjustment();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=16').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=17').catch(()=>{});
