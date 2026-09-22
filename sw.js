@@ -1,5 +1,5 @@
-const CACHE='physiqueos-v47';
-const ASSETS=['./','./index.html','./styles.css?v=47','./data.js?v=47','./app.js?v=47','./manifest.webmanifest'];
+const CACHE='physiqueos-v48';
+const ASSETS=['./','./index.html','./styles.css?v=48','./data.js?v=48','./app.js?v=48','./manifest.webmanifest'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))),self.clients.claim()])));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match('./index.html')));return}e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request)))});
