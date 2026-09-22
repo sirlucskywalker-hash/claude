@@ -179,7 +179,7 @@ async function showDeviceNotification(title,body,type){
     else new Notification(title,{body});
   }catch(e){console.warn('Notification failed',e)}
 }
-function toggleNotificationCenter(){el('notificationCenter')?.classList.toggle('hidden');renderNotificationCenter()}
+function toggleNotificationCenter(){closeAppMenu();el('notificationCenter')?.classList.toggle('hidden');renderNotificationCenter()}
 function markAllNotificationsRead(){state.notifications.forEach(x=>x.read=true);save();renderNotificationCenter()}
 function renderNotificationStatus(){
   const p=notificationPermission(),txt=p==='granted'?'Device alerts enabled':p==='denied'?'Blocked in browser':p==='unsupported'?'Unsupported here':'Enable notifications';
@@ -308,7 +308,8 @@ function toggleAppMenu(force){
   const open=typeof force==='boolean'?force:menu.classList.contains('hidden');
   menu.classList.toggle('hidden',!open);back.classList.toggle('hidden',!open);
   document.body.classList.toggle('menuOpen',open);
-  if(open)renderMenuProfile();
+  const trigger=el('menuTrigger');if(trigger)trigger.setAttribute('aria-expanded',open?'true':'false');
+  if(open){if(el('notificationCenter'))el('notificationCenter').classList.add('hidden');renderMenuProfile();}
 }
 function closeAppMenu(){toggleAppMenu(false)}
 function menuGo(id){closeAppMenu();showTab(id)}
@@ -1376,4 +1377,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=34').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=35').catch(()=>{});
