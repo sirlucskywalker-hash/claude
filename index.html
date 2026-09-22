@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=19">
+<link rel="stylesheet" href="styles.css?v=20">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -212,9 +212,16 @@
 <section id="nutrition" class="tab"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">ADAPTIVE TARGETS</span><h2>Nutrition</h2></div></div><div id="nutritionOut"></div></div></section>
 
 <section id="meals" class="tab">
-<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div><p>Generated from your macros, dietary needs, preferences, cooking tolerance, budget and meal style.</p>
-<button class="primary" onclick="generateMeals()">Generate / regenerate 7-day plan</button>
-<button onclick="openStores()">Stores near ZIP</button>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div>
+<p>Choose how you actually like to eat. PhysiqueOS redistributes the same daily calorie and macro targets across meals and snacks instead of forcing one meal frequency.</p>
+<div class="mealStructureControls">
+  <label>Main meals<select id="planMealsPerDay" onchange="previewMealStructure()"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+  <label>Snacks<select id="planSnacksPerDay" onchange="previewMealStructure()"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></label>
+  <label>Distribution<select id="mealDistribution" onchange="previewMealStructure()"><option value="balanced">Balanced</option><option value="largerDinner">Larger dinner</option><option value="largerBreakfast">Larger breakfast</option><option value="training">Training-focused</option></select></label>
+</div>
+<div id="mealStructurePreview" class="structurePreview"></div>
+<div class="buttons"><button class="primary" onclick="generateMeals()">Generate / regenerate 7-day plan</button><button onclick="openStores()">Stores near ZIP</button></div>
+<div class="notice mealTip"><strong>Per-day flexibility:</strong> after generation, each day has its own meal + snack controls. Change one day without changing the other six.</div>
 <div id="mealPlan"></div></div>
 <div class="grid2"><div class="card"><h3>Grocery plan</h3><div id="grocery"></div></div><div class="card"><h3>Replacement options</h3><div id="swaps"></div></div></div>
 </section>
@@ -273,5 +280,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=19"></script><script src="app.js?v=19"></script>
+<script src="data.js?v=20"></script><script src="app.js?v=20"></script>
 </body></html>
