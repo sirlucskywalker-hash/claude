@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=47">
+<link rel="stylesheet" href="styles.css?v=48">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -468,6 +468,31 @@
   <div id="swapPickerCount" class="swapPickerCount"></div>
   <div id="swapPickerOptions" class="swapPickerOptions"></div>
 </div>
+
+<div id="mealAddBackdrop" class="swapPickerBackdrop hidden" onclick="closeMealAdd()"></div>
+<div id="mealAddPicker" class="swapPicker mealAddPicker hidden" role="dialog" aria-modal="true" aria-labelledby="mealAddTitle">
+  <div class="swapPickerHead">
+    <div><span class="kicker">ADD TO MEAL</span><h3 id="mealAddTitle">Add another food</h3><p>Add cheese, sauces, toppings, fruit, sides, or anything else. PhysiqueOS can rebalance the meal to protect your targets.</p></div>
+    <button onclick="closeMealAdd()" aria-label="Close">×</button>
+  </div>
+  <div class="mealAddMode">
+    <label><input id="mealAddRebalance" type="checkbox" checked> Rebalance this meal to keep macros close</label>
+  </div>
+  <input id="mealAddSearch" type="search" placeholder="Search foods…" oninput="renderMealAddResults()">
+  <div id="mealAddResults" class="swapPickerOptions mealAddResults"></div>
+  <details class="customFoodBox">
+    <summary>Add a custom food</summary>
+    <div class="customFoodGrid">
+      <label>Name<input id="customFoodName" placeholder="e.g. shredded cheese"></label>
+      <label>Serving grams<input id="customFoodGrams" type="number" min="1" value="30"></label>
+      <label>Protein / 100g<input id="customFoodProtein" type="number" min="0" step=".1"></label>
+      <label>Carbs / 100g<input id="customFoodCarbs" type="number" min="0" step=".1"></label>
+      <label>Fat / 100g<input id="customFoodFat" type="number" min="0" step=".1"></label>
+    </div>
+    <button class="primary fullBtn" onclick="addCustomFoodToMeal()">Add custom food</button>
+  </details>
+</div>
+
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=47"></script><script src="app.js?v=47"></script>
+<script src="data.js?v=48"></script><script src="app.js?v=48"></script>
 </body></html>
