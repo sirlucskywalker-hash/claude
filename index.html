@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=35">
+<link rel="stylesheet" href="styles.css?v=36">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -67,7 +67,10 @@
 <main>
 <section id="dashboard" class="tab active">
   <div class="dashboardHero">
-    <div><div class="eyebrow" id="timeGreeting">YOUR DAILY COMMAND CENTER</div><h2 id="welcome">Build your baseline</h2><p id="heroSub">The more consistently you log, the smarter your plan becomes.</p></div>
+    <button class="welcomeProfileLink" onclick="showTab('onboarding')" aria-label="Open user profile">
+      <span id="heroProfilePhoto" class="heroProfilePhoto"><span>P</span></span>
+      <span class="welcomeProfileCopy"><span class="eyebrow" id="timeGreeting">YOUR DAILY COMMAND CENTER</span><strong id="welcome">Build your baseline</strong><small id="heroSub">The more consistently you log, the smarter your plan becomes.</small><em>View profile</em></span>
+    </button>
     <div class="heroScore"><span id="dailyScore">—</span><small>Daily score</small></div>
   </div>
 
@@ -262,6 +265,15 @@
 
 <section id="onboarding" class="tab">
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZATION</span><h2>Build your profile</h2></div></div>
+<div class="profileIdentity">
+  <div id="profilePhotoPreview" class="profilePhotoPreview"><span>P</span></div>
+  <div class="profilePhotoCopy"><strong>Your profile photo</strong><p>Add a photo from your camera or library. It stays on this device in the beta.</p>
+    <div class="buttons">
+      <label class="fileBtn profilePhotoButton">Take / choose photo<input id="profilePhotoInput" type="file" accept="image/*" capture="user" onchange="saveProfilePhoto(this)" hidden></label>
+      <button type="button" onclick="removeProfilePhoto()">Remove</button>
+    </div>
+  </div>
+</div>
 <div class="form">
 <label>Name<input id="name"></label><label>Age<input id="age" type="number"></label><label>Sex<select id="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
 <label>Units<select id="units" onchange="toggleUnits()"><option value="imperial">Imperial</option><option value="metric">Metric</option></select></label>
@@ -407,5 +419,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=35"></script><script src="app.js?v=35"></script>
+<script src="data.js?v=36"></script><script src="app.js?v=36"></script>
 </body></html>
