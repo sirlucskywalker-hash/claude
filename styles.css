@@ -92,3 +92,381 @@ footer{text-align:center;color:var(--muted2);font-size:10px;padding:12px 15px 40
 .runwayCoachNote{padding:10px 12px;margin:7px 0;border:1px solid rgba(79,140,255,.18);border-radius:12px;background:rgba(79,140,255,.04);font-size:10px;line-height:1.45;color:var(--muted)}.runwayCoachNote strong{color:#e9f1ff}.runwayItem em{display:block;font-style:normal;color:#7fa8ff;font-size:8px;margin-top:4px}.runwayRecommendations{margin-top:10px;padding:11px;border:1px solid var(--line);border-radius:12px;background:rgba(5,12,23,.45)}.runwayRecommendations>strong{font-size:10px}.runwayRecommendations p{font-size:9px;line-height:1.4;color:var(--muted);margin:5px 0}.driftCard{margin:14px 0;background:radial-gradient(circle at 8% 0,rgba(255,180,80,.07),transparent 28%),rgba(8,16,29,.82)}.driftStatus{min-width:92px;text-align:center;padding:10px;border:1px solid var(--line);border-radius:13px}.driftStatus strong,.driftStatus small{display:block}.driftStatus strong{font-size:11px}.driftStatus small{font-size:8px;color:var(--muted);margin-top:2px}.driftStatus.good{border-color:rgba(61,220,151,.28);background:rgba(61,220,151,.05)}.driftStatus.low{border-color:rgba(126,168,255,.25)}.driftStatus.medium{border-color:rgba(255,202,98,.34);background:rgba(255,202,98,.05)}.driftStatus.high{border-color:rgba(255,107,134,.4);background:rgba(255,107,134,.07)}.driftSignals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.driftSignal{padding:11px;border:1px solid var(--line);border-radius:12px;background:rgba(5,12,23,.45)}.driftSignal strong,.driftSignal span{display:block}.driftSignal strong{font-size:10px}.driftSignal span{font-size:9px;color:var(--muted);line-height:1.4;margin-top:4px}.driftSignal.s2{border-color:rgba(255,202,98,.25)}.driftSignal.s3{border-color:rgba(255,107,134,.32)}.driftSignal.good{border-color:rgba(61,220,151,.22)}.driftControls{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}.driftControls label{font-size:9px;color:var(--muted)}.driftIntervention{padding:12px 14px;border-radius:13px;border:1px solid rgba(79,140,255,.18);background:rgba(79,140,255,.04);margin:10px 0}.driftIntervention strong{font-size:9px;letter-spacing:.1em;color:#82aaff}.driftIntervention p{font-size:10px;color:#cbd7e9;line-height:1.5;margin:5px 0 0}
 @media(max-width:900px){.driftSignals{grid-template-columns:1fr 1fr}.driftControls{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.driftSignals,.driftControls{grid-template-columns:1fr}.driftStatus{margin-top:10px}}
+
+/* =========================================================
+   PHYSIQUEOS V29 — EXECUTIVE PERFORMANCE DESIGN SYSTEM
+   ========================================================= */
+:root{
+  --bg:#05070c;
+  --bg2:#080b12;
+  --surface:#0a0f18;
+  --surface2:#0d1420;
+  --surface3:#111b2a;
+  --surface4:#162235;
+  --text:#f7f9fd;
+  --muted:#8995a8;
+  --muted2:#5f6b7b;
+  --line:rgba(157,180,214,.105);
+  --lineStrong:rgba(157,180,214,.18);
+  --blue:#5b8cff;
+  --blue2:#7ea6ff;
+  --cyan:#72d8ff;
+  --violet:#8978ff;
+  --green:#4ee3a2;
+  --amber:#ffc86b;
+  --red:#ff6f8f;
+  --shadow:0 28px 90px rgba(0,0,0,.42);
+  --shadowSoft:0 14px 44px rgba(0,0,0,.24);
+  --radius:24px;
+  --radiusSm:16px;
+}
+html{background:#05070c;scroll-behavior:smooth}
+body{
+  min-height:100dvh;
+  background:
+    radial-gradient(1000px 600px at 16% -8%,rgba(84,129,255,.13),transparent 58%),
+    radial-gradient(800px 560px at 88% 4%,rgba(124,98,255,.08),transparent 58%),
+    linear-gradient(180deg,#060910 0%,#05070c 36%,#060910 100%);
+  color:var(--text);
+  letter-spacing:-.01em;
+  overflow-x:hidden;
+}
+.ambientGrid{
+  position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.34;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:linear-gradient(to bottom,black,transparent 78%);
+}
+::selection{background:rgba(91,140,255,.35);color:white}
+*{scrollbar-color:rgba(108,132,168,.35) transparent;scrollbar-width:thin}
+button,input,select,textarea{font-family:inherit}
+button,.fileBtn{
+  min-height:42px;
+  border:1px solid var(--lineStrong);
+  background:linear-gradient(180deg,rgba(24,34,51,.94),rgba(14,22,35,.96));
+  color:#eaf0f9;
+  border-radius:13px;
+  padding:10px 14px;
+  font-weight:650;
+  font-size:12px;
+  letter-spacing:-.01em;
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 8px 18px rgba(0,0,0,.14);
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+button:hover{border-color:rgba(126,166,255,.36);background:linear-gradient(180deg,rgba(31,44,66,.98),rgba(17,27,43,.98));box-shadow:inset 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.22)}
+button:active{transform:translateY(1px) scale(.99)}
+.primary{
+  border:1px solid rgba(132,169,255,.38);
+  background:linear-gradient(135deg,#4f7ef0 0%,#6557e9 52%,#764fe4 100%);
+  color:white;
+  box-shadow:0 12px 32px rgba(74,93,230,.24),inset 0 1px rgba(255,255,255,.18);
+}
+.primary:hover{background:linear-gradient(135deg,#5b89f7,#725ff0 58%,#8259eb);box-shadow:0 15px 38px rgba(74,93,230,.32)}
+input,select,textarea{
+  min-height:44px;
+  background:linear-gradient(180deg,rgba(7,12,20,.94),rgba(9,15,25,.94));
+  border:1px solid var(--lineStrong);
+  color:#f2f6fc;
+  border-radius:13px;
+  padding:11px 12px;
+  box-shadow:inset 0 1px rgba(255,255,255,.02);
+  transition:border-color .16s,box-shadow .16s,background .16s;
+}
+input:hover,select:hover,textarea:hover{border-color:rgba(134,158,197,.26)}
+input:focus,select:focus,textarea:focus{
+  border-color:rgba(103,149,255,.72);
+  box-shadow:0 0 0 4px rgba(91,140,255,.105),inset 0 1px rgba(255,255,255,.03);
+  background:#0a111d;
+}
+label{letter-spacing:.01em}
+.appHeader{
+  max-width:1460px;
+  margin:0 auto;
+  padding:22px 28px 18px;
+  display:flex;justify-content:space-between;align-items:center;gap:18px;
+}
+.brandBlock{gap:13px}
+.brandMark{
+  position:relative;width:46px;height:46px;border-radius:14px;
+  background:linear-gradient(145deg,#0e1c36,#18366b 56%,#5238b6);
+  border:1px solid rgba(131,169,255,.3);
+  box-shadow:0 14px 40px rgba(56,94,202,.2),inset 0 1px rgba(255,255,255,.16);
+  overflow:hidden;
+}
+.brandMark:after{content:"";position:absolute;inset:-35% 28% 45% -20%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.22),transparent);transform:rotate(22deg)}
+.brandMark span{position:relative;z-index:1;font-size:20px;font-weight:850;letter-spacing:-.08em}
+.brandCopy h1{font-size:23px;letter-spacing:-.055em;margin:1px 0 0;font-weight:780}
+.brandCopy p{font-size:10px;margin:3px 0 0;color:#738096}
+.eyebrow,.kicker{
+  font-size:8px;
+  letter-spacing:.19em;
+  color:#7fa7ff;
+  font-weight:800;
+}
+.headerActions{display:flex;align-items:center;gap:9px}
+.systemStatus{
+  display:flex;align-items:center;gap:8px;padding:8px 11px;
+  border:1px solid var(--line);border-radius:13px;background:rgba(9,15,25,.64);
+}
+.systemStatus>span{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(78,227,162,.07),0 0 16px rgba(78,227,162,.42)}
+.systemStatus strong,.systemStatus small{display:block}
+.systemStatus strong{font-size:9px}.systemStatus small{font-size:7px;color:var(--muted2);margin-top:1px}
+.iconButton{width:42px;min-width:42px;padding:0;display:grid;place-items:center}
+.iconButton svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.appNav{
+  position:sticky;top:10px;z-index:70;
+  max-width:1040px;margin:0 auto 18px;
+  padding:7px;
+  display:grid;grid-template-columns:repeat(9,1fr);gap:3px;
+  overflow:visible;
+  border:1px solid rgba(158,180,214,.11);
+  border-radius:18px;
+  background:rgba(8,12,19,.76);
+  backdrop-filter:blur(28px) saturate(150%);
+  -webkit-backdrop-filter:blur(28px) saturate(150%);
+  box-shadow:0 16px 50px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.025);
+}
+.appNav button{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  min-height:43px;padding:9px 10px;
+  border:1px solid transparent;border-radius:12px;
+  background:transparent;box-shadow:none;color:#7e8a9c;font-size:10px;font-weight:650;
+}
+.appNav button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.appNav button span{margin:0;color:inherit}
+.appNav button:hover{color:#c6d1e1;background:rgba(255,255,255,.025)}
+.appNav button.active{
+  color:#fff;
+  background:linear-gradient(180deg,rgba(82,128,242,.19),rgba(70,96,181,.09));
+  border-color:rgba(111,155,255,.24);
+  box-shadow:inset 0 1px rgba(255,255,255,.055),0 8px 18px rgba(28,49,103,.16);
+}
+.appNav button.active svg{color:#83a8ff;filter:drop-shadow(0 0 8px rgba(91,140,255,.35))}
+main{max-width:1380px;padding:6px 28px 96px}
+.tab.active{animation:premiumIn .32s cubic-bezier(.2,.7,.2,1)}
+@keyframes premiumIn{from{opacity:0;transform:translateY(8px) scale(.997)}to{opacity:1;transform:none}}
+
+.dashboardHero{
+  isolation:isolate;
+  min-height:205px;
+  padding:34px 36px;
+  margin:8px 0 18px;
+  border:1px solid rgba(130,158,202,.14);
+  border-radius:30px;
+  background:
+    radial-gradient(520px 220px at 92% 24%,rgba(99,126,255,.17),transparent 68%),
+    linear-gradient(128deg,rgba(16,25,40,.96),rgba(8,13,22,.98) 62%);
+  box-shadow:0 30px 88px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.035);
+}
+.dashboardHero:before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(115deg,rgba(255,255,255,.018),transparent 35%)}
+.dashboardHero:after{width:420px;height:420px;right:-150px;top:-230px;background:radial-gradient(circle,rgba(91,140,255,.22),transparent 66%)}
+.dashboardHero h2{font-size:clamp(32px,5vw,54px);line-height:.98;letter-spacing:-.055em;margin:9px 0 12px;font-weight:760}
+.dashboardHero p{font-size:13px;line-height:1.6;color:#93a0b3}
+.compactHero{min-height:auto;padding:25px 28px}
+.compactHero h2{font-size:32px}
+.heroScore{
+  --score:0%;
+  position:relative;width:126px;height:126px;padding:6px;border-radius:50%;
+  background:conic-gradient(#6b96ff var(--score),rgba(121,147,188,.11) var(--score));
+  box-shadow:0 18px 45px rgba(38,64,140,.2);
+}
+.heroScore:before{
+  content:"";position:absolute;inset:7px;border-radius:50%;
+  background:radial-gradient(circle at 42% 30%,#15233a,#090f19 72%);
+  border:1px solid rgba(152,180,224,.12);
+}
+.heroScore span,.heroScore small{position:relative;z-index:1}
+.heroScore span{font-size:35px;letter-spacing:-.06em}
+.heroScore small{font-size:7px;letter-spacing:.14em}
+
+.premiumCard,.card,.coachShell{
+  position:relative;
+  border:1px solid rgba(148,170,204,.105);
+  background:
+    linear-gradient(180deg,rgba(13,20,32,.92),rgba(8,13,22,.94));
+  border-radius:24px;
+  padding:22px;
+  margin-bottom:14px;
+  box-shadow:0 16px 48px rgba(0,0,0,.18),inset 0 1px rgba(255,255,255,.025);
+}
+.premiumCard:before,.card:before,.coachShell:before{
+  content:"";position:absolute;pointer-events:none;inset:0;border-radius:inherit;
+  background:linear-gradient(115deg,rgba(255,255,255,.014),transparent 26%);
+}
+.sectionHead{margin-bottom:18px;align-items:center}
+.sectionHead h2,.sectionHead h3{letter-spacing:-.035em;font-weight:720}
+.sectionHead h2{font-size:25px}.sectionHead h3{font-size:18px}
+.sectionHead p{line-height:1.55}
+.muted{color:#8290a4!important}
+
+.todayGrid,.grid2{gap:14px}
+.quickLogCard,.focusCard{min-height:100%}
+.todayMetricsSnapshot{gap:7px}
+.snapshotMetric,.summaryGrid>div,.metricCard{
+  position:relative;overflow:hidden;
+  background:linear-gradient(180deg,rgba(15,24,38,.74),rgba(8,14,23,.78));
+  border:1px solid rgba(153,176,211,.10);
+  box-shadow:inset 0 1px rgba(255,255,255,.02);
+}
+.snapshotMetric:after,.metricCard:after{content:"";position:absolute;inset:auto -20% -80% 35%;height:90px;background:radial-gradient(circle,rgba(91,140,255,.07),transparent 68%);pointer-events:none}
+.snapshotMetric span,.metricCard small{font-size:8px;text-transform:uppercase;letter-spacing:.09em;color:#69778c}
+.snapshotMetric strong{font-size:17px;letter-spacing:-.035em}
+.metricStrip{gap:9px;margin:14px 0 18px}
+.metricCard{padding:18px 17px;border-radius:18px}
+.metricIcon{width:30px;height:30px;border:1px solid rgba(107,150,255,.14);background:linear-gradient(180deg,rgba(91,140,255,.13),rgba(91,140,255,.05));font-size:13px;margin-bottom:17px}
+.metricCard strong{font-size:27px;letter-spacing:-.055em;font-weight:740}.metricCard em{font-size:8px}
+.todayItem{padding:13px 0}.todayItem div{font-size:12px}.todayItem strong{font-size:11px}
+
+.scheduleCard,.driftCard{overflow:hidden}
+.scheduleCard:after,.driftCard:after{content:"";position:absolute;width:220px;height:220px;border-radius:50%;right:-110px;top:-130px;background:radial-gradient(circle,rgba(83,132,255,.09),transparent 68%);pointer-events:none}
+.scheduleGrid,.driftControls{gap:7px}
+.scheduleGrid label,.driftControls label,.form label,.metricEntryGrid label,.activityForm label,.mealStructureControls label,.dayStructure label{font-size:8px;text-transform:uppercase;letter-spacing:.075em;color:#718096}
+.scheduleGrid input,.scheduleGrid select,.driftControls select{margin-top:6px}
+.scheduleBody{gap:10px}
+.dailyRunway,.adherenceNudge,.runwayRecommendations,.runwayCoachNote,.driftIntervention{background:rgba(6,11,19,.55);border-color:rgba(145,169,204,.095)}
+.runwayItem{padding:12px 13px;border-color:rgba(145,169,204,.075)}
+.runwayItem>span{font-variant-numeric:tabular-nums;color:#84a9ff}
+.runwayItem strong{font-size:10px}.runwayItem small{font-size:8px}
+.driftSignals{gap:7px}.driftSignal{background:rgba(6,11,19,.52);padding:12px}
+.driftStatus{background:rgba(7,12,20,.6)}
+
+.foodLogTabs{
+  display:flex;gap:4px;padding:4px;border:1px solid var(--line);
+  border-radius:14px;background:rgba(5,10,17,.62);margin-bottom:12px;
+}
+.foodLogTabs button{flex:1;border:0;background:transparent;box-shadow:none;min-height:36px;padding:8px;font-size:9px;color:#748196}
+.foodLogTabs button.active{background:linear-gradient(180deg,rgba(89,135,244,.17),rgba(89,135,244,.07));color:#e8effb;border:1px solid rgba(112,156,255,.18);box-shadow:inset 0 1px rgba(255,255,255,.035)}
+.foodLogger,.savedFoodLogger,.trainingCheck,.exerciseIssue,.executionGuide,.dayStructure{
+  border-color:rgba(145,169,204,.095)!important;
+  background:rgba(6,11,19,.48)!important;
+}
+.foodLogger{padding:13px;border-radius:17px}
+.diaryMeal{border-color:rgba(145,169,204,.08)}
+.diaryEntry{padding:11px 0}
+.diaryEntry strong{font-size:11px}.diaryEntry small{font-size:9px}
+.recentChips button{background:rgba(12,20,32,.72);font-size:9px;min-height:34px}
+
+.form{gap:10px}
+.form fieldset{border-color:rgba(145,169,204,.1)!important;background:rgba(7,12,20,.45)}
+.safety{background:rgba(255,111,143,.028)}
+textarea{min-height:96px}
+.rangeField input[type="range"]{accent-color:#719aff}
+.rangeField input[type="range"]::-webkit-slider-runnable-track{background:linear-gradient(90deg,rgba(91,140,255,.75),rgba(137,120,255,.34))}
+.rangeField input[type="range"]::-webkit-slider-thumb{background:#f7f9fd;border-color:#6f96f7;box-shadow:0 0 0 4px rgba(91,140,255,.08),0 4px 14px rgba(0,0,0,.35)}
+
+.workout{
+  border:1px solid rgba(149,172,210,.11);
+  border-radius:25px!important;
+  background:linear-gradient(180deg,rgba(12,19,31,.94),rgba(7,12,20,.96))!important;
+  padding:18px!important;
+  box-shadow:0 18px 58px rgba(0,0,0,.22);
+}
+.workoutHeader{
+  position:relative!important;top:auto!important;
+  padding:4px 2px 14px!important;background:transparent!important;border:0!important;border-radius:0!important;
+  border-bottom:1px solid rgba(145,169,204,.08)!important;
+}
+.workoutHeader h3{font-size:21px;letter-spacing:-.045em}
+.exerciseCard{
+  margin-top:12px!important;padding:15px!important;
+  border:1px solid rgba(145,169,204,.09)!important;
+  border-radius:18px!important;background:rgba(7,12,20,.48)!important;
+}
+.exName strong{font-size:14px;letter-spacing:-.025em}.exName small{font-size:9px;line-height:1.5}
+.coachSetRow{gap:6px}
+.coachSetRow label{font-size:7px;text-transform:uppercase;letter-spacing:.08em}
+.coachSetRow input{min-height:40px;padding:8px 7px;text-align:center;font-weight:650;font-variant-numeric:tabular-nums}
+.setCue{font-size:8px}
+.restButtons button,.exerciseActions button,.workoutFavoriteControls button{min-height:33px;padding:6px 9px;font-size:8px}
+.executionGuide summary,.trainingCheck summary,.exerciseIssue summary{padding:12px 13px}
+.guideGrid>div{background:rgba(5,9,15,.45);border-color:rgba(145,169,204,.075)}
+
+.coachShell{overflow:hidden}
+.coachShell:after{content:"";position:absolute;right:-110px;top:-130px;width:280px;height:280px;background:radial-gradient(circle,rgba(104,92,255,.09),transparent 68%);pointer-events:none}
+.coachChat{background:rgba(5,10,17,.56)!important;border-color:rgba(145,169,204,.09)!important;border-radius:18px!important}
+.chatMsg{border-radius:16px!important;font-size:11px!important;line-height:1.55!important}
+.chatMsg.coach{background:linear-gradient(180deg,rgba(22,34,55,.9),rgba(13,22,36,.92))!important;border:1px solid rgba(106,148,244,.14)!important}
+.chatMsg.user{background:linear-gradient(135deg,rgba(76,116,220,.24),rgba(84,67,194,.22))!important;border:1px solid rgba(116,153,246,.18)!important}
+.chatMeta{font-size:7px!important;letter-spacing:.13em!important}
+.faqPanel{background:rgba(5,10,17,.4);border-color:rgba(145,169,204,.08)}
+
+.notice,.coachInsight,.issueRecommendation,.coachModification{
+  border-color:rgba(111,153,245,.16);
+  background:linear-gradient(180deg,rgba(84,126,224,.06),rgba(65,89,151,.025));
+}
+.pill,.betaBadge,.estimateBadge,.readOnlyBadge,.liveDot{
+  border-radius:999px;
+  font-size:7px!important;
+  letter-spacing:.11em!important;
+  padding:6px 8px!important;
+  font-weight:800!important;
+}
+.emptyState{border-color:rgba(145,169,204,.12);color:#6f7c90;background:rgba(5,10,17,.25)}
+table{border-collapse:separate;border-spacing:0;width:100%;overflow:hidden;border:1px solid rgba(145,169,204,.09);border-radius:14px}
+th,td{padding:11px 10px!important;border-bottom:1px solid rgba(145,169,204,.07)!important;font-size:9px!important}
+th{color:#728096!important;text-transform:uppercase;letter-spacing:.07em;background:rgba(5,10,17,.4)}
+tr:last-child td{border-bottom:0!important}
+canvas{border-radius:14px}
+.integrationCard{background:linear-gradient(180deg,rgba(10,17,28,.82),rgba(7,12,20,.82));border-color:rgba(145,169,204,.095);padding:16px}
+.integrationCard strong{font-size:12px}.integrationCard span{font-size:9px}.integrationCard em{margin-top:9px}
+
+@media(min-width:1180px){
+  .appHeader{padding-top:24px}
+  main{padding-left:34px;padding-right:34px}
+}
+@media(max-width:980px){
+  .appNav{margin:0 18px 16px;grid-template-columns:repeat(9,minmax(82px,1fr));overflow-x:auto;justify-content:flex-start}
+  .appNav button{min-width:82px}
+  main{padding-left:18px;padding-right:18px}
+  .appHeader{padding-left:18px;padding-right:18px}
+}
+@media(max-width:760px){
+  body{padding-bottom:76px}
+  .appHeader{padding:14px 16px 10px}
+  .brandMark{width:42px;height:42px}.brandCopy h1{font-size:20px}.brandCopy p,.systemStatus{display:none}
+  .appNav{
+    position:fixed;z-index:90;left:10px;right:10px;bottom:10px;top:auto;
+    margin:0;max-width:none;padding:5px;
+    display:grid;grid-template-columns:repeat(5,1fr);
+    border-radius:18px;
+    background:rgba(7,11,18,.9);
+    box-shadow:0 18px 70px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.035);
+  }
+  .appNav button{min-width:0;min-height:50px;padding:6px 3px;gap:3px;flex-direction:column;font-size:7px;border-radius:12px}
+  .appNav button svg{width:17px;height:17px}
+  .appNav button:nth-child(n+6){display:none}
+  body[data-view="training"] .appNav button[data-tab="training"],
+  body[data-view="progress"] .appNav button[data-tab="progress"],
+  body[data-view="coach"] .appNav button[data-tab="coach"],
+  body[data-view="data"] .appNav button[data-tab="data"]{display:flex}
+  body[data-view="training"] .appNav button[data-tab="onboarding"],
+  body[data-view="progress"] .appNav button[data-tab="onboarding"],
+  body[data-view="coach"] .appNav button[data-tab="onboarding"],
+  body[data-view="data"] .appNav button[data-tab="onboarding"]{display:none}
+  main{padding:4px 14px 28px}
+  .dashboardHero{min-height:170px;padding:23px 21px;border-radius:24px}
+  .dashboardHero h2{font-size:33px}.dashboardHero p{font-size:11px}
+  .heroScore{width:94px;height:94px}.heroScore span{font-size:27px}
+  .premiumCard,.card,.coachShell{padding:17px;border-radius:20px}
+  .metricStrip{grid-template-columns:1fr 1fr}
+  .metricCard{padding:15px}.metricCard strong{font-size:24px}
+  .todayGrid,.grid2{grid-template-columns:1fr}
+  .sectionHead{align-items:flex-start}
+  .scheduleGrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .headerActions .iconButton{width:38px;min-width:38px;min-height:38px}
+  .dashboardHero{gap:12px}
+  .dashboardHero h2{font-size:29px}
+  .heroScore{width:84px;height:84px}.heroScore span{font-size:24px}
+  .todayMetricsSnapshot{grid-template-columns:1fr 1fr}
+  .snapshotMetric{padding:11px}
+  .scheduleGrid,.driftControls,.form,.metricEntryGrid,.activityForm,.mealStructureControls{grid-template-columns:1fr 1fr!important}
+  .wide,.form .wide{grid-column:1/-1!important}
+  .scheduleActions{display:grid;grid-template-columns:1fr 1fr}
+  .scheduleActions button{width:100%}
+  .workout{padding:14px!important}.exerciseCard{padding:12px!important}
+}
