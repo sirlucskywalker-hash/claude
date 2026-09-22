@@ -306,7 +306,7 @@ function progression(name,min,max,targetRir){
 }
 function logWorkout(di){
   const day=state.trainingPlan[di];if(!day)return;
-  const exercises=day.items.map((x,ei)=>({name:x.name,weight:+el('w_'+di+'_'+ei).value||0,reps:+el('r_'+di+'_'+ei).value||0,rir:+el('rir_'+di+'_'+ei).value||0})).filter(x=>x.reps>0);
+  const exercises=day.items.map((x,ei)=>({name:x.name,sets:+el('s_'+di+'_'+ei).value||x.sets,weight:+el('w_'+di+'_'+ei).value||0,reps:+el('r_'+di+'_'+ei).value||0,rir:+el('rir_'+di+'_'+ei).value||0})).filter(x=>x.reps>0);
   if(!exercises.length)return alert('Enter at least one exercise result.');
   state.workoutLogs.push({date:today(),workout:day.name,exercises});save();renderTraining();alert('Workout logged. Progression guidance updated.');
 }
@@ -314,7 +314,7 @@ function renderTraining(){
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
   el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>'<div class="workout"><div class="row"><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div>'+d.items.map((x,ei)=>'<div class="exerciseLog"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><label>Load<input id="w_'+di+'_'+ei+'" type="number" step=".5"></label><label>Reps<input id="r_'+di+'_'+ei+'" type="number"></label><label>RIR<input id="rir_'+di+'_'+ei+'" type="number" min="0" max="6"></label></div>').join('')+'<button class="primary" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>').join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong><div>'+w.exercises.map(x=>x.name+': '+x.weight+' × '+x.reps+' @ '+x.rir+' RIR').join('<br>')+'</div></div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong><div>'+w.exercises.map(x=>x.name+': '+x.sets+' sets • '+x.weight+' × '+x.reps+' @ '+x.rir+' RIR').join('<br>')+'</div></div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
 function saveLog(){
