@@ -291,7 +291,8 @@ function generateTraining(){
   state.trainingPlan=split(state.profile.days||4).map((d,di)=>({name:d[0],preferredDay:(state.profile.preferredDays||'').split(',')[di]?.trim()||'',items:d[1].slice(0,limit).map((m,i)=>{
     const compound=['chest','back','quads','hamstrings','glutes'].includes(m),range=goal==='strength'&&compound?[4,8]:goal==='performance'&&compound?[5,10]:compound?[6,12]:[10,20];
     return{name:chooseEx(m,di+i),sets:baseSets,minReps:range[0],maxReps:range[1],rir:exp==='advanced'?2:3};
-  }))}));
+  })
+}));
   save();renderTraining();
 }
 function lastExerciseLogs(name){return state.workoutLogs.flatMap(w=>w.exercises||[]).filter(x=>x.name===name).slice(-2)}
