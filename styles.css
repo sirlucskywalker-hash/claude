@@ -1281,3 +1281,6 @@ button,.fileBtn{letter-spacing:-.012em}
 .swapFilters{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.swapFilters button{min-height:34px;padding:7px 6px;font-size:7.5px;box-shadow:none;background:rgba(7,12,20,.55)}.swapFilters button.active{color:#fff;border-color:rgba(126,160,242,.24);background:linear-gradient(180deg,rgba(79,116,220,.19),rgba(47,66,118,.13))}
 .swapPickerCount{font-size:7.5px;color:var(--muted2);margin:8px 2px 7px;text-transform:uppercase;letter-spacing:.07em}
 @media(max-width:560px){.swapFilters{grid-template-columns:1fr 1fr}}
+
+/* V47 all-compatible swaps */
+.swapScopeNote{font-size:8px;line-height:1.45;color:var(--muted);padding:8px 10px;border:1px solid rgba(155,179,216,.07);border-radius:11px;background:rgba(5,9,15,.42)}
