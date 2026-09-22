@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -70,7 +70,8 @@
 
   <div class="grid2">
     <div class="premiumCard">
-      <div class="sectionHead"><div><span class="kicker">FOOD DIARY</span><h3>Today’s nutrition</h3></div><input id="foodLogDate" class="dateCompact" type="date" onchange="renderFoodDiary();loadDailyMetrics()"></div>
+      <div class="sectionHead"><div><span class="kicker">FOOD DIARY</span><h3>Daily nutrition</h3></div>
+<div class="dateNavigator"><button onclick="shiftLogDate(-1)">‹</button><input id="foodLogDate" class="dateCompact" type="date" onchange="renderAll()"><button onclick="setLogDateToday()">Today</button><button onclick="shiftLogDate(1)">›</button></div></div>
       <div id="macroProgress" class="macroProgress"></div>
       <div class="foodLogTabs">
         <button class="active" type="button" onclick="setFoodLogMode('database',this)">Food database</button>
@@ -78,7 +79,7 @@
       </div>
       <div id="foodDbLogger" class="foodLogger">
         <label>Meal<select id="foodMealSlot"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Pre-workout</option><option>Post-workout</option></select></label>
-        <label>Food<select id="foodSelect"></select></label>
+        <label>Find food<input id="foodSearch" placeholder="Search foods..." oninput="filterFoodSelect()"></label><label>Food<select id="foodSelect"></select></label>
         <label>Amount (g)<input id="foodGrams" type="number" value="100" step="5" min="1"></label>
         <button class="primary" onclick="addDatabaseFood()">Add food</button>
       </div>
@@ -91,7 +92,7 @@
         <label>Fat (g)<input id="customFat" type="number" min="0"></label>
         <button class="primary" onclick="addCustomFood()">Add entry</button>
       </div>
-      <div id="foodDiary"></div>
+      <div id="recentFoods" class="recentFoods"></div><div id="foodDiary"></div>
     </div>
 
     <div class="premiumCard">
@@ -177,6 +178,7 @@
 <label>Cardio preference<select id="cardioPreference"><option value="walking">Walking / steps</option><option value="steady">Steady-state cardio</option><option value="intervals">Intervals</option><option value="mixed">Mixed</option><option value="minimal">Minimal cardio</option></select></label>
 <label>Daily step goal<input id="stepGoal" type="number" value="8000" step="500"></label>
 <label>Daily water goal <span id="waterGoalUnit">oz</span><input id="waterGoal" type="number" value="100" step="5"></label>
+<label>Sleep goal (hours)<input id="sleepGoal" type="number" value="7.5" step=".5" min="5" max="12"></label>
 
 <label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
 <label>Meal style<select id="mealStyle"><option value="structured">Structured</option><option value="hybrid" selected>Hybrid</option><option value="flexible">Flexible</option></select></label>
@@ -228,8 +230,11 @@
   <p>Use Daily Log for everyday data. Use this deeper check-in for measurements, subjective recovery and progress review.</p>
 </div>
 <div class="card"><h2>Deep check-in</h2><div class="form">
-<label>Date<input id="logDate" type="date"></label><label>Weight <span class="muted">(your selected units)</span><input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label>
-<label>Chest<input id="logChest" type="number" step=".1"></label><label>Arm<input id="logArm" type="number" step=".1"></label><label>Thigh<input id="logThigh" type="number" step=".1"></label>
+<label>Date<input id="logDate" type="date"></label><label>Weight <span class="muted">(selected units)</span><input id="logWeight" type="number" step=".1"></label><label>Body fat % <span class="muted">optional</span><input id="logBodyFat" type="number" step=".1"></label>
+<label>Neck<input id="logNeck" type="number" step=".1"></label><label>Shoulders<input id="logShoulders" type="number" step=".1"></label><label>Chest<input id="logChest" type="number" step=".1"></label>
+<label>Waist<input id="logWaist" type="number" step=".1"></label><label>Hips<input id="logHips" type="number" step=".1"></label><label>Left arm<input id="logArmL" type="number" step=".1"></label>
+<label>Right arm<input id="logArmR" type="number" step=".1"></label><label>Left thigh<input id="logThighL" type="number" step=".1"></label><label>Right thigh<input id="logThighR" type="number" step=".1"></label>
+<label>Left calf<input id="logCalfL" type="number" step=".1"></label><label>Right calf<input id="logCalfR" type="number" step=".1"></label>
 <label>Steps<input id="logSteps" type="number"></label><label>Water <span class="muted">(oz or L)</span><input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
 <label>Calories eaten<input id="logCalories" type="number"></label><label>Adherence %<input id="logAdherence" type="number" min="0" max="100"></label>
 <label>Hunger 1–10<input id="logHunger" type="number" min="1" max="10"></label><label>Energy 1–10<input id="logEnergy" type="number" min="1" max="10"></label><label>Stress 1–10<input id="logStress" type="number" min="1" max="10"></label>
@@ -237,6 +242,7 @@
 <label>Training performance<select id="logPerformance"><option value="">—</option><option value="down">Down</option><option value="same">Stable</option><option value="up">Improving</option></select></label>
 <label class="wide">Notes<textarea id="logNotes"></textarea></label></div>
 <button class="primary" onclick="saveLog()">Save check-in</button></div>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">WEEKLY REVIEW</span><h3>Seven-day intelligence</h3></div><button onclick="renderWeeklyReview()">Refresh</button></div><div id="weeklyReview"></div></div>
 <div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p><div class="notice"><strong>Full-version vision analysis:</strong> planned photo-based meal estimation, physique change analysis, standardized comparison overlays and confidence-aware recommendations. Beta stores photos only and does not pretend to infer body fat from an image.</div>
 <div class="form"><label>Date<input id="photoDate" type="date"></label><label>Front<input id="photoFront" type="file" accept="image/*"></label><label>Side<input id="photoSide" type="file" accept="image/*"></label><label>Back<input id="photoBack" type="file" accept="image/*"></label></div>
 <button onclick="savePhotos()">Save photo set</button><div id="photoGallery" class="photoGrid"></div></div>
@@ -267,5 +273,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=18"></script><script src="app.js?v=18"></script>
+<script src="data.js?v=19"></script><script src="app.js?v=19"></script>
 </body></html>
