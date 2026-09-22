@@ -539,15 +539,63 @@ function buildMealDay(dayIndex,meals,snacks,distribution){
   const parts=mealStructure(meals,snacks,distribution);
   return{day:dayIndex+1,meals:parts.map((p,i)=>buildMeal(dayIndex,i,p.share,p.kind,p.label)),prefs:{meals:+meals,snacks:+snacks,distribution}};
 }
+function saveMealBudget(){
+  if(!el('mealBudget'))return;
+  state.profile.budget=Math.max(0,+el('mealBudget').value||0);
+  if(el('budget'))el('budget').value=state.profile.budget||'';
+  save();
+}
+function estimateMealPlanCost(days){
+  let total=0;
+  (days||[]).forEach(d=>(d.meals||[]).forEach(m=>(m.items||[]).forEach(x=>{
+    const f=FOOD_DB.find(z=>z.name===x.name);
+    const price=Number(x.price??f?.price)||0;
+    total+=(Number(x.g)||0)/1000*price;
+  })));
+  return total;
+}
+function cheapestCompatible(item){
+  const current=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat);
+  const options=pool(item.cat).filter(x=>x&&x.name!==item.name&&Number(x.price)>=0).sort((a,b)=>(a.price||0)-(b.price||0));
+  if(!options.length)return null;
+  const next=options[0];
+  let g=Number(item.g)||0;
+  if(key&&current&&next[key]>0){const target=(current[key]||0)*g/100;g=gramsFor(next,key,target)}
+  return{name:next.name,g,cat:item.cat,price:next.price};
+}
+function optimizeBudget(days){
+  const budget=Number(state.profile.budget)||0;
+  if(!budget)return days;
+  let plan=JSON.parse(JSON.stringify(days)),cost=estimateMealPlanCost(plan);
+  if(cost<=budget)return plan;
+  const candidates=[];
+  plan.forEach((d,di)=>(d.meals||[]).forEach((m,mi)=>(m.items||[]).forEach((item,ii)=>{
+    const alt=cheapestCompatible(item);if(!alt)return;
+    const curPrice=Number(item.price??FOOD_DB.find(x=>x.name===item.name)?.price)||0;
+    const oldCost=(Number(item.g)||0)/1000*curPrice,newCost=(Number(alt.g)||0)/1000*(Number(alt.price)||0);
+    const savings=oldCost-newCost;
+    if(savings>.01)candidates.push({di,mi,ii,alt,savings});
+  })));
+  candidates.sort((x,y)=>y.savings-x.savings);
+  for(const c of candidates){
+    if(cost<=budget)break;
+    plan[c.di].meals[c.mi].items[c.ii]=c.alt;
+    plan[c.di].meals[c.mi].sum=sumMeal(plan[c.di].meals[c.mi].items);
+    cost-=c.savings;
+  }
+  plan.budgetEstimate=estimateMealPlanCost(plan);
+  return plan;
+}
 function generateMeals(){
   try{
     if(safetyBlockers(state.profile).length)return alert('Meal-plan automation is paused by the safety screening.');
     if(!state.macro)return alert('Complete onboarding first.');
+    saveMealBudget();
     const meals=+el('planMealsPerDay').value||Number(state.profile.meals)||4,snacks=+el('planSnacksPerDay').value||0,distribution=el('mealDistribution').value||'balanced';
     state.mealPrefs={meals,snacks,distribution};state.dayMealPrefs={};
     const days=[];for(let d=0;d<7;d++)days.push(buildMealDay(d,meals,snacks,distribution));
     state.mealPlan=optimizeBudget(days);save();renderMeals();
-  }catch(e){console.error(e);el('mealPlan').innerHTML='<div class="notice dangerNotice">Meal generator error: '+String(e.message||e)+'</div>'}
+  }catch(e){console.error(e);el('mealPlan').innerHTML='<div class="notice dangerNotice"><strong>We couldn’t build the meal plan yet.</strong><br>'+String(e.message||e)+'<br><small>Your settings were saved. Try Generate again.</small></div>'}
 }
 function rebuildMealDay(di){
   try{
@@ -592,6 +640,7 @@ function displayPackage(g,packs){
   return packs+' × '+displayGroceryWeight(g);
 }
 function renderMeals(){
+  if(el('mealBudget'))el('mealBudget').value=state.profile.budget||'';
   if(el('planMealsPerDay'))el('planMealsPerDay').value=state.mealPrefs.meals||state.profile.meals||4;
   if(el('planSnacksPerDay'))el('planSnacksPerDay').value=state.mealPrefs.snacks??1;
   if(el('mealDistribution'))el('mealDistribution').value=state.mealPrefs.distribution||'balanced';
@@ -1432,4 +1481,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=40').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=41').catch(()=>{});
