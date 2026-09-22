@@ -502,26 +502,45 @@ function sumMeal(items){
   return total;
 }
 function targetMealMacros(share){const m=state.macro;return{p:m.protein*share,c:m.carbs*share,f:m.fat*share,k:m.calories*share}}
-function tuneMealItems(items,share){
-  const target=targetMealMacros(share),out=items.map(x=>({...x}));
-  const idxFor=cat=>out.findIndex(x=>x.cat===cat);
-  for(let pass=0;pass<7;pass++){
-    const total=sumMeal(out);
-    for(const [cat,key] of [['protein','p'],['carb','c'],['fat','f']]){
-      const idx=idxFor(cat);if(idx<0)continue;
-      const food=FOOD_DB.find(z=>z.name===out[idx].name);if(!food||!food[key])continue;
-      const error=target[key]-total[key];
-      const delta=(error/(food[key]/100));
-      out[idx].g=Math.max(5,Math.round((out[idx].g+delta)/5)*5);
-    }
+function solve3x3(A,b){
+  const m=A.map((r,i)=>[...r,b[i]]);
+  for(let col=0;col<3;col++){
+    let pivot=col;for(let r=col+1;r<3;r++)if(Math.abs(m[r][col])>Math.abs(m[pivot][col]))pivot=r;
+    if(Math.abs(m[pivot][col])<1e-8)return null;
+    [m[col],m[pivot]]=[m[pivot],m[col]];
+    const div=m[col][col];for(let j=col;j<4;j++)m[col][j]/=div;
+    for(let r=0;r<3;r++){if(r===col)continue;const f=m[r][col];for(let j=col;j<4;j++)m[r][j]-=f*m[col][j]}
   }
-  return out;
+  return [m[0][3],m[1][3],m[2][3]];
+}
+function solveMealGrams(pf,cf,ff,vf,share,kind){
+  const target=targetMealMacros(share),vegG=vf&&kind==='meal'?100:0,veg=vf?macro(vf,vegG):{p:0,c:0,f:0};
+  const b=[target.p-veg.p,target.c-veg.c,target.f-veg.f];
+  const A=[
+    [(pf.p||0)/100,(cf.p||0)/100,(ff.p||0)/100],
+    [(pf.c||0)/100,(cf.c||0)/100,(ff.c||0)/100],
+    [(pf.f||0)/100,(cf.f||0)/100,(ff.f||0)/100]
+  ];
+  let g=solve3x3(A,b);
+  if(!g||g.some(x=>!Number.isFinite(x)||x<0)){
+    const pg=gramsFor(pf,'p',Math.max(1,b[0]));
+    const pm=macro(pf,pg);
+    const cg=gramsFor(cf,'c',Math.max(1,target.c-veg.c-pm.c));
+    const cm=macro(cf,cg);
+    const fg=gramsFor(ff,'f',Math.max(1,target.f-veg.f-pm.f-cm.f));
+    g=[pg,cg,fg];
+  }
+  return g.map(x=>Math.max(5,Math.round(x/5)*5)).concat([vegG]);
 }
 function alignMealToTarget(meal){
   if(!meal||!meal.items||!state.macro)return meal;
-  meal.items=tuneMealItems(meal.items,meal.share||0);
-  meal.sum=sumMeal(meal.items);
-  return meal;
+  const pfItem=meal.items.find(x=>x.cat==='protein'),cfItem=meal.items.find(x=>x.cat==='carb'),ffItem=meal.items.find(x=>x.cat==='fat'),vfItem=meal.items.find(x=>x.cat==='veg');
+  if(!pfItem||!cfItem||!ffItem){meal.sum=sumMeal(meal.items);return meal}
+  const pf=FOOD_DB.find(x=>x.name===pfItem.name),cf=FOOD_DB.find(x=>x.name===cfItem.name),ff=FOOD_DB.find(x=>x.name===ffItem.name),vf=vfItem?FOOD_DB.find(x=>x.name===vfItem.name):null;
+  if(!pf||!cf||!ff){meal.sum=sumMeal(meal.items);return meal}
+  const [pg,cg,fg,vg]=solveMealGrams(pf,cf,ff,vf,meal.share||0,meal.kind||'meal');
+  pfItem.g=pg;cfItem.g=cg;ffItem.g=fg;if(vfItem)vfItem.g=vg;
+  meal.sum=sumMeal(meal.items);return meal;
 }
 function alignMealPlanToTargets(plan){
   if(!Array.isArray(plan)||!state.macro)return plan;
@@ -560,18 +579,16 @@ function previewMealStructure(){
   el('mealStructurePreview').innerHTML=parts.map(p=>'<div class="structureChip"><strong>'+p.label+'</strong><span>'+(m?Math.round(m.calories*p.share)+' kcal • '+Math.round(m.protein*p.share)+'P • '+Math.round(m.carbs*p.share)+'C • '+Math.round(m.fat*p.share)+'F':' '+Math.round(p.share*100)+'% of day')+'</span></div>').join('');
 }
 function buildMeal(d,i,share,kind='meal',label='Meal'){
-  const m=state.macro,ps=kind==='snack'?snackPool('protein'):pool('protein'),cs=kind==='snack'?snackPool('carb'):pool('carb'),vs=pool('veg'),fs=kind==='snack'?snackPool('fat'):pool('fat');
+  const ps=kind==='snack'?snackPool('protein'):pool('protein'),cs=kind==='snack'?snackPool('carb'):pool('carb'),vs=pool('veg'),fs=kind==='snack'?snackPool('fat'):pool('fat');
   if(!ps.length||!cs.length||!fs.length||(kind==='meal'&&!vs.length))throw new Error('Your restrictions leave an empty food category. Adjust preferences or exclusions.');
   const pf=foodChoice(ps,d,i),cf=foodChoice(cs,d,i+1),vf=kind==='meal'?foodChoice(vs,d,i+2):null,ff=foodChoice(fs,d,i+3);
-  const target=targetMealMacros(share);
-  const vegItem=vf?{name:vf.name,g:100,cat:'veg',price:vf.price}:null,vegMacros=vf?macro(vf,100):{p:0,c:0,f:0};
-  const pg=gramsFor(pf,'p',Math.max(1,target.p-vegMacros.p));
-  const proteinMacros=macro(pf,pg);
-  const cg=gramsFor(cf,'c',Math.max(1,target.c-vegMacros.c-proteinMacros.c));
-  const carbMacros=macro(cf,cg);
-  const fg=gramsFor(ff,'f',Math.max(1,target.f-vegMacros.f-proteinMacros.f-carbMacros.f));
-  let items=[{name:pf.name,g:pg,cat:'protein',price:pf.price},{name:cf.name,g:cg,cat:'carb',price:cf.price},vegItem,{name:ff.name,g:fg,cat:'fat',price:ff.price}].filter(x=>x&&x.g>0);
-  items=tuneMealItems(items,share);
+  const [pg,cg,fg,vg]=solveMealGrams(pf,cf,ff,vf,share,kind);
+  const items=[
+    {name:pf.name,g:pg,cat:'protein',price:pf.price},
+    {name:cf.name,g:cg,cat:'carb',price:cf.price},
+    vf&&{name:vf.name,g:vg,cat:'veg',price:vf.price},
+    {name:ff.name,g:fg,cat:'fat',price:ff.price}
+  ].filter(x=>x&&x.g>0);
   return{kind,label,share,items,sum:sumMeal(items)};
 }
 function buildMealDay(dayIndex,meals,snacks,distribution){
@@ -606,7 +623,7 @@ function optimizeBudget(days){
   const budget=Number(state.profile.budget)||0;
   if(!budget)return alignMealPlanToTargets(days);
   let plan=JSON.parse(JSON.stringify(days)),cost=estimateMealPlanCost(plan);
-  if(cost<=budget)return plan;
+  if(cost<=budget)return alignMealPlanToTargets(plan);
   const candidates=[];
   plan.forEach((d,di)=>(d.meals||[]).forEach((m,mi)=>(m.items||[]).forEach((item,ii)=>{
     const alt=cheapestCompatible(item);if(!alt)return;
@@ -634,13 +651,13 @@ function generateMeals(){
     const meals=+el('planMealsPerDay').value||Number(state.profile.meals)||4,snacks=+el('planSnacksPerDay').value||0,distribution=el('mealDistribution').value||'balanced';
     state.mealPrefs={meals,snacks,distribution};state.dayMealPrefs={};
     const days=[];for(let d=0;d<7;d++)days.push(buildMealDay(d,meals,snacks,distribution));
-    state.mealPlan=optimizeBudget(days);save();renderMeals();
+    state.mealPlan=optimizeBudget(days);state.mealPlanSchema=3;save();renderMeals();
   }catch(e){console.error(e);el('mealPlan').innerHTML='<div class="notice dangerNotice"><strong>We couldn’t build the meal plan yet.</strong><br>'+String(e.message||e)+'<br><small>Your settings were saved. Try Generate again.</small></div>'}
 }
 function rebuildMealDay(di){
   try{
     const meals=+el('dayMeals_'+di).value||3,snacks=+el('daySnacks_'+di).value||0,distribution=el('dayDist_'+di).value||state.mealPrefs.distribution||'balanced';
-    state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);alignMealPlanToTargets(state.mealPlan);save();renderMeals();
+    state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);state.mealPlanSchema=3;alignMealPlanToTargets(state.mealPlan);save();renderMeals();
   }catch(e){alert('Could not rebuild this day: '+e.message)}
 }
 function swapIngredient(di,mi,ii){
@@ -680,6 +697,7 @@ function displayPackage(g,packs){
   return packs+' × '+displayGroceryWeight(g);
 }
 function renderMeals(){
+  if(state.mealPlan.length&&state.mealPlanSchema!==3){state.mealPlan=[];state.mealPlanSchema=3;save()}
   if(state.mealPlan.length&&state.macro)alignMealPlanToTargets(state.mealPlan);
   if(el('mealBudget'))el('mealBudget').value=state.profile.budget||'';
   if(el('planMealsPerDay'))el('planMealsPerDay').value=state.mealPrefs.meals||state.profile.meals||4;
@@ -1522,4 +1540,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=42').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=43').then(r=>r.update()).catch(()=>{});
