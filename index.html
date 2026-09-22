@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=25">
+<link rel="stylesheet" href="styles.css?v=26">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -108,16 +108,16 @@
         <label>Waist <small id="dailyMeasureUnit">in</small><input id="dailyWaist" type="number" step=".1"></label>
         <label>Steps<input id="dailySteps" type="number"></label>
         <label>Water <small id="dailyWaterUnit">oz</small><input id="dailyWater" type="number" step=".1"></label>
-        <label>Sleep (hrs)<input id="dailySleep" type="number" step=".1"></label>
+        <label class="rangeField">Sleep <span><output id="dailySleepOut">—</output> hrs</span><input id="dailySleep" type="range" min="0" max="12" step=".5" value="7.5" data-empty="1" oninput="rangeTouched('dailySleep','dailySleepOut')"></label>
         <label>Resting HR<input id="dailyRhr" type="number" placeholder="optional"></label>
         <label>Calories consumed <small>auto from food log; override optional</small><input id="dailyCalories" type="number" placeholder="auto"></label>
-        <label>Adherence %<input id="dailyAdherence" type="number" min="0" max="100" placeholder="auto / manual"></label>
-        <label>Hunger 1–10<input id="dailyHunger" type="number" min="1" max="10"></label>
-        <label>Energy 1–10<input id="dailyEnergy" type="number" min="1" max="10"></label>
-        <label>Stress 1–10<input id="dailyStress" type="number" min="1" max="10"></label>
-        <label>Recovery 1–10<input id="dailyRecovery" type="number" min="1" max="10"></label>
-        <label>Digestion 1–10<input id="dailyDigestion" type="number" min="1" max="10"></label>
-        <label>Soreness 1–10<input id="dailySoreness" type="number" min="1" max="10"></label>
+        <label class="rangeField">Adherence <span><output id="dailyAdherenceOut">—</output>%</span><input id="dailyAdherence" type="range" min="0" max="100" step="5" value="85" data-empty="1" oninput="rangeTouched('dailyAdherence','dailyAdherenceOut')"></label>
+        <label class="rangeField">Hunger <span><output id="dailyHungerOut">—</output>/10</span><input id="dailyHunger" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailyHunger','dailyHungerOut')"></label>
+        <label class="rangeField">Energy <span><output id="dailyEnergyOut">—</output>/10</span><input id="dailyEnergy" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailyEnergy','dailyEnergyOut')"></label>
+        <label class="rangeField">Stress <span><output id="dailyStressOut">—</output>/10</span><input id="dailyStress" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailyStress','dailyStressOut')"></label>
+        <label class="rangeField">Recovery <span><output id="dailyRecoveryOut">—</output>/10</span><input id="dailyRecovery" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailyRecovery','dailyRecoveryOut')"></label>
+        <label class="rangeField">Digestion <span><output id="dailyDigestionOut">—</output>/10</span><input id="dailyDigestion" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailyDigestion','dailyDigestionOut')"></label>
+        <label class="rangeField">Soreness <span><output id="dailySorenessOut">—</output>/10</span><input id="dailySoreness" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('dailySoreness','dailySorenessOut')"></label>
       </div>
       <label class="wide metricNote">Daily note<textarea id="dailyNotes" placeholder="Anything the coach should know today?"></textarea></label>
       <button class="primary fullBtn" onclick="saveDailyMetrics()">Save daily metrics</button>
@@ -137,7 +137,7 @@
           <option value="swim">Swimming</option><option value="hiit">Intervals / HIIT</option><option value="sport">Recreational sport</option>
         </select></label>
         <label>Intensity<select id="activityIntensity" onchange="previewActivityBurn()"><option value="easy">Easy / recovery</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select></label>
-        <label>Minutes<input id="activityMinutes" type="number" min="1" value="30" oninput="previewActivityBurn()"></label>
+        <label class="rangeField">Minutes <span><output id="activityMinutesOut">30</output></span><input id="activityMinutes" type="range" min="5" max="180" step="5" value="30" data-empty="0" oninput="rangeTouched('activityMinutes','activityMinutesOut');previewActivityBurn()"></label>
         <label>Avg HR <small>optional</small><input id="activityHr" type="number" placeholder="bpm"></label>
         <label>Distance <small>optional</small><input id="activityDistance" type="number" step=".1"></label>
         <label>Machine / wearable kcal <small>optional override</small><input id="activityDeviceKcal" type="number" min="0"></label>
@@ -184,7 +184,7 @@
 <label>Cardio preference<select id="cardioPreference"><option value="walking">Walking / steps</option><option value="steady">Steady-state cardio</option><option value="intervals">Intervals</option><option value="mixed">Mixed</option><option value="minimal">Minimal cardio</option></select></label>
 <label>Daily step goal<input id="stepGoal" type="number" value="8000" step="500"></label>
 <label>Daily water goal <span id="waterGoalUnit">oz</span><input id="waterGoal" type="number" value="100" step="5"></label>
-<label>Sleep goal (hours)<input id="sleepGoal" type="number" value="7.5" step=".5" min="5" max="12"></label>
+<label>Sleep goal<select id="sleepGoal"><option value="6">6 hours</option><option value="6.5">6.5 hours</option><option value="7">7 hours</option><option value="7.5" selected>7.5 hours</option><option value="8">8 hours</option><option value="8.5">8.5 hours</option><option value="9">9 hours</option><option value="9.5">9.5 hours</option><option value="10">10 hours</option></select></label>
 
 <label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
 <label>Meal style<select id="mealStyle"><option value="structured">Structured</option><option value="hybrid" selected>Hybrid</option><option value="flexible">Flexible</option></select></label>
@@ -252,10 +252,10 @@
 <label>Waist<input id="logWaist" type="number" step=".1"></label><label>Hips<input id="logHips" type="number" step=".1"></label><label>Left arm<input id="logArmL" type="number" step=".1"></label>
 <label>Right arm<input id="logArmR" type="number" step=".1"></label><label>Left thigh<input id="logThighL" type="number" step=".1"></label><label>Right thigh<input id="logThighR" type="number" step=".1"></label>
 <label>Left calf<input id="logCalfL" type="number" step=".1"></label><label>Right calf<input id="logCalfR" type="number" step=".1"></label>
-<label>Steps<input id="logSteps" type="number"></label><label>Water <span class="muted">(oz or L)</span><input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
-<label>Calories eaten<input id="logCalories" type="number"></label><label>Adherence %<input id="logAdherence" type="number" min="0" max="100"></label>
-<label>Hunger 1–10<input id="logHunger" type="number" min="1" max="10"></label><label>Energy 1–10<input id="logEnergy" type="number" min="1" max="10"></label><label>Stress 1–10<input id="logStress" type="number" min="1" max="10"></label>
-<label>Recovery 1–10<input id="logRecovery" type="number" min="1" max="10"></label><label>Soreness 1–10<input id="logSoreness" type="number" min="1" max="10"></label><label>Digestion 1–10<input id="logDigestion" type="number" min="1" max="10"></label>
+<label>Steps<input id="logSteps" type="number"></label><label>Water <span class="muted">(oz or L)</span><input id="logWater" type="number"></label><label class="rangeField">Sleep <span><output id="logSleepOut">—</output> hrs</span><input id="logSleep" type="range" min="0" max="12" step=".5" value="7.5" data-empty="1" oninput="rangeTouched('logSleep','logSleepOut')"></label>
+<label>Calories eaten<input id="logCalories" type="number"></label><label class="rangeField">Adherence <span><output id="logAdherenceOut">—</output>%</span><input id="logAdherence" type="range" min="0" max="100" step="5" value="85" data-empty="1" oninput="rangeTouched('logAdherence','logAdherenceOut')"></label>
+<label class="rangeField">Hunger <span><output id="logHungerOut">—</output>/10</span><input id="logHunger" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logHunger','logHungerOut')"></label><label class="rangeField">Energy <span><output id="logEnergyOut">—</output>/10</span><input id="logEnergy" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logEnergy','logEnergyOut')"></label><label class="rangeField">Stress <span><output id="logStressOut">—</output>/10</span><input id="logStress" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logStress','logStressOut')"></label>
+<label class="rangeField">Recovery <span><output id="logRecoveryOut">—</output>/10</span><input id="logRecovery" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logRecovery','logRecoveryOut')"></label><label class="rangeField">Soreness <span><output id="logSorenessOut">—</output>/10</span><input id="logSoreness" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logSoreness','logSorenessOut')"></label><label class="rangeField">Digestion <span><output id="logDigestionOut">—</output>/10</span><input id="logDigestion" type="range" min="1" max="10" step="1" value="5" data-empty="1" oninput="rangeTouched('logDigestion','logDigestionOut')"></label>
 <label>Training performance<select id="logPerformance"><option value="">—</option><option value="down">Down</option><option value="same">Stable</option><option value="up">Improving</option></select></label>
 <label class="wide">Notes<textarea id="logNotes"></textarea></label></div>
 <button class="primary" onclick="saveLog()">Save check-in</button></div>
@@ -298,5 +298,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=25"></script><script src="app.js?v=25"></script>
+<script src="data.js?v=26"></script><script src="app.js?v=26"></script>
 </body></html>
