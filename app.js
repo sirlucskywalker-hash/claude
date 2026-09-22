@@ -754,14 +754,60 @@ function rebuildMealDay(di){
     state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);state.mealPlanSchema=3;alignMealPlanToTargets(state.mealPlan);save();renderMeals();
   }catch(e){alert('Could not rebuild this day: '+e.message)}
 }
-function swapIngredient(di,mi,ii){
-  const meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
-  const old=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat),options=pool(item.cat).filter(x=>x.name!==item.name);
-  if(!options.length)return alert('No compatible alternative is available.');
-  const currentIndex=Number(item.swapIndex)||0,next=options[currentIndex%options.length];
-  let g=item.g;if(key&&old&&next[key]>0){const target=old[key]*item.g/100;g=gramsFor(next,key,target)}
-  meal.items[ii]={name:next.name,g,cat:next.cat,price:next.price,swapIndex:currentIndex+1};alignMealToTarget(meal);save();renderMeals();
+function swapCompatibilityScore(item,candidate){
+  const old=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat);
+  if(!old||!candidate)return 999;
+  const oldM=macro(old,item.g),targetPrimary=key?oldM[key]:0;
+  let g=item.g;
+  if(key&&candidate[key]>0)g=gramsFor(candidate,key,targetPrimary);
+  const cand=macro(candidate,g);
+  const pDiff=Math.abs(cand.p-oldM.p),cDiff=Math.abs(cand.c-oldM.c),fDiff=Math.abs(cand.f-oldM.f),kDiff=Math.abs(cand.k-oldM.k);
+  const pref=preferred(candidate)?-8:0,budget=(state.profile.groceryPriority==='budget'?(candidate.price||0)*.15:0);
+  return pDiff*2+cDiff*1.2+fDiff*2+kDiff*.03+budget+pref;
 }
+function swapOptionsFor(item){
+  return pool(item.cat)
+    .filter(x=>x.name!==item.name)
+    .map(x=>({food:x,score:swapCompatibilityScore(item,x)}))
+    .sort((a,b)=>a.score-b.score);
+}
+function swapPreview(item,candidate,meal){
+  const old=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat);
+  let g=item.g;
+  if(key&&old&&candidate[key]>0){const target=old[key]*item.g/100;g=gramsFor(candidate,key,target)}
+  const cloned={...meal,items:meal.items.map(x=>({...x}))};
+  const idx=cloned.items.indexOf(cloned.items.find(x=>x.name===item.name&&x.cat===item.cat));
+  if(idx>=0)cloned.items[idx]={name:candidate.name,g,cat:item.cat,price:candidate.price};
+  alignMealToTarget(cloned);
+  const newItem=cloned.items[idx]||{g};
+  return{grams:newItem.g,meal:cloned,macros:cloned.sum};
+}
+let activeSwap=null;
+function openSwapPicker(di,mi,ii){
+  const meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
+  const options=swapOptionsFor(item);if(!options.length)return alert('No compatible alternatives are available for this item.');
+  activeSwap={di,mi,ii};
+  const old=FOOD_DB.find(x=>x.name===item.name),oldMacro=old?macro(old,item.g):null;
+  el('swapPickerCurrent').innerHTML='<span>Current</span><strong>'+escapeHtml(item.name)+'</strong><small>'+Math.round(item.g)+'g'+(oldMacro?' • '+Math.round(oldMacro.k)+' kcal • '+Math.round(oldMacro.p)+'P '+Math.round(oldMacro.c)+'C '+Math.round(oldMacro.f)+'F':'')+'</small>';
+  el('swapPickerOptions').innerHTML=options.map((o,idx)=>{
+    const p=swapPreview(item,o.food,meal),m=p.macros,recommended=idx<3;
+    return '<button class="swapOption '+(recommended?'recommended':'')+'" onclick="chooseSwap(\''+escapeHtml(o.food.name).replace(/'/g,"\\'")+'\')">'+
+      '<div><strong>'+escapeHtml(o.food.name)+'</strong><small>'+Math.round(p.grams)+'g • '+Math.round(m.k)+' kcal • '+Math.round(m.p)+'P '+Math.round(m.c)+'C '+Math.round(m.f)+'F</small></div>'+
+      '<span>'+(recommended?'Recommended':'Choose')+'</span></button>';
+  }).join('');
+  el('swapPicker').classList.remove('hidden');el('swapPickerBackdrop').classList.remove('hidden');document.body.classList.add('menuOpen');
+}
+function closeSwapPicker(){el('swapPicker')?.classList.add('hidden');el('swapPickerBackdrop')?.classList.add('hidden');document.body.classList.remove('menuOpen');activeSwap=null}
+function chooseSwap(name){
+  if(!activeSwap)return;
+  const {di,mi,ii}=activeSwap,meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii],next=FOOD_DB.find(x=>x.name===name);
+  if(!meal||!item||!next)return closeSwapPicker();
+  const preview=swapPreview(item,next,meal);
+  state.mealPlan[di].meals[mi]=preview.meal;
+  save();closeSwapPicker();renderMeals();
+}
+function swapIngredient(di,mi,ii){openSwapPicker(di,mi,ii)}
+
 function replaceMeal(di,mi){
   const old=state.mealPlan[di]?.meals?.[mi];if(!old)return;
   const share=old.share||1/Math.max(1,state.mealPlan[di].meals.length),kind=old.kind||'meal',label=old.label||(kind==='snack'?'Snack':'Meal '+(mi+1));
@@ -806,7 +852,7 @@ function renderMeals(){
   el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>{
     const pref=d.prefs||state.dayMealPrefs[di]||state.mealPrefs,total=d.meals.reduce((s,m)=>({k:s.k+m.sum.k,p:s.p+m.sum.p,c:s.c+m.sum.c,f:s.f+m.sum.f}),{k:0,p:0,c:0,f:0}),target=state.macro||{},deltaK=Math.round(total.k-(target.calories||0));
     const controls='<div class="dayStructure"><label>Meals<select id="dayMeals_'+di+'">'+[2,3,4,5,6].map(n=>'<option '+(n==pref.meals?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Snacks<select id="daySnacks_'+di+'">'+[0,1,2,3].map(n=>'<option '+(n==pref.snacks?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Distribution<select id="dayDist_'+di+'"><option value="balanced" '+(pref.distribution==='balanced'?'selected':'')+'>Balanced</option><option value="largerDinner" '+(pref.distribution==='largerDinner'?'selected':'')+'>Larger dinner</option><option value="largerBreakfast" '+(pref.distribution==='largerBreakfast'?'selected':'')+'>Larger breakfast</option><option value="training" '+(pref.distribution==='training'?'selected':'')+'>Training-focused</option></select></label><button onclick="rebuildMealDay('+di+')">Rebuild day</button></div>';
-    const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('');
+    const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Choose swap</button></div>').join('')+'</div>').join('');
     return'<details class="meal dayCard" '+(d.day===1?'open':'')+'><summary><span>Day '+d.day+'</span><small>'+Math.round(total.k)+' / '+Math.round(target.calories||total.k)+' kcal • '+Math.round(total.p)+'P '+Math.round(total.c)+'C '+Math.round(total.f)+'F'+(Math.abs(deltaK)>25?' • '+(deltaK>0?'+':'')+deltaK+' kcal':' • on target')+'</small></summary>'+controls+cards+'</details>';
   }).join('');
   const totals=groceryTotals(),rows=Object.entries(totals);let roundedCost=0;
@@ -1634,4 +1680,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=44').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=45').then(r=>r.update()).catch(()=>{});
