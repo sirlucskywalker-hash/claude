@@ -19,7 +19,52 @@ state.recoveryLogs=Array.isArray(state.recoveryLogs)?state.recoveryLogs:[];
 state.mealPrefs=state.mealPrefs||{meals:Number(state.profile.meals)||4,snacks:1,distribution:'balanced'};
 state.dayMealPrefs=state.dayMealPrefs||{};
 state.activeTimer=state.activeTimer||null;
+state.trainingFlags=Array.isArray(state.trainingFlags)?state.trainingFlags:[];
+state.trainingDrafts=state.trainingDrafts||{};
 
+const FAQ_LIBRARY={
+'Getting started':[
+'What should I focus on first?','How do I use PhysiqueOS every day?','How often should I weigh myself?','When should I take progress photos?','How often should I update measurements?','How accurate are my starting calorie targets?'
+],
+'Calories & macros':[
+'Should I change my calories?','How much protein do I need?','Should I eat back cardio calories?','What if I go over calories today?','What if I am under calories today?','Do I need to hit macros exactly?','Should calories change on rest days?','Should I carb cycle?','Why are my macros changing?','When should we increase calories?','When should we reduce calories?'
+],
+'Fat loss & scale':[
+'Why did my weight go up overnight?','Is my fat loss too slow?','Is my fat loss too fast?','The scale stalled. What should I do?','How long is a real plateau?','Why is my waist changing but weight is not?','Should I add cardio or cut food?','What rate of weight loss should I target?'
+],
+'Muscle gain & recomp':[
+'Am I gaining too fast?','How do I know if I am building muscle?','Should I be in a surplus?','Can I build muscle while losing fat?','When should I move from a cut to maintenance?','When should I start a gaining phase?'
+],
+'Meals & hunger':[
+'I am hungry. What should I do?','What should I eat before training?','What should I eat after training?','Can I move calories between meals?','Can I skip breakfast?','Can I eat fewer meals today?','Can I add a snack?','How do I handle a restaurant meal?','What if I cannot prep food?','How do I handle cravings?','What are good high-volume foods?'
+],
+'Training & progression':[
+'Am I ready to train today?','Should I add weight next set?','Should I add reps or load?','What does RIR mean?','What does session RPE mean?','How close to failure should I train?','How long should I rest between sets?','Should I add another set?','Should I remove a set?','Why did my performance drop today?','Should I deload?','How do I know if I am progressing?','Can I swap this exercise?','What should I do if equipment is taken?'
+],
+'Pain, tweaks & modifications':[
+'I felt a tweak during my workout. What should I do?','An exercise hurts. Should I stop?','Can you modify today’s workout around pain?','Should I reduce range of motion?','Should I reduce load because something feels off?','How do I tell soreness from a possible injury?','What should I log when something hurts?','Should I train around an injury?','When should I get an injury evaluated?'
+],
+'Cardio & steps':[
+'How much cardio should I do?','Should I do cardio today?','What type of cardio is best for my goal?','How many steps should I get?','Can I replace steps with cardio?','Should I do cardio before or after lifting?','Am I doing too much cardio?'
+],
+'Recovery & sleep':[
+'I am very sore. Should I train?','My recovery is poor. What should I change?','How much sleep do I need?','What if I slept badly last night?','Should today be a rest day?','What should I do on an active recovery day?','My stress is high. Should training change?'
+],
+'Travel & lifestyle':[
+'How do I stay on plan while traveling?','How do I handle alcohol or a night out?','What if I miss a workout?','What if I miss several days?','How do I handle holidays?','How do I handle a busy work week?'
+],
+'Progress & check-ins':[
+'Analyze my progress.','What is the biggest thing holding me back?','Am I actually adherent?','What should change this week?','Which metric matters most right now?','Why are my photos improving but the scale is not?','When should I update my goal?'
+]
+};
+function renderFaqQuestions(){
+  if(!el('faqCategory')||!el('faqQuestion'))return;
+  const cats=Object.keys(FAQ_LIBRARY);if(!el('faqCategory').options.length)el('faqCategory').innerHTML=cats.map(x=>'<option>'+x+'</option>').join('');
+  const cat=el('faqCategory').value||cats[0];el('faqQuestion').innerHTML=(FAQ_LIBRARY[cat]||[]).map(q=>'<option value="'+escapeHtml(q)+'">'+escapeHtml(q)+'</option>').join('');
+}
+function askFaqQuestion(){
+  const q=el('faqQuestion')?.value;if(!q)return;el('coachInput').value=q;sendCoachMessage();
+}
 function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
 function showTab(id){
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -368,6 +413,29 @@ function progression(name,min,max,targetRir){
   if(previous.length&&total>prevTotal)return'Progressing. Keep the load and continue adding total reps across the sets.';
   return'Hold the load and beat total reps, RIR, or execution quality next session.';
 }
+function workoutDraftKey(di){const d=state.trainingPlan[di];return today()+'|'+(d?.name||di)}
+function getWorkoutDraft(di){const k=workoutDraftKey(di);return state.trainingDrafts[k]||(state.trainingDrafts[k]={pre:{},post:{},exercises:{}})}
+function saveWorkoutDraft(di){
+  const d=getWorkoutDraft(di);
+  d.pre={area:el('preArea_'+di)?.value||'',sensation:el('preSensation_'+di)?.value||'',severity:+(el('preSeverity_'+di)?.value||0),notes:el('preNotes_'+di)?.value||''};
+  d.post={area:el('postArea_'+di)?.value||'',sensation:el('postSensation_'+di)?.value||'',severity:+(el('postSeverity_'+di)?.value||0),notes:el('postNotes_'+di)?.value||''};
+  state.trainingPlan[di]?.items?.forEach((x,ei)=>{d.exercises[ei]={pain:+(el('exPain_'+di+'_'+ei)?.value||0),mod:el('exMod_'+di+'_'+ei)?.value||'as prescribed',note:el('exNote_'+di+'_'+ei)?.value||''}});
+  save();
+}
+function saveTrainingFlag(di,phase,area,sensation,severity,notes,exercise=''){
+  if(!area&&!sensation&&!notes&&!severity)return;
+  state.trainingFlags.push({id:Date.now()+'_'+Math.random(),date:today(),workout:state.trainingPlan[di]?.name||'',phase,exercise,area,sensation,severity:+severity||0,notes});
+}
+function recentTrainingFlag(){
+  return [...state.trainingFlags].reverse().find(x=>x.area||x.sensation||x.notes)||null;
+}
+function flagAdvice(flag){
+  if(!flag)return'';
+  const sev=+flag.severity||0,text=((flag.sensation||'')+' '+(flag.notes||'')).toLowerCase();
+  if(sev>=7||/sharp|pop|snap|unstable|giving way|numb|tingl|weakness/.test(text))return'Stop loading that area for now and seek appropriate clinical evaluation before pushing through it.';
+  if(sev>=4)return'Do not chase progression through this. Reduce load/range or substitute a pain-free movement and reassess.';
+  return'Keep it pain-free, avoid escalating load if symptoms increase, and log whether it improves or worsens across sets.';
+}
 function readinessScore(){
   const x=currentLog()||{},sleepGoal=state.profile.sleepGoal||7.5;
   const inputs=[
@@ -432,34 +500,46 @@ function renderFloatingTimer(){
 }
 function workoutVolume(exercises){return exercises.reduce((sum,e)=>sum+e.results.reduce((s,x)=>s+(x.weight||0)*(x.reps||0),0),0)}
 function logWorkout(di){
-  const day=state.trainingPlan[di];if(!day)return;
+  const day=state.trainingPlan[di];if(!day)return;saveWorkoutDraft(di);const draft=getWorkoutDraft(di);
   const exercises=day.items.map((x,ei)=>{
     const results=[];
     for(let si=0;si<x.sets;si++){
       const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0,rir=el('rir_'+di+'_'+ei+'_'+si).value!==''?+el('rir_'+di+'_'+ei+'_'+si).value:null;
       if(reps>0)results.push({set:si+1,weight,reps,rir,rpe:rir!=null?Math.max(1,10-rir):null});
     }
-    return{name:x.name,results};
-  }).filter(x=>x.results.length);
-  if(!exercises.length)return alert('Enter at least one completed set.');
+    const issue=draft.exercises[ei]||{};
+    if(issue.pain||issue.note||issue.mod!=='as prescribed')saveTrainingFlag(di,'during','',issue.mod,issue.pain,issue.note,x.name);
+    return{name:x.name,issue,results};
+  }).filter(x=>x.results.length||x.issue?.pain||x.issue?.note);
+  if(!exercises.length)return alert('Enter at least one completed set or exercise note.');
+  saveTrainingFlag(di,'pre',draft.pre.area,draft.pre.sensation,draft.pre.severity,draft.pre.notes);
+  saveTrainingFlag(di,'post',draft.post.area,draft.post.sensation,draft.post.severity,draft.post.notes);
   const sessionRpe=+el('sessionRpe_'+di).value||null;
   if(!sessionRpe&&!confirm('No session RPE entered. Save the workout anyway?'))return;
-  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe,notes:el('sessionNotes_'+di).value||'',volume:workoutVolume(exercises),readiness:readinessScore(),exercises});save();renderTraining();renderCoachChat();alert('Workout logged. PhysiqueOS updated your progression history.');
+  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe,notes:el('sessionNotes_'+di).value||'',volume:workoutVolume(exercises),readiness:readinessScore(),pre:draft.pre,post:draft.post,exercises});
+  delete state.trainingDrafts[workoutDraftKey(di)];save();renderTraining();renderCoachChat();alert('Workout logged. Notes, modifications and symptom flags were saved with the session.');
 }
 function renderTraining(){
   renderReadiness();
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
+  const areas=['','Shoulder','Elbow','Wrist/hand','Neck','Upper back','Low back','Hip','Groin','Knee','Ankle/foot','Other'];
+  const sensations=['','Tight/stiff','Sore','Ache','Pinch','Sharp','Burning','Numb/tingly','Unstable','Weak','Other'];
   el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>{
+    const draft=getWorkoutDraft(di);
+    const pre='<details class="trainingCheck" '+((draft.pre?.severity||draft.pre?.notes)?'open':'')+'><summary><strong>Pre-workout body check</strong><span>Anything tight, sore, tweaked or needing modification?</span></summary><div class="issueGrid"><label>Area<select id="preArea_'+di+'" onchange="saveWorkoutDraft('+di+')">'+areas.map(x=>'<option '+(draft.pre?.area===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Feeling<select id="preSensation_'+di+'" onchange="saveWorkoutDraft('+di+')">'+sensations.map(x=>'<option '+(draft.pre?.sensation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Severity 0–10<input id="preSeverity_'+di+'" type="number" min="0" max="10" value="'+(draft.pre?.severity||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label class="issueNote">Coach note<textarea id="preNotes_'+di+'" onblur="saveWorkoutDraft('+di+')" placeholder="What feels off? What movements worry you? What modification do you think you need?">'+escapeHtml(draft.pre?.notes||'')+'</textarea></label></div></details>';
     const exercises=d.items.map((x,ei)=>{
-      const targetRpe=Math.max(1,10-(x.rir??3)),prev=lastPerformance(x.name);
+      const targetRpe=Math.max(1,10-(x.rir??3)),prev=lastPerformance(x.name),issue=draft.exercises?.[ei]||{};
       const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setBlock"><div class="setRow coachSetRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal" placeholder="'+(prev?.sets?.[si]?.weight??'')+'"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric" placeholder="'+(prev?.sets?.[si]?.reps??'')+'" oninput="liveSetCue('+di+','+ei+','+si+')"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="9" step=".5" inputmode="decimal" placeholder="'+(prev?.sets?.[si]?.rir??x.rir)+'" oninput="liveSetCue('+di+','+ei+','+si+')"></label><div class="derivedRpe">RPE ≈ <span id="derived_'+di+'_'+ei+'_'+si+'">'+targetRpe+'</span></div></div><div id="cue_'+di+'_'+ei+'_'+si+'" class="setCue">Previous: '+previousSetText(x.name,si)+'</div></div>').join('');
-      return'<div class="exerciseCard"><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR (≈ '+targetRpe+' RPE)</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="fillPrevious('+di+','+ei+')">Last workout</button><button onclick="changeSetCount('+di+','+ei+',-1)">− set</button><button onclick="changeSetCount('+di+','+ei+',1)">+ set</button><button onclick="swapExercise('+di+','+ei+')">Swap</button></div></div><div class="restButtons"><span>Rest timer</span><button onclick="startRestTimer(60)">1:00</button><button onclick="startRestTimer(90)">1:30</button><button onclick="startRestTimer(120)">2:00</button><button onclick="startRestTimer(180)">3:00</button></div><div class="setRows">'+setRows+'</div></div>';
+      const issueBox='<details class="exerciseIssue" '+((issue.pain||issue.note||issue.mod&&issue.mod!=='as prescribed')?'open':'')+'><summary>Exercise notes / tweak / modification</summary><div class="exerciseIssueGrid"><label>Pain / discomfort 0–10<input id="exPain_'+di+'_'+ei+'" type="number" min="0" max="10" value="'+(issue.pain||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label>Modification<select id="exMod_'+di+'_'+ei+'" onchange="saveWorkoutDraft('+di+')"><option value="as prescribed" '+(issue.mod==='as prescribed'?'selected':'')+'>As prescribed</option><option value="reduced load" '+(issue.mod==='reduced load'?'selected':'')+'>Reduced load</option><option value="reduced ROM" '+(issue.mod==='reduced ROM'?'selected':'')+'>Reduced range of motion</option><option value="tempo modified" '+(issue.mod==='tempo modified'?'selected':'')+'>Tempo modified</option><option value="technique modified" '+(issue.mod==='technique modified'?'selected':'')+'>Technique modified</option><option value="substituted" '+(issue.mod==='substituted'?'selected':'')+'>Substituted movement</option><option value="stopped" '+(issue.mod==='stopped'?'selected':'')+'>Stopped exercise</option></select></label><label class="issueNote">What happened / what needs to change<textarea id="exNote_'+di+'_'+ei+'" onblur="saveWorkoutDraft('+di+')" placeholder="Example: front of right shoulder pinched on set 2; reduced ROM and load.">'+escapeHtml(issue.note||'')+'</textarea></label></div></details>';
+      return'<div class="exerciseCard"><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR (≈ '+targetRpe+' RPE)</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="fillPrevious('+di+','+ei+')">Last workout</button><button onclick="changeSetCount('+di+','+ei+',-1)">− set</button><button onclick="changeSetCount('+di+','+ei+',1)">+ set</button><button onclick="swapExercise('+di+','+ei+')">Swap</button></div></div><div class="restButtons"><span>Rest timer</span><button onclick="startRestTimer(60)">1:00</button><button onclick="startRestTimer(90)">1:30</button><button onclick="startRestTimer(120)">2:00</button><button onclick="startRestTimer(180)">3:00</button></div><div class="setRows">'+setRows+'</div>'+issueBox+'</div>';
     }).join('');
-    const finish='<div class="workoutFinish"><div><span class="kicker">POST-WORKOUT</span><h4>How hard was the whole session?</h4><p>Session RPE is separate from set RIR. Rate the overall workout after you finish.</p></div><label><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" placeholder="1–10"></label></div><label class="sessionNote">Coach notes<input id="sessionNotes_'+di+'" placeholder="Performance, pain, pumps, technique, energy, anything unusual..."></label>';
-    return'<div class="workout"><div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div></div>'+exercises+finish+'<button class="primary fullBtn" onclick="logWorkout('+di+')">Finish & log '+d.name+'</button></div>';
+    const post='<details class="trainingCheck postCheck" '+((draft.post?.severity||draft.post?.notes)?'open':'')+'><summary><strong>Post-workout body check</strong><span>Anything to carry into the next session?</span></summary><div class="issueGrid"><label>Area<select id="postArea_'+di+'" onchange="saveWorkoutDraft('+di+')">'+areas.map(x=>'<option '+(draft.post?.area===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Feeling<select id="postSensation_'+di+'" onchange="saveWorkoutDraft('+di+')">'+sensations.map(x=>'<option '+(draft.post?.sensation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Severity 0–10<input id="postSeverity_'+di+'" type="number" min="0" max="10" value="'+(draft.post?.severity||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label class="issueNote">Carry-forward note<textarea id="postNotes_'+di+'" onblur="saveWorkoutDraft('+di+')" placeholder="What should the coach remember or modify next time?">'+escapeHtml(draft.post?.notes||'')+'</textarea></label></div></details>';
+    const finish='<div class="workoutFinish"><div><span class="kicker">POST-WORKOUT</span><h4>How hard was the whole session?</h4><p>Session RPE is separate from set RIR. Rate the overall workout after you finish.</p></div><label><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" placeholder="1–10"></label></div><label class="sessionNote">General session notes<input id="sessionNotes_'+di+'" placeholder="Performance, pumps, technique, energy, anything unusual..."></label>';
+    return'<div class="workout"><div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div></div>'+pre+exercises+post+finish+'<button class="primary fullBtn" onclick="logWorkout('+di+')">Finish & log '+d.name+'</button></div>';
   }).join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><div class="row"><strong>'+w.date+' • '+w.workout+'</strong><span class="pill">'+(w.sessionRpe?'RPE '+w.sessionRpe:'Logged')+'</span></div>'+(w.volume?'<div class="muted">Volume '+Math.round(w.volume).toLocaleString()+' • readiness '+(w.readiness??'—')+'</div>':'')+(w.notes?'<div class="muted">'+escapeHtml(w.notes)+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+(s.rir!=null?' @ '+s.rir+' RIR':'')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  const flags=[...state.trainingFlags].reverse().slice(0,10);
+  el('workoutHistory').innerHTML=(flags.length?'<div class="flagHistory"><h4>Recent body / modification notes</h4>'+flags.map(f=>'<div class="flagItem '+(f.severity>=7?'highFlag':f.severity>=4?'midFlag':'')+'"><strong>'+f.date+' • '+(f.exercise||f.workout||f.phase)+'</strong><span>'+[f.area,f.sensation,f.severity?f.severity+'/10':'',f.notes].filter(Boolean).map(escapeHtml).join(' • ')+'</span></div>').join('')+'</div>':'')+(state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><div class="row"><strong>'+w.date+' • '+w.workout+'</strong><span class="pill">'+(w.sessionRpe?'RPE '+w.sessionRpe:'Logged')+'</span></div>'+(w.volume?'<div class="muted">Volume '+Math.round(w.volume).toLocaleString()+' • readiness '+(w.readiness??'—')+'</div>':'')+(w.notes?'<div class="muted">'+escapeHtml(w.notes)+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong>'+(x.issue&&(x.issue.pain||x.issue.note||x.issue.mod!=='as prescribed')?'<div class="issueHistory">'+[x.issue.mod,x.issue.pain?x.issue.pain+'/10':'',x.issue.note].filter(Boolean).map(escapeHtml).join(' • ')+'</div>':'')+'<div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+(s.rir!=null?' @ '+s.rir+' RIR':'')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>');
 }
 
 function shiftLogDate(delta){
@@ -769,15 +849,16 @@ function renderDashboard(){
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function coachContext(){
   const t=trend(),x=currentLog(),m=state.macro,p=state.profile,work=todaysWorkout(),food=dayFoodTotals(today()),day=dayType(today()),activityKcal=activityCalories(today());
-  return{t,x,m,p,work,food,day,activityKcal,readiness:readinessAdvice(),lastWorkout:state.workoutLogs[state.workoutLogs.length-1]||null};
+  return{t,x,m,p,work,food,day,activityKcal,readiness:readinessAdvice(),lastWorkout:state.workoutLogs[state.workoutLogs.length-1]||null,flag:recentTrainingFlag()};
 }
 function coachReply(q){
-  const {t,x,m,p,work,food,day,activityKcal,readiness,lastWorkout}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
+  const {t,x,m,p,work,food,day,activityKcal,readiness,lastWorkout,flag}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
   if(s.includes('chest pain')||s.includes('faint')||s.includes('passed out')||s.includes('severe pain'))return'I don’t want to coach through that symptom. Stop the session and get appropriate medical evaluation, especially for chest pain, fainting, trouble breathing, or severe/unusual symptoms.';
   if(s.includes('hungry')||s.includes('hunger'))return'Your hunger'+name+' should be interpreted with adherence and recovery, not in isolation. '+(x?.hunger>=8?'You logged high hunger today. ':'')+(t?.sleep&&t.sleep<6.5?'Sleep has also been low, which can amplify appetite. ':'')+'Keep protein on target, use high-volume produce and lean protein, distribute meals around the hardest part of your day, and don’t cut calories further just because hunger is present.';
   if(s.includes('stall')||s.includes('plateau')||s.includes('scale'))return t?'Your current trend is '+Math.abs(t.weekly).toFixed(2)+' lb/week '+(t.weekly>=0?'down':'up')+' with roughly '+(t.adh?t.adh.toFixed(0):'unknown')+'% adherence. '+(t.days<14?'That is not enough time for a confident plateau call yet. Keep collecting data.':t.adh<85?'I would fix execution before changing the prescription.':getAdjustment()?'Your data qualifies for a small target adjustment. Review the recommendation above.':'I would hold the plan right now; the data does not justify a change.'):'I need at least 7–14 days of weight and adherence data before calling a plateau.';
   if(s.includes('water')||s.includes('hydr'))return'Your current hydration target is '+(p.units==='metric'?((p.waterGoalOz||100)/33.814).toFixed(1)+' L':Math.round(p.waterGoalOz||100)+' oz')+' per day. '+(x?.water?'Today you’ve logged '+(p.units==='metric'?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz')+'. ':'')+'Use that as a practical baseline and increase intake when heat, sweat, or training demand rises.';
   if(s.includes('step')||s.includes('walk'))return'Your daily step target is '+(p.stepGoal||8000).toLocaleString()+'. '+(x?.steps?'You are at '+x.steps.toLocaleString()+' today. ':'')+(x?.steps<(p.stepGoal||8000)?'A short walk after meals is the easiest way to close the gap without adding much fatigue.':'You’ve reached the target today; more is optional, not mandatory.');
+  if(s.includes('tweak')||s.includes('hurt')||s.includes('pain')||s.includes('injur')||s.includes('modify'))return flag?'Your latest training note was '+[flag.exercise||flag.workout,flag.area,flag.sensation,flag.severity?flag.severity+'/10':''].filter(Boolean).join(' • ')+'. '+flagAdvice(flag)+' I can help you modify the session around pain-free options, but I won’t diagnose the injury.':'Log the area, sensation, severity and what movement triggered it in the Training tab. If pain is sharp, severe, unstable, associated with a pop/snap, numbness/tingling, or worsening weakness, stop loading it and get appropriate clinical evaluation.';
   if(s.includes('sore')||s.includes('recovery')||s.includes('fatigue'))return(t?.recovery&&t.recovery<=4?'Recovery has been trending low. ':'')+'Keep the distinction between normal muscular soreness and injury-type pain. For normal soreness, preserve movement, sleep, protein and hydration, and reduce training effort if performance is clearly suppressed. Sharp, unstable, or worsening pain should not be trained through.';
   if(s.includes('cardio'))return day.type==='training'?'Today is a lifting day. Keep optional cardio easy unless it is specifically programmed so it does not compete with the session.':cardioPrescription().title+': '+cardioPrescription().text+(activityKcal?' You have logged about '+activityKcal+' exercise kcal today.':'');
   if(s.includes('rest day')||s.includes('recovery day'))return day.type==='training'?'Today is currently a programmed lifting day. If recovery is unusually poor, use your Recovery score and symptoms to decide whether to reduce volume or move the session rather than forcing it.':cardioPrescription().text;
@@ -808,9 +889,9 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=21').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=22').catch(()=>{});
