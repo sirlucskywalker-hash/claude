@@ -1358,4 +1358,4 @@ renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=31').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=32').catch(()=>{});
