@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=27">
+<link rel="stylesheet" href="styles.css?v=28">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -50,21 +50,41 @@
       <div id="timezoneStatus" class="timezoneBadge"></div>
     </div>
     <div class="scheduleGrid">
-      <label>Daily check-in<input id="scheduleCheckin" type="time" value="08:00"></label>
-      <label>Workout time<input id="scheduleWorkout" type="time" value="17:30"></label>
+      <label>Wake time<input id="scheduleWake" type="time" value="07:00"></label>
+      <label>Daily check-in<input id="scheduleCheckin" type="time" value="07:15"></label>
       <label>First meal<input id="scheduleMeal" type="time" value="08:00"></label>
+      <label>Workout time<input id="scheduleWorkout" type="time" value="17:30"></label>
+      <label>Bedtime<input id="scheduleBed" type="time" value="23:00"></label>
       <label>Meal spacing<select id="scheduleMealGap"><option value="3">Every ~3 hours</option><option value="4" selected>Every ~4 hours</option><option value="5">Every ~5 hours</option></select></label>
+      <label>Runway style<select id="scheduleMode"><option value="lifestyle" selected>Fit my lifestyle first</option><option value="performance">Performance-biased</option></select></label>
       <label>Calendar reminder<select id="scheduleReminder"><option value="0">At event time</option><option value="10">10 min before</option><option value="15" selected>15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select></label>
     </div>
     <div class="buttons scheduleActions">
-      <button class="primary" onclick="saveSchedule()">Save routine</button>
+      <button class="primary" onclick="saveSchedule()">Save my ideal times</button>
+      <button onclick="applyRecommendedRunway()">Use coach-recommended timing</button>
       <button onclick="addTodayToGoogleCalendar()">Add today to Google Calendar</button>
       <button onclick="downloadWeekCalendar()">Export 7 days (.ics)</button>
     </div>
     <div class="scheduleBody">
-      <div><span class="kicker">TODAY'S RUNWAY</span><div id="dailyRunway" class="dailyRunway"></div></div>
-      <div><span class="kicker">NEXT BEST ACTION</span><div id="adherenceNudge" class="adherenceNudge"></div></div>
+      <div><span class="kicker">TODAY'S RUNWAY</span><div id="runwayCoachNote" class="runwayCoachNote"></div><div id="dailyRunway" class="dailyRunway"></div></div>
+      <div><span class="kicker">NEXT BEST ACTION</span><div id="adherenceNudge" class="adherenceNudge"></div><div id="runwayRecommendations" class="runwayRecommendations"></div></div>
     </div>
+  </div>
+
+  <div class="premiumCard driftCard">
+    <div class="sectionHead">
+      <div><span class="kicker">DRIFT MONITOR</span><h3>Catch slippage before it becomes a setback</h3><p class="muted">Watches logging consistency, training completion, nutrition execution, recovery and multi-week progress. The goal is early correction, not punishment.</p></div>
+      <div id="driftStatus" class="driftStatus"></div>
+    </div>
+    <div id="driftSignals" class="driftSignals"></div>
+    <div class="driftControls">
+      <label>Monitor sensitivity<select id="driftSensitivity" onchange="saveDriftControls()"><option value="relaxed">Relaxed</option><option value="balanced" selected>Balanced</option><option value="strict">Strict</option></select></label>
+      <label>Minimum adherence<select id="driftAdherence" onchange="saveDriftControls()"><option value="75">75%</option><option value="80">80%</option><option value="85" selected>85%</option><option value="90">90%</option></select></label>
+      <label>Logging gap<select id="driftGap" onchange="saveDriftControls()"><option value="1">1 day</option><option value="2" selected>2 days</option><option value="3">3 days</option></select></label>
+      <label>Progress stall<select id="driftStall" onchange="saveDriftControls()"><option value="14">14 days</option><option value="21" selected>21 days</option><option value="28">28 days</option></select></label>
+    </div>
+    <div id="driftIntervention" class="driftIntervention"></div>
+    <div class="buttons"><button class="primary" onclick="activateRescueMode()">Start 3-day rescue</button><button onclick="downloadRescueCalendar()">Calendar rescue plan</button><button onclick="dismissDrift()">I’m back on track</button></div>
   </div>
 
   <div class="metricStrip">
@@ -331,5 +351,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=27"></script><script src="app.js?v=27"></script>
+<script src="data.js?v=28"></script><script src="app.js?v=28"></script>
 </body></html>
