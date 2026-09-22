@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -15,6 +15,7 @@
 </header>
 <nav class="appNav">
 <button data-tab="dashboard" class="active"><span>◉</span>Today</button>
+<button data-tab="dailylog"><span>＋</span>Log</button>
 <button data-tab="onboarding"><span>◎</span>Profile</button>
 <button data-tab="nutrition"><span>◇</span>Nutrition</button>
 <button data-tab="meals"><span>⌁</span>Meals</button>
@@ -67,6 +68,61 @@
   <div class="grid2">
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div>
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div>
+  </div>
+</section>
+
+<section id="dailylog" class="tab">
+  <div class="dashboardHero compactHero">
+    <div><div class="eyebrow">DAILY TRACKING</div><h2>Log what actually happened</h2><p>Meals, macros, bodyweight, movement, hydration and recovery all feed the adaptive coaching engine.</p></div>
+    <div class="heroScore"><span id="logDayScore">—</span><small>Day score</small></div>
+  </div>
+
+  <div class="grid2">
+    <div class="premiumCard">
+      <div class="sectionHead"><div><span class="kicker">FOOD DIARY</span><h3>Today’s nutrition</h3></div><input id="foodLogDate" class="dateCompact" type="date" onchange="renderFoodDiary();loadDailyMetrics()"></div>
+      <div id="macroProgress" class="macroProgress"></div>
+      <div class="foodLogTabs">
+        <button class="active" type="button" onclick="setFoodLogMode('database',this)">Food database</button>
+        <button type="button" onclick="setFoodLogMode('custom',this)">Quick macros</button>
+      </div>
+      <div id="foodDbLogger" class="foodLogger">
+        <label>Meal<select id="foodMealSlot"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Pre-workout</option><option>Post-workout</option></select></label>
+        <label>Food<select id="foodSelect"></select></label>
+        <label>Amount (g)<input id="foodGrams" type="number" value="100" step="5" min="1"></label>
+        <button class="primary" onclick="addDatabaseFood()">Add food</button>
+      </div>
+      <div id="customFoodLogger" class="foodLogger hidden">
+        <label class="wide">Food / meal name<input id="customFoodName" placeholder="Restaurant bowl, protein shake..."></label>
+        <label>Meal<select id="customMealSlot"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Pre-workout</option><option>Post-workout</option></select></label>
+        <label>Calories<input id="customCalories" type="number" min="0"></label>
+        <label>Protein (g)<input id="customProtein" type="number" min="0"></label>
+        <label>Carbs (g)<input id="customCarbs" type="number" min="0"></label>
+        <label>Fat (g)<input id="customFat" type="number" min="0"></label>
+        <button class="primary" onclick="addCustomFood()">Add entry</button>
+      </div>
+      <div id="foodDiary"></div>
+    </div>
+
+    <div class="premiumCard">
+      <div class="sectionHead"><div><span class="kicker">DAILY METRICS</span><h3>Body & recovery</h3></div></div>
+      <div class="metricEntryGrid">
+        <label>Weight <small id="dailyWeightUnit">lb</small><input id="dailyWeight" type="number" step=".1"></label>
+        <label>Waist <small id="dailyMeasureUnit">in</small><input id="dailyWaist" type="number" step=".1"></label>
+        <label>Steps<input id="dailySteps" type="number"></label>
+        <label>Water <small id="dailyWaterUnit">oz</small><input id="dailyWater" type="number" step=".1"></label>
+        <label>Sleep (hrs)<input id="dailySleep" type="number" step=".1"></label>
+        <label>Resting HR<input id="dailyRhr" type="number" placeholder="optional"></label>
+        <label>Hunger 1–10<input id="dailyHunger" type="number" min="1" max="10"></label>
+        <label>Energy 1–10<input id="dailyEnergy" type="number" min="1" max="10"></label>
+        <label>Stress 1–10<input id="dailyStress" type="number" min="1" max="10"></label>
+        <label>Recovery 1–10<input id="dailyRecovery" type="number" min="1" max="10"></label>
+        <label>Digestion 1–10<input id="dailyDigestion" type="number" min="1" max="10"></label>
+        <label>Soreness 1–10<input id="dailySoreness" type="number" min="1" max="10"></label>
+      </div>
+      <label class="wide metricNote">Daily note<textarea id="dailyNotes" placeholder="Anything the coach should know today?"></textarea></label>
+      <button class="primary fullBtn" onclick="saveDailyMetrics()">Save daily metrics</button>
+      <div id="dailyMetricSummary"></div>
+    </div>
   </div>
 </section>
 
@@ -139,7 +195,11 @@
 </section>
 
 <section id="progress" class="tab">
-<div class="card"><h2>Check-in</h2><div class="form">
+<div class="premiumCard">
+  <div class="sectionHead"><div><span class="kicker">BODY METRICS</span><h2>Progress</h2></div></div>
+  <p>Use Daily Log for everyday data. Use this deeper check-in for measurements, subjective recovery and progress review.</p>
+</div>
+<div class="card"><h2>Deep check-in</h2><div class="form">
 <label>Date<input id="logDate" type="date"></label><label>Weight <span class="muted">(your selected units)</span><input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label>
 <label>Chest<input id="logChest" type="number" step=".1"></label><label>Arm<input id="logArm" type="number" step=".1"></label><label>Thigh<input id="logThigh" type="number" step=".1"></label>
 <label>Steps<input id="logSteps" type="number"></label><label>Water <span class="muted">(oz or L)</span><input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
@@ -149,7 +209,7 @@
 <label>Training performance<select id="logPerformance"><option value="">—</option><option value="down">Down</option><option value="same">Stable</option><option value="up">Improving</option></select></label>
 <label class="wide">Notes<textarea id="logNotes"></textarea></label></div>
 <button class="primary" onclick="saveLog()">Save check-in</button></div>
-<div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p>
+<div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p><div class="notice"><strong>Full-version vision analysis:</strong> planned photo-based meal estimation, physique change analysis, standardized comparison overlays and confidence-aware recommendations. Beta stores photos only and does not pretend to infer body fat from an image.</div>
 <div class="form"><label>Date<input id="photoDate" type="date"></label><label>Front<input id="photoFront" type="file" accept="image/*"></label><label>Side<input id="photoSide" type="file" accept="image/*"></label><label>Back<input id="photoBack" type="file" accept="image/*"></label></div>
 <button onclick="savePhotos()">Save photo set</button><div id="photoGallery" class="photoGrid"></div></div>
 <div class="card"><h3>History</h3><div id="history"></div></div>
@@ -179,5 +239,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=14"></script><script src="app.js?v=14"></script>
+<script src="data.js?v=15"></script><script src="app.js?v=15"></script>
 </body></html>
