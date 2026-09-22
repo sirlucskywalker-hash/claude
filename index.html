@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=43">
+<link rel="stylesheet" href="styles.css?v=44">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -349,7 +349,9 @@
 </div>
 </section>
 
-<section id="nutrition" class="tab"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">ADAPTIVE TARGETS</span><h2>Nutrition</h2></div></div><div id="nutritionOut"></div></div></section>
+<section id="nutrition" class="tab"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">ADAPTIVE TARGETS</span><h2>Nutrition</h2></div></div><div id="nutritionOut"></div>
+<div id="macroAutomationPanel" class="macroAutomationPanel"></div>
+</div></section>
 
 <section id="meals" class="tab">
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div>
@@ -447,5 +449,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=43"></script><script src="app.js?v=43"></script>
+<script src="data.js?v=44"></script><script src="app.js?v=44"></script>
 </body></html>
