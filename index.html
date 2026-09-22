@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=24">
+<link rel="stylesheet" href="styles.css?v=25">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -76,6 +76,7 @@
       <div class="foodLogTabs">
         <button class="active" type="button" onclick="setFoodLogMode('database',this)">Food database</button>
         <button type="button" onclick="setFoodLogMode('custom',this)">Quick macros</button>
+        <button type="button" onclick="setFoodLogMode('saved',this)">★ Saved</button>
       </div>
       <div id="foodDbLogger" class="foodLogger">
         <label>Meal<select id="foodMealSlot"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option><option>Pre-workout</option><option>Post-workout</option></select></label>
@@ -91,6 +92,11 @@
         <label>Carbs (g)<input id="customCarbs" type="number" min="0"></label>
         <label>Fat (g)<input id="customFat" type="number" min="0"></label>
         <button class="primary" onclick="addCustomFood()">Add entry</button>
+      </div>
+      <div id="savedFoodLogger" class="savedFoodLogger hidden">
+        <div class="savedHeader"><div><strong>Favorites & repeat templates</strong><small>Save foods, full days, or an entire week and reload them in one tap.</small></div>
+        <div class="buttons"><button onclick="saveCurrentDayTemplate()">Save this day</button><button onclick="saveCurrentWeekTemplate()">Save this week</button></div></div>
+        <div id="savedNutrition"></div>
       </div>
       <div id="recentFoods" class="recentFoods"></div><div id="foodDiary"></div>
     </div>
@@ -292,5 +298,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=24"></script><script src="app.js?v=24"></script>
+<script src="data.js?v=25"></script><script src="app.js?v=25"></script>
 </body></html>
