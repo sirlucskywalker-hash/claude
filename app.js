@@ -144,6 +144,75 @@ function renderDriftMonitor(){
   if(rescue)msg='3-day Rescue Mode is active through '+state.rescueMode.end+'. The goal is minimum effective consistency, not catching up.';
   el('driftIntervention').innerHTML='<strong>'+(rescue?'RESCUE MODE':'COACH INTERVENTION')+'</strong><p>'+escapeHtml(msg)+'</p>';
 }
+function notificationPermission(){return 'Notification' in window?Notification.permission:'unsupported'}
+function loadNotificationSettings(){
+  const s=state.notificationSettings||{},map={notifyCheckin:'checkin',notifyMeals:'meals',notifyWorkout:'workout',notifySteps:'steps',notifyHydration:'hydration',notifyDrift:'drift',notifyRecovery:'recovery'};
+  Object.entries(map).forEach(([id,k])=>{if(el(id))el(id).checked=s[k]!==false});
+  if(el('notifyQuietStart'))el('notifyQuietStart').value=s.quietStart||'22:30';
+  if(el('notifyQuietEnd'))el('notifyQuietEnd').value=s.quietEnd||'07:00';
+  if(el('notifyEscalation'))el('notifyEscalation').value=s.escalation||'balanced';
+  renderNotificationStatus();
+}
+function saveNotificationSettings(){
+  state.notificationSettings={checkin:el('notifyCheckin')?.checked!==false,meals:el('notifyMeals')?.checked!==false,workout:el('notifyWorkout')?.checked!==false,steps:el('notifySteps')?.checked!==false,hydration:el('notifyHydration')?.checked!==false,drift:el('notifyDrift')?.checked!==false,recovery:el('notifyRecovery')?.checked!==false,quietStart:el('notifyQuietStart')?.value||'22:30',quietEnd:el('notifyQuietEnd')?.value||'07:00',escalation:el('notifyEscalation')?.value||'balanced'};save();renderNotificationStatus()
+}
+function inQuietHours(){
+  const s=state.notificationSettings||{},now=new Date(),cur=now.getHours()*60+now.getMinutes(),start=minutesFromTime(s.quietStart||'22:30'),end=minutesFromTime(s.quietEnd||'07:00');
+  return start>end?(cur>=start||cur<end):(cur>=start&&cur<end);
+}
+async function enableNotifications(){
+  if(!('Notification' in window))return alert('This browser does not support device notifications.');
+  const permission=await Notification.requestPermission();renderNotificationStatus();
+  if(permission==='granted'){queueNotification('system','Notifications enabled','PhysiqueOS will surface high-value reminders on this device while the beta is active/installed.',{force:true});processSmartReminders()}
+}
+function notificationKey(type,date=today()){return date+'|'+type}
+function alreadyNotified(type,date=today()){return !!state.notificationSent[notificationKey(type,date)]}
+function recordNotified(type,date=today()){state.notificationSent[notificationKey(type,date)]=Date.now();save()}
+function queueNotification(type,title,body,opts={}){
+  const entry={id:Date.now()+'_'+Math.random(),type,title,body,date:today(),time:new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}),read:false,createdAt:Date.now()};
+  state.notifications.unshift(entry);state.notifications=state.notifications.slice(0,80);save();renderNotificationCenter();
+  if((opts.force||!inQuietHours())&&notificationPermission()==='granted')showDeviceNotification(title,body,type);
+}
+async function showDeviceNotification(title,body,type){
+  try{
+    if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.ready;await reg.showNotification(title,{body,tag:'physiqueos-'+type,renotify:false,data:{url:location.href}})}
+    else new Notification(title,{body});
+  }catch(e){console.warn('Notification failed',e)}
+}
+function toggleNotificationCenter(){el('notificationCenter')?.classList.toggle('hidden');renderNotificationCenter()}
+function markAllNotificationsRead(){state.notifications.forEach(x=>x.read=true);save();renderNotificationCenter()}
+function renderNotificationStatus(){
+  const p=notificationPermission(),txt=p==='granted'?'Device alerts enabled':p==='denied'?'Blocked in browser':p==='unsupported'?'Unsupported here':'Enable notifications';
+  if(el('notificationStatusPill')){el('notificationStatusPill').textContent=txt;el('notificationStatusPill').className='notificationStatusPill '+(p==='granted'?'on':p==='denied'?'blocked':'')}
+  if(el('notificationPermissionState'))el('notificationPermissionState').innerHTML='<strong>'+txt+'</strong><span>'+(p==='granted'?'Smart reminders are active when the beta is running. Calendar reminders cover closed-app scheduling.':'Enable alerts for in-app/device accountability. Calendar reminders work independently.')+'</span>';
+}
+function renderNotificationCenter(){
+  if(!el('notificationList'))return;renderNotificationStatus();const unread=state.notifications.filter(x=>!x.read).length;
+  if(el('notificationBadge')){el('notificationBadge').textContent=unread>9?'9+':unread;el('notificationBadge').classList.toggle('hidden',!unread)}
+  el('notificationList').innerHTML=state.notifications.length?state.notifications.slice(0,30).map(x=>'<button class="notificationItem '+(x.read?'':'unread')+'" onclick="readNotification(\''+x.id+'\')"><span class="notificationType">'+escapeHtml(x.type)+'</span><strong>'+escapeHtml(x.title)+'</strong><p>'+escapeHtml(x.body)+'</p><small>'+escapeHtml(x.date)+' • '+escapeHtml(x.time)+'</small></button>').join(''):'<div class="emptyState">No notifications yet. PhysiqueOS will surface the highest-value reminders here.</div>';
+}
+function readNotification(id){const x=state.notifications.find(n=>n.id===id);if(x)x.read=true;save();renderNotificationCenter()}
+function reminderDue(time,windowMin=10){
+  if(!time)return false;const now=new Date(),cur=now.getHours()*60+now.getMinutes(),target=minutesFromTime(time),delta=cur-target;return delta>=0&&delta<=windowMin;
+}
+function hoursBefore(time,hours){return timeFromMinutes(minutesFromTime(time)-hours*60)}
+function processSmartReminders(){
+  if(!state.profile.age)return;
+  const ns=state.notificationSettings||{},sch=state.schedule||{},x=currentLog()||{},food=dayFoodTotals(today()),day=dayType(today()),d=driftAnalysis(),es=ns.escalation||'balanced';
+  const send=(type,title,body)=>{if(!alreadyNotified(type)){queueNotification(type,title,body);recordNotified(type)}};
+  if(ns.checkin&&reminderDue(sch.checkin||'07:15')&&!x.weight&&!x.sleep&&!x.energy)send('checkin','Quick check-in','Log your morning data now so today’s plan can react to you.');
+  if(ns.meals&&reminderDue(sch.meal||'08:00')&&food.cal===0)send('nutrition-start','First nutrition touchpoint','Use a favorite, saved day or quick log so the day starts with almost zero friction.');
+  if(ns.workout&&day.type==='training'&&reminderDue(hoursBefore(sch.workout||'17:30',2))&&food.p<(state.macro?.protein||0)*.35)send('preworkout-fuel','Fuel the session','Training is coming up. Get an easy-to-digest protein-containing meal in if it fits your plan and comfort.');
+  if(ns.workout&&day.type==='training'&&reminderDue(sch.workout||'17:30')&&!state.workoutLogs.some(w=>w.date===today()&&w.workout===day.title))send('workout','Workout runway is open',day.title+' is planned now. Open Workouts and let PhysiqueOS adapt the session from today’s readiness.');
+  const hour=new Date().getHours();
+  if(ns.steps&&hour>=15&&(x.steps||0)<(state.profile.stepGoal||8000)*.55)send('steps','Movement is falling behind','You are under 55% of today’s step target. A short walk now is easier than rescuing it late tonight.');
+  if(ns.hydration&&hour>=14&&(x.water||0)<(state.profile.waterGoalOz||100)*.45)send('hydration','Hydration check','You are under halfway to your hydration target. Catch up gradually instead of cramming fluids at night.');
+  if(ns.recovery&&reminderDue(hoursBefore(sch.bed||'23:00',1)))send('winddown','Protect tomorrow’s performance','Your wind-down window is starting. Make the next hour support the bedtime you chose.');
+  if(ns.drift&&d.level==='high')send('drift-high','You are drifting','Multiple behaviors are slipping at once. Start the 3-day Rescue Mode instead of waiting for motivation.');
+  else if(ns.drift&&d.level==='medium'&&es!=='gentle')send('drift-medium','Small course correction','PhysiqueOS sees early slippage. Fix the easiest failing behavior today before it compounds.');
+  if(ns.drift&&d.signals.some(z=>z.title.toLowerCase().includes('stagnant')))send('stagnation','Progress needs a review','Your multi-week trend may be stagnant. Review execution first, then let the adaptive system decide whether the prescription should change.');
+  if(es==='firm'&&d.level!=='good'&&hour>=18){const tasks=adherenceTasks(),next=tasks.find(t=>!t.done);if(next)send('evening-rescue','Finish the highest-value action','Before the day closes: '+next.title+' — '+next.detail+'. Do not try to make up everything at once.')}
+}
 function renderSchedule(){
   if(!el('timezoneStatus'))return;
   const tz=deviceTimezone();if(state.timezone!==tz){state.timezone=tz;save()}
@@ -186,6 +255,9 @@ state.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time';
 state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};
 state.rescueMode=state.rescueMode||null;
 state.driftDismissedUntil=state.driftDismissedUntil||null;
+state.notificationSettings=state.notificationSettings||{checkin:true,meals:true,workout:true,steps:true,hydration:true,drift:true,recovery:true,quietStart:'22:30',quietEnd:'07:00',escalation:'balanced'};
+state.notifications=Array.isArray(state.notifications)?state.notifications:[];
+state.notificationSent=state.notificationSent||{};
 
 const FAQ_LIBRARY={
 'Getting started':[
@@ -1273,16 +1345,17 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{wake:'07:00',checkin:'07:15',meal:'08:00',workout:'17:30',bed:'23:00',mealGap:4,mode:'lifestyle',reminder:15};state.timezone=deviceTimezone();state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};state.rescueMode=state.rescueMode||null;state.driftDismissedUntil=state.driftDismissedUntil||null;save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{wake:'07:00',checkin:'07:15',meal:'08:00',workout:'17:30',bed:'23:00',mealGap:4,mode:'lifestyle',reminder:15};state.timezone=deviceTimezone();state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};state.rescueMode=state.rescueMode||null;state.driftDismissedUntil=state.driftDismissedUntil||null;state.notificationSettings=state.notificationSettings||{checkin:true,meals:true,workout:true,steps:true,hydration:true,drift:true,recovery:true,quietStart:'22:30',quietEnd:'07:00',escalation:'balanced'};state.notifications=state.notifications||[];state.notificationSent=state.notificationSent||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 async function resetAll(){
   if(!confirm('Erase ALL local PhysiqueOS data on this device, including progress photos? This cannot be undone.'))return;
   localStorage.removeItem('physiqueOS');
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();loadSchedule();loadDriftControls();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 document.body.dataset.view='dashboard';
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-setInterval(()=>{if(el('timezoneStatus'))renderSchedule()},60000);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=29').catch(()=>{});
+setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
+setTimeout(processSmartReminders,2500);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=30').catch(()=>{});
