@@ -1,13 +1,50 @@
 const FOOD_DB=[
-{name:'Chicken breast',cat:'protein',p:31,c:0,f:3.6,k:165,price:8.2},{name:'93% lean ground beef',cat:'protein',p:26,c:0,f:8,k:180,price:12},{name:'Sirloin steak',cat:'protein',p:27,c:0,f:10,k:205,price:17},{name:'Shrimp',cat:'protein',p:24,c:.2,f:.4,k:101,price:14},{name:'Mahi-mahi',cat:'protein',p:24,c:0,f:1,k:110,price:15},{name:'Salmon',cat:'protein',p:22,c:0,f:12,k:208,price:16},{name:'Tuna',cat:'protein',p:25,c:0,f:1,k:116,price:10},{name:'Egg whites',cat:'protein',p:11,c:.7,f:.2,k:52,price:6},{name:'0% Greek yogurt',cat:'protein',p:10,c:4,f:0,k:59,price:5.5},{name:'Whey protein',cat:'protein',p:80,c:10,f:5,k:400,price:28},
-{name:'Jasmine rice',cat:'carb',p:2.7,c:28,f:.3,k:130,price:2.4},{name:'Yukon potato',cat:'carb',p:2,c:21,f:.1,k:93,price:2.2},{name:'Sweet potato',cat:'carb',p:1.6,c:20,f:.1,k:90,price:2.8},{name:'Oats',cat:'carb',p:16.9,c:66.3,f:6.9,k:389,price:3},{name:'Cream of rice',cat:'carb',p:7,c:80,f:1,k:360,price:5},{name:'Banana',cat:'carb',p:1.1,c:23,f:.3,k:89,price:1.5},{name:'Mixed berries',cat:'carb',p:.8,c:12,f:.4,k:55,price:8},{name:'Apple',cat:'carb',p:.3,c:14,f:.2,k:52,price:3},
-{name:'Olive oil',cat:'fat',p:0,c:0,f:100,k:884,price:9},{name:'Avocado',cat:'fat',p:2,c:8.5,f:15,k:160,price:6},{name:'Almond butter',cat:'fat',p:21,c:19,f:56,k:614,price:12},
-{name:'Broccoli',cat:'veg',p:2.8,c:7,f:.4,k:35,price:3.5},{name:'Green beans',cat:'veg',p:1.8,c:7,f:.2,k:35,price:3},{name:'Spinach',cat:'veg',p:3,c:4,f:.4,k:25,price:6}];
+{name:'Chicken breast',cat:'protein',p:31,c:0,f:3.6,k:165,price:8.2,packageG:1360,tags:['meat','glutenfree'],allergens:[]},
+{name:'93% lean ground beef',cat:'protein',p:26,c:0,f:8,k:180,price:12,packageG:454,tags:['meat','glutenfree'],allergens:[]},
+{name:'Sirloin steak',cat:'protein',p:27,c:0,f:10,k:205,price:17,packageG:454,tags:['meat','glutenfree'],allergens:[]},
+{name:'Turkey breast',cat:'protein',p:29,c:0,f:2,k:135,price:9.5,packageG:907,tags:['meat','glutenfree'],allergens:[]},
+{name:'Shrimp',cat:'protein',p:24,c:.2,f:.4,k:101,price:14,packageG:454,tags:['pescatarian','glutenfree'],allergens:['shellfish']},
+{name:'Mahi-mahi',cat:'protein',p:24,c:0,f:1,k:110,price:15,packageG:454,tags:['pescatarian','glutenfree'],allergens:['fish']},
+{name:'Salmon',cat:'protein',p:22,c:0,f:12,k:208,price:16,packageG:454,tags:['pescatarian','glutenfree'],allergens:['fish']},
+{name:'Tuna',cat:'protein',p:25,c:0,f:1,k:116,price:10,packageG:340,tags:['pescatarian','glutenfree'],allergens:['fish']},
+{name:'Egg whites',cat:'protein',p:11,c:.7,f:.2,k:52,price:6,packageG:946,tags:['vegetarian','glutenfree'],allergens:['egg']},
+{name:'Whole eggs',cat:'protein',p:13,c:1.1,f:10,k:143,price:5.5,packageG:600,tags:['vegetarian','glutenfree'],allergens:['egg']},
+{name:'0% Greek yogurt',cat:'protein',p:10,c:4,f:0,k:59,price:5.5,packageG:907,tags:['vegetarian','glutenfree'],allergens:['dairy']},
+{name:'Low-fat cottage cheese',cat:'protein',p:12,c:3.4,f:2.3,k:81,price:6,packageG:680,tags:['vegetarian','glutenfree'],allergens:['dairy']},
+{name:'Firm tofu',cat:'protein',p:14,c:3,f:9,k:144,price:5,packageG:397,tags:['vegan','vegetarian','glutenfree'],allergens:['soy']},
+{name:'Lentils cooked',cat:'protein',p:9,c:20,f:.4,k:116,price:3.5,packageG:425,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Whey protein',cat:'protein',p:80,c:10,f:5,k:400,price:28,packageG:907,tags:['vegetarian'],allergens:['dairy']},
+{name:'Plant protein powder',cat:'protein',p:75,c:12,f:7,k:405,price:30,packageG:700,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Jasmine rice',cat:'carb',p:2.7,c:28,f:.3,k:130,price:2.4,packageG:2268,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Yukon potato',cat:'carb',p:2,c:21,f:.1,k:93,price:2.2,packageG:2268,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Sweet potato',cat:'carb',p:1.6,c:20,f:.1,k:90,price:2.8,packageG:1360,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Oats',cat:'carb',p:16.9,c:66.3,f:6.9,k:389,price:3,packageG:1190,tags:['vegan','vegetarian'],allergens:['gluten-risk']},
+{name:'Cream of rice',cat:'carb',p:7,c:80,f:1,k:360,price:5,packageG:794,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Quinoa cooked',cat:'carb',p:4.4,c:21,f:1.9,k:120,price:7,packageG:907,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Banana',cat:'carb',p:1.1,c:23,f:.3,k:89,price:1.5,packageG:1000,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Mixed berries',cat:'carb',p:.8,c:12,f:.4,k:55,price:8,packageG:680,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Apple',cat:'carb',p:.3,c:14,f:.2,k:52,price:3,packageG:1360,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Whole grain bread',cat:'carb',p:12,c:43,f:4,k:250,price:5,packageG:567,tags:['vegan','vegetarian'],allergens:['gluten']},
+{name:'Olive oil',cat:'fat',p:0,c:0,f:100,k:884,price:9,packageG:750,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Avocado',cat:'fat',p:2,c:8.5,f:15,k:160,price:6,packageG:600,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Almond butter',cat:'fat',p:21,c:19,f:56,k:614,price:12,packageG:454,tags:['vegan','vegetarian','glutenfree'],allergens:['tree nuts']},
+{name:'Peanut butter',cat:'fat',p:25,c:20,f:50,k:588,price:7,packageG:454,tags:['vegan','vegetarian','glutenfree'],allergens:['peanut']},
+{name:'Broccoli',cat:'veg',p:2.8,c:7,f:.4,k:35,price:3.5,packageG:907,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Green beans',cat:'veg',p:1.8,c:7,f:.2,k:35,price:3,packageG:907,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Spinach',cat:'veg',p:3,c:4,f:.4,k:25,price:6,packageG:454,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Mixed vegetables',cat:'veg',p:3,c:10,f:.5,k:55,price:3,packageG:907,tags:['vegan','vegetarian','glutenfree'],allergens:[]},
+{name:'Zucchini',cat:'veg',p:1.2,c:3.1,f:.3,k:17,price:4,packageG:907,tags:['vegan','vegetarian','glutenfree'],allergens:[]}
+];
+
 const EXERCISES=[
-{name:'Goblet Squat',m:'quads',eq:['dumbbells'],avoid:['knee']},{name:'Leg Press',m:'quads',eq:['machines'],avoid:['knee']},{name:'Back Squat',m:'quads',eq:['barbell'],avoid:['knee','low back']},{name:'Romanian Deadlift',m:'hamstrings',eq:['barbell','dumbbells'],avoid:['low back']},{name:'Seated Leg Curl',m:'hamstrings',eq:['machines'],avoid:[]},{name:'Hip Thrust',m:'glutes',eq:['barbell','machines'],avoid:['hip']},{name:'Walking Lunge',m:'glutes',eq:['dumbbells','bodyweight'],avoid:['knee','hip']},
+{name:'Goblet Squat',m:'quads',eq:['dumbbells'],avoid:['knee']},{name:'Leg Press',m:'quads',eq:['machines'],avoid:['knee']},{name:'Back Squat',m:'quads',eq:['barbell'],avoid:['knee','low back']},{name:'Hack Squat',m:'quads',eq:['machines'],avoid:['knee']},{name:'Leg Extension',m:'quads',eq:['machines'],avoid:['knee']},
+{name:'Romanian Deadlift',m:'hamstrings',eq:['barbell','dumbbells'],avoid:['low back']},{name:'Seated Leg Curl',m:'hamstrings',eq:['machines'],avoid:[]},{name:'Lying Leg Curl',m:'hamstrings',eq:['machines'],avoid:[]},
+{name:'Hip Thrust',m:'glutes',eq:['barbell','machines'],avoid:['hip']},{name:'Walking Lunge',m:'glutes',eq:['dumbbells','bodyweight'],avoid:['knee','hip']},{name:'Cable Kickback',m:'glutes',eq:['cables'],avoid:['hip']},
 {name:'DB Bench Press',m:'chest',eq:['dumbbells','bench'],avoid:['shoulder']},{name:'Machine Chest Press',m:'chest',eq:['machines'],avoid:['shoulder']},{name:'Push-up',m:'chest',eq:['bodyweight'],avoid:['shoulder','wrist']},{name:'Incline DB Press',m:'chest',eq:['dumbbells','bench'],avoid:['shoulder']},{name:'Cable Fly',m:'chest',eq:['cables'],avoid:['shoulder']},
 {name:'Lat Pulldown',m:'back',eq:['cables','machines'],avoid:['shoulder']},{name:'Chest Supported Row',m:'back',eq:['dumbbells','bench'],avoid:[]},{name:'Cable Row',m:'back',eq:['cables'],avoid:[]},{name:'Pull-up',m:'back',eq:['pull-up bar','bodyweight'],avoid:['shoulder','elbow']},{name:'One-arm DB Row',m:'back',eq:['dumbbells'],avoid:['low back']},
 {name:'DB Lateral Raise',m:'delts',eq:['dumbbells'],avoid:['shoulder']},{name:'Cable Lateral Raise',m:'delts',eq:['cables'],avoid:['shoulder']},{name:'Machine Shoulder Press',m:'delts',eq:['machines'],avoid:['shoulder']},{name:'Rear Delt Fly',m:'delts',eq:['machines','dumbbells'],avoid:['shoulder']},
-{name:'Cable Curl',m:'biceps',eq:['cables'],avoid:['elbow']},{name:'DB Curl',m:'biceps',eq:['dumbbells'],avoid:['elbow']},{name:'Rope Pressdown',m:'triceps',eq:['cables'],avoid:['elbow']},{name:'DB Skullcrusher',m:'triceps',eq:['dumbbells','bench'],avoid:['elbow']},{name:'Standing Calf Raise',m:'calves',eq:['machines','bodyweight'],avoid:[]},{name:'Plank',m:'core',eq:['bodyweight'],avoid:['low back']},{name:'Cable Crunch',m:'core',eq:['cables'],avoid:[]}];
+{name:'Cable Curl',m:'biceps',eq:['cables'],avoid:['elbow']},{name:'DB Curl',m:'biceps',eq:['dumbbells'],avoid:['elbow']},{name:'Rope Pressdown',m:'triceps',eq:['cables'],avoid:['elbow']},{name:'DB Skullcrusher',m:'triceps',eq:['dumbbells','bench'],avoid:['elbow']},
+{name:'Standing Calf Raise',m:'calves',eq:['machines','bodyweight'],avoid:[]},{name:'Plank',m:'core',eq:['bodyweight'],avoid:['low back']},{name:'Cable Crunch',m:'core',eq:['cables'],avoid:[]}
+];
 const EQUIPMENT=['bodyweight','dumbbells','barbell','bench','cables','machines','pull-up bar','bands','cardio machine'];
-const STORE_MULTIPLIERS={Aldi:.88,Walmart:.94,Costco:.90,Target:1.05,Publix:1.12,"Whole Foods":1.28,TraderJoes:1.02};
+const STORE_MULTIPLIERS={Aldi:.88,Walmart:.94,Costco:.90,Target:1.05,Publix:1.12,'Whole Foods':1.28,'Trader Joes':1.02};
