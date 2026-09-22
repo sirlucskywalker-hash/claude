@@ -72,7 +72,7 @@ function saveProfile(){
     ft:+el('ft').value||0,inch:+el('inch').value||0,weight,goalWeight:goalWeight||weight,bf:+el('bf').value||null,
     activity:+el('activity').value,goal:el('goal').value,aggr:el('aggr').value,trainingGoal:el('trainingGoal').value,
     days:+el('days').value,experience:el('experience').value,sessionLength:+el('sessionLength').value,
-    trainingEnvironment:el('trainingEnvironment').value,preferredDays:el('preferredDays').value,cardioPreference:el('cardioPreference').value,stepGoal:+el('stepGoal').value||8000,waterGoalOz:el('units').value==='metric'?(+el('waterGoal').value||3)*33.814:(+el('waterGoal').value||100),
+    trainingEnvironment:el('trainingEnvironment').value,preferredDays:el('preferredDays').value,cardioPreference:el('cardioPreference').value,stepGoal:+el('stepGoal').value||8000,waterGoalOz:el('units').value==='metric'?(+el('waterGoal').value||3)*33.814:(+el('waterGoal').value||100),sleepGoal:+el('sleepGoal').value||7.5,
     meals:+el('mealsPerDay').value,mealStyle:el('mealStyle').value,mealVariety:el('mealVariety').value,cookingSkill:el('cookingSkill').value,
     prepTolerance:el('prepTolerance').value,mealsOut:+el('mealsOut').value||0,budget:+el('budget').value||0,zip:el('zip').value.trim(),
     stores:el('stores').value.trim(),groceryPriority:el('groceryPriority').value,cuisines:el('cuisines').value,diet:el('diet').value,
@@ -90,7 +90,7 @@ function saveProfile(){
 }
 function loadProfile(){
   const p=state.profile;if(!p.age){toggleUnits();return}
-  const simple=['name','age','sex','units','bf','activity','goal','aggr','trainingGoal','days','experience','sessionLength','trainingEnvironment','preferredDays','cardioPreference','stepGoal','mealStyle','mealVariety','cookingSkill','prepTolerance','mealsOut','budget','zip','stores','groceryPriority','cuisines','diet'];
+  const simple=['name','age','sex','units','bf','activity','goal','aggr','trainingGoal','days','experience','sessionLength','trainingEnvironment','preferredDays','cardioPreference','stepGoal','sleepGoal','mealStyle','mealVariety','cookingSkill','prepTolerance','mealsOut','budget','zip','stores','groceryPriority','cuisines','diet'];
   simple.forEach(k=>{if(el(k)&&p[k]!=null)el(k).value=p[k]});
   if(el('mealsPerDay'))el('mealsPerDay').value=p.meals||4;
   if(p.units==='metric'){el('heightCm').value=p.heightCm||'';el('weightInput').value=(p.weight/2.20462).toFixed(1);el('goalWeightInput').value=(p.goalWeight/2.20462).toFixed(1)}
@@ -310,12 +310,22 @@ function generateTraining(){
   const limit=state.profile.sessionLength<=30?4:state.profile.sessionLength<=45?5:state.profile.sessionLength<=60?6:7;
   state.trainingPlan=split(state.profile.days||4).map((d,di)=>({name:d[0],preferredDay:(state.profile.preferredDays||'').split(',')[di]?.trim()||'',items:d[1].slice(0,limit).map((m,i)=>{
     const compound=['chest','back','quads','hamstrings','glutes'].includes(m),range=goal==='strength'&&compound?[4,8]:goal==='performance'&&compound?[5,10]:compound?[6,12]:[10,20];
-    return{name:chooseEx(m,di+i),sets:baseSets,minReps:range[0],maxReps:range[1],rir:exp==='advanced'?2:3};
+    return{name:chooseEx(m,di+i),muscle:m,sets:baseSets,minReps:range[0],maxReps:range[1],rir:exp==='advanced'?2:3};
   })
 }));
   save();renderTraining();
 }
 function lastExerciseLogs(name){return state.workoutLogs.flatMap(w=>w.exercises||[]).filter(x=>x.name===name).slice(-2)}
+function exerciseMuscle(item){return item.muscle||EXERCISES.find(e=>e.name===item.name)?.m||''}
+function swapExercise(di,ei){
+  const item=state.trainingPlan[di]?.items?.[ei];if(!item)return;
+  const m=exerciseMuscle(item),inj=(state.profile.injuries||'').toLowerCase(),owned=state.profile.equipment||[];
+  let opts=EXERCISES.filter(x=>x.m===m&&x.name!==item.name&&x.eq.some(e=>owned.includes(e))&&!x.avoid.some(z=>inj.includes(z)));
+  if(!opts.length)opts=EXERCISES.filter(x=>x.m===m&&x.name!==item.name&&!x.avoid.some(z=>inj.includes(z)));
+  if(!opts.length)return alert('No compatible replacement found.');
+  const history=item.swapHistory||[],next=opts.find(x=>!history.includes(x.name))||opts[0];
+  item.swapHistory=[...history,next.name];item.name=next.name;item.muscle=m;save();renderTraining();
+}
 function normalizeSetResults(x){
   if(Array.isArray(x.results))return x.results;
   if(Array.isArray(x.setData))return x.setData;
@@ -346,18 +356,28 @@ function logWorkout(di){
     return{name:x.name,results};
   }).filter(x=>x.results.length);
   if(!exercises.length)return alert('Enter at least one completed set.');
-  state.workoutLogs.push({date:today(),workout:day.name,exercises});save();renderTraining();alert('Workout logged. Set-by-set progression guidance updated.');
+  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe:+el('sessionRpe_'+di).value||null,notes:el('sessionNotes_'+di).value||'',exercises});save();renderTraining();alert('Workout logged. Set-by-set progression guidance updated.');
 }
 function renderTraining(){
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
   el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>'<div class="workout"><div class="row"><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div>'+d.items.map((x,ei)=>{
     const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="6" inputmode="numeric"></label></div>').join('');
-    return'<div class="exerciseCard"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="setRows">'+setRows+'</div></div>';
+    return'<div class="exerciseCard"><div class="row"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><button onclick="swapExercise('+di+','+ei+')">Swap exercise</button></div><div class="setRows">'+setRows+'</div></div>';
   }).join('')+'<button class="primary" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>').join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+s.rir+' RIR').join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+(w.sessionRpe?'<div class="muted">Session RPE '+w.sessionRpe+(w.notes?' • '+escapeHtml(w.notes):'')+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+s.rir+' RIR').join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
+function shiftLogDate(delta){
+  const d=new Date(selectedFoodDate()+'T12:00:00');d.setDate(d.getDate()+delta);el('foodLogDate').value=d.toISOString().slice(0,10);renderAll();
+}
+function setLogDateToday(){el('foodLogDate').value=today();renderAll()}
+function filterFoodSelect(){
+  if(!el('foodSelect'))return;const q=(el('foodSearch')?.value||'').toLowerCase(),current=el('foodSelect').value;
+  const matches=FOOD_DB.map((f,idx)=>({f,idx})).filter(x=>x.f.name.toLowerCase().includes(q));
+  el('foodSelect').innerHTML=matches.map(x=>'<option value="'+x.idx+'">'+x.f.name+'</option>').join('');
+  if(matches.some(x=>String(x.idx)===current))el('foodSelect').value=current;
+}
 function selectedFoodDate(){return el('foodLogDate')?.value||today()}
 function dayFoodEntries(date=selectedFoodDate()){return state.foodLogs.filter(x=>x.date===date)}
 function dayFoodTotals(date=selectedFoodDate()){
@@ -405,6 +425,13 @@ function copyYesterdayFood(){
 function clearFoodDay(){
   const date=selectedFoodDate();if(!confirm('Clear all food entries for '+date+'?'))return;
   state.foodLogs=state.foodLogs.filter(x=>x.date!==date);syncFoodToDailyLog(date);save();renderAll();
+}
+function renderRecentFoods(){
+  if(!el('recentFoods'))return;const seen=[],recent=[...state.foodLogs].reverse().filter(x=>x.source==='database').filter(x=>{if(seen.includes(x.name))return false;seen.push(x.name);return true}).slice(0,5);
+  el('recentFoods').innerHTML=recent.length?'<div class="recentLabel">Recent</div><div class="recentChips">'+recent.map(x=>'<button onclick="quickAddRecent(\''+escapeHtml(x.name).replace(/&#039;/g,"\\'")+'\')">'+escapeHtml(x.name)+'</button>').join('')+'</div>':'';
+}
+function quickAddRecent(name){
+  const idx=FOOD_DB.findIndex(f=>f.name===name);if(idx<0)return;el('foodSelect').value=String(idx);el('foodGrams').focus();
 }
 function renderFoodDiary(){
   if(!el('foodDiary'))return;const date=selectedFoodDate(),entries=dayFoodEntries(date),tot=dayFoodTotals(date),m=state.macro;
@@ -467,16 +494,38 @@ function dailyScore(){
   const x=currentLog();if(!x)return 0;let pts=0,total=0;
   const score=(cond,w)=>{total+=w;if(cond)pts+=w};
   const stepGoal=state.profile.stepGoal||8000,waterGoal=state.profile.waterGoalOz||100;
-  score(x.steps>=stepGoal,20);score(x.water>=waterGoal*.9,15);score(x.sleep>=7,20);score(x.adherence>=85,20);score(x.calories&&state.macro&&Math.abs(x.calories-state.macro.calories)<=Math.max(150,state.macro.calories*.08),15);score(x.energy>=6,10);
+  score(x.steps>=stepGoal,20);score(x.water>=waterGoal*.9,15);score(x.sleep>=(state.profile.sleepGoal||7.5),20);score(x.adherence>=85,20);score(x.calories&&state.macro&&Math.abs(x.calories-state.macro.calories)<=Math.max(150,state.macro.calories*.08),15);score(x.energy>=6,10);
   return total?Math.round(pts/total*100):0;
 }
 function saveLog(){
   const metric=state.profile.units==='metric',rawWeight=+el('logWeight').value||null,rawWater=+el('logWater').value||null;
-  const x={date:el('logDate').value||today(),weight:rawWeight?(metric?rawWeight*2.20462:rawWeight):null,waist:+el('logWaist').value||null,chest:+el('logChest').value||null,arm:+el('logArm').value||null,thigh:+el('logThigh').value||null,steps:+el('logSteps').value||null,water:rawWater?(metric?rawWater*33.814:rawWater):null,sleep:+el('logSleep').value||null,calories:+el('logCalories').value||null,adherence:+el('logAdherence').value||null,hunger:+el('logHunger').value||null,energy:+el('logEnergy').value||null,stress:+el('logStress').value||null,recovery:+el('logRecovery').value||null,soreness:+el('logSoreness').value||null,digestion:+el('logDigestion').value||null,performance:el('logPerformance').value,notes:el('logNotes').value};
+  const measure=id=>{const v=+el(id).value||null;return v?(metric?v/2.54:v):null};
+  const x={date:el('logDate').value||today(),weight:rawWeight?(metric?rawWeight*2.20462:rawWeight):null,bodyFat:+el('logBodyFat').value||null,neck:measure('logNeck'),shoulders:measure('logShoulders'),chest:measure('logChest'),waist:measure('logWaist'),hips:measure('logHips'),armL:measure('logArmL'),armR:measure('logArmR'),thighL:measure('logThighL'),thighR:measure('logThighR'),calfL:measure('logCalfL'),calfR:measure('logCalfR'),steps:+el('logSteps').value||null,water:rawWater?(metric?rawWater*33.814:rawWater):null,sleep:+el('logSleep').value||null,calories:+el('logCalories').value||null,adherence:+el('logAdherence').value||null,hunger:+el('logHunger').value||null,energy:+el('logEnergy').value||null,stress:+el('logStress').value||null,recovery:+el('logRecovery').value||null,soreness:+el('logSoreness').value||null,digestion:+el('logDigestion').value||null,performance:el('logPerformance').value,notes:el('logNotes').value};
   state.logs=state.logs.filter(a=>a.date!==x.date);state.logs.push(x);state.logs.sort((a,b)=>a.date.localeCompare(b.date));save();renderAll();
 }
 function renderHistory(){
   el('history').innerHTML='<table><tr><th>Date</th><th>Weight</th><th>Waist</th><th>Steps</th><th>Sleep</th><th>Adh.</th><th>Hunger</th><th>Recovery</th></tr>'+[...state.logs].reverse().map(x=>'<tr><td>'+x.date+'</td><td>'+(x.weight||'—')+'</td><td>'+(x.waist||'—')+'</td><td>'+(x.steps||'—')+'</td><td>'+(x.sleep||'—')+'</td><td>'+(x.adherence!=null?x.adherence+'%':'—')+'</td><td>'+(x.hunger||'—')+'</td><td>'+(x.recovery||'—')+'</td></tr>').join('')+'</table>';
+}
+function dateDaysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)}
+function weeklyWindow(){
+  const start=dateDaysAgo(6),logs=state.logs.filter(x=>x.date>=start&&x.date<=today()),foods=state.foodLogs.filter(x=>x.date>=start&&x.date<=today()),workouts=state.workoutLogs.filter(x=>x.date>=start&&x.date<=today()),acts=state.activityLogs.filter(x=>x.date>=start&&x.date<=today());
+  return{start,logs,foods,workouts,acts};
+}
+function renderWeeklyReview(){
+  if(!el('weeklyReview'))return;const w=weeklyWindow(),m=state.macro;
+  const vals=k=>w.logs.map(x=>x[k]).filter(v=>Number.isFinite(v)&&v>0),foodDays=[...new Set(w.foods.map(x=>x.date))],weights=vals('weight');
+  const avgCal=foodDays.length?avg(foodDays.map(d=>dayFoodTotals(d).cal)):0,avgProtein=foodDays.length?avg(foodDays.map(d=>dayFoodTotals(d).p)):0;
+  const planned=normalizedTrainingDays().length,trainingPct=planned?Math.min(100,Math.round(w.workouts.length/planned*100)):0;
+  const weightChange=weights.length>=2?weights[weights.length-1]-weights[0]:null;
+  const cards=[['Avg calories',avgCal?Math.round(avgCal):'—',m?'/ '+m.calories+' target':''],['Avg protein',avgProtein?Math.round(avgProtein)+'g':'—',m?'/ '+m.protein+'g':''],['Avg steps',vals('steps').length?Math.round(avg(vals('steps'))).toLocaleString():'—',''],['Avg sleep',vals('sleep').length?avg(vals('sleep')).toFixed(1)+'h':'—',''],['Training',trainingPct+'%',w.workouts.length+' sessions'],['Cardio',w.acts.reduce((s,x)=>s+x.minutes,0)+' min',w.acts.reduce((s,x)=>s+x.usedKcal,0)+' kcal est.']];
+  let insight='Keep collecting consistent daily data.';
+  if(w.logs.length>=4){
+    if(m&&avgCal&&Math.abs(avgCal-m.calories)>m.calories*.12)insight='Nutrition execution is the biggest signal to tighten before changing the prescription.';
+    else if(vals('sleep').length&&avg(vals('sleep'))<(state.profile.sleepGoal||7.5)-.75)insight='Sleep is the clearest recovery constraint this week.';
+    else if(trainingPct<70)insight='Training completion is the biggest execution gap this week.';
+    else if(weightChange!=null)insight='Execution looks reasonably consistent. Let the multi-week trend, not one weigh-in, drive the next adjustment.';
+  }
+  el('weeklyReview').innerHTML='<div class="summaryGrid">'+cards.map(x=>'<div><small>'+x[0]+'</small><strong>'+x[1]+'</strong><span>'+x[2]+'</span></div>').join('')+'</div><div class="coachInsight weeklyInsight"><strong>Coach read:</strong> '+insight+'</div>';
 }
 function draw(id,key,label){
   const c=el(id),ctx=c.getContext('2d'),a=state.logs.filter(x=>x[key]).slice(-30),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);ctx.fillStyle='#0b1325';ctx.fillRect(0,0,w,h);
@@ -664,7 +713,7 @@ function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
 function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=18').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=19').catch(()=>{});
