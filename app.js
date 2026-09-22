@@ -765,8 +765,27 @@ function swapCompatibilityScore(item,candidate){
   const pref=preferred(candidate)?-8:0,budget=(state.profile.groceryPriority==='budget'?(candidate.price||0)*.15:0);
   return pDiff*2+cDiff*1.2+fDiff*2+kDiff*.03+budget+pref;
 }
+function nutritionRole(item){
+  const f=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat);
+  if(key)return key;
+  if(!f)return null;
+  return f.p>=f.c&&f.p>=f.f?'p':f.c>=f.f?'c':'f';
+}
+function roleCandidatePool(item){
+  const role=nutritionRole(item),sameCat=FOOD_DB.filter(x=>x.cat===item.cat&&!excluded(x));
+  const broad=FOOD_DB.filter(x=>{
+    if(excluded(x)||x.name===item.name)return false;
+    if(role==='p')return (x.p||0)>=8 && (x.p||0)>=Math.max((x.c||0)*.35,(x.f||0)*.45);
+    if(role==='c')return (x.c||0)>=10 && (x.c||0)>=Math.max((x.p||0)*1.2,(x.f||0)*2);
+    if(role==='f')return (x.f||0)>=5 && (x.f||0)>=Math.max((x.p||0)*.7,(x.c||0)*.35);
+    return x.cat===item.cat;
+  });
+  const map=new Map();
+  [...sameCat,...broad].forEach(x=>map.set(x.name,x));
+  return [...map.values()];
+}
 function swapOptionsFor(item){
-  return pool(item.cat)
+  return roleCandidatePool(item)
     .filter(x=>x.name!==item.name)
     .map(x=>({food:x,score:swapCompatibilityScore(item,x)}))
     .sort((a,b)=>a.score-b.score);
@@ -806,6 +825,7 @@ function renderSwapPickerOptions(){
   const {di,mi,ii}=activeSwap,meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
   const allRanked=swapOptionsFor(item),options=filteredSwapOptions();
   if(el('swapPickerCount'))el('swapPickerCount').textContent=options.length+' option'+(options.length===1?'':'s')+(activeSwapFilter==='recommended'?' • best macro matches first':'');
+  if(el('swapScopeNote')){const role=nutritionRole(item);el('swapScopeNote').textContent=activeSwapFilter==='all'?(role==='p'?'Showing every compatible protein source in the current food library that fits your dietary rules.':'Showing every compatible option in the current food library that can fill this nutrition role.'):'Recommendations are ranked by macro similarity, your preferences and budget settings.';}
   el('swapPickerOptions').innerHTML=options.length?options.map(o=>{
     const idx=allRanked.findIndex(x=>x.food.name===o.food.name),p=swapPreview(item,o.food,meal),m=p.macros,recommended=idx>=0&&idx<3;
     return '<button class="swapOption '+(recommended?'recommended':'')+'" onclick="chooseSwap(\''+escapeHtml(o.food.name).replace(/'/g,"\\'")+'\')">'+
@@ -1707,4 +1727,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=46').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=47').then(r=>r.update()).catch(()=>{});
