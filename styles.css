@@ -515,3 +515,311 @@ canvas{border-radius:14px}
   .appNav button span{font-size:6px!important}
   .appNav button svg{width:15px!important;height:15px!important}
 }
+
+/* =========================================================
+   V33 APEX — flagship design language
+   ========================================================= */
+:root{
+  --bg:#03050a;
+  --bg2:#070a10;
+  --surface:#0a0e16;
+  --surface2:#0d131e;
+  --surface3:#121a28;
+  --surface4:#182334;
+  --text:#fbfcff;
+  --muted:#9aa6b8;
+  --muted2:#667184;
+  --line:rgba(170,191,224,.09);
+  --lineStrong:rgba(170,191,224,.16);
+  --blue:#6f92ff;
+  --blue2:#8db0ff;
+  --cyan:#68dcff;
+  --violet:#8c6fff;
+  --green:#4fe0a2;
+  --amber:#ffca70;
+  --red:#ff6f92;
+  --luxGlow:0 0 0 1px rgba(142,170,220,.055),0 28px 90px rgba(0,0,0,.42);
+  --luxGlowStrong:0 0 0 1px rgba(135,166,226,.08),0 32px 110px rgba(0,0,0,.52);
+  --radius:28px;
+}
+body{
+  background:
+    radial-gradient(900px 620px at 12% -8%,rgba(79,119,255,.12),transparent 62%),
+    radial-gradient(800px 560px at 96% 8%,rgba(122,83,255,.07),transparent 64%),
+    linear-gradient(180deg,#04060b 0%,#03050a 42%,#05070c 100%);
+}
+body:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;
+  background:radial-gradient(circle at 50% -20%,rgba(255,255,255,.035),transparent 35%);
+}
+.ambientGrid{opacity:.18;background-size:88px 88px}
+
+.appHeader{
+  max-width:1420px;
+  padding:24px 30px 18px;
+  position:relative;
+}
+.brandBlock{gap:15px}
+.brandMark{
+  width:52px;height:52px;border-radius:17px;
+  background:
+    radial-gradient(circle at 28% 18%,rgba(255,255,255,.24),transparent 28%),
+    linear-gradient(145deg,#14264f 0%,#234b9d 48%,#5b3ac7 100%);
+  border:1px solid rgba(142,177,255,.34);
+  box-shadow:0 18px 50px rgba(64,91,210,.26),inset 0 1px rgba(255,255,255,.22),inset 0 -12px 28px rgba(15,18,42,.25);
+}
+.brandMark span{font-size:22px;letter-spacing:-.08em;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.brandCopy .eyebrow{color:#8fb0ff;font-size:8px;letter-spacing:.22em}
+.brandCopy h1{font-size:26px;font-weight:790;letter-spacing:-.065em;margin-top:2px}
+.brandCopy p{font-size:10px;color:#748096;letter-spacing:.01em}
+.systemStatus{background:rgba(8,12,19,.72);border-color:rgba(164,187,224,.11);box-shadow:inset 0 1px rgba(255,255,255,.025)}
+
+.appNav{
+  max-width:1120px;
+  top:12px;
+  margin-bottom:22px;
+  padding:6px;
+  border-radius:20px;
+  border:1px solid rgba(165,187,223,.10);
+  background:linear-gradient(180deg,rgba(12,17,26,.78),rgba(7,11,18,.82));
+  box-shadow:0 18px 60px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.03);
+}
+.appNav button{
+  min-height:46px;border-radius:14px;font-size:10px;color:#7c889a;
+  transition:all .18s cubic-bezier(.2,.7,.2,1);
+}
+.appNav button:hover{transform:translateY(-1px);color:#d8e2f2;background:rgba(255,255,255,.026)}
+.appNav button.active{
+  color:white;
+  border-color:rgba(129,161,240,.24);
+  background:
+    radial-gradient(circle at 50% 0,rgba(118,157,255,.16),transparent 65%),
+    linear-gradient(180deg,rgba(58,82,139,.34),rgba(29,40,71,.26));
+  box-shadow:0 8px 24px rgba(37,61,124,.24),inset 0 1px rgba(255,255,255,.07);
+}
+.appNav button.active:after{
+  content:"";position:absolute;bottom:3px;width:18px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,#70a0ff,#9278ff);box-shadow:0 0 12px rgba(111,151,255,.5);
+}
+.appNav button{position:relative}
+.appNav button svg{width:17px;height:17px;stroke-width:1.7}
+
+main{max-width:1420px;padding:4px 30px 110px}
+.dashboardHero{
+  min-height:230px;padding:38px 40px;border-radius:32px;
+  border:1px solid rgba(145,170,214,.12);
+  background:
+    linear-gradient(120deg,rgba(255,255,255,.018),transparent 22%),
+    radial-gradient(560px 240px at 92% 12%,rgba(94,124,255,.22),transparent 66%),
+    radial-gradient(420px 200px at 68% 100%,rgba(135,93,255,.09),transparent 72%),
+    linear-gradient(128deg,rgba(16,23,36,.98),rgba(7,11,18,.985) 62%);
+  box-shadow:var(--luxGlowStrong),inset 0 1px rgba(255,255,255,.04);
+}
+.dashboardHero h2{font-size:clamp(36px,5.2vw,58px);letter-spacing:-.065em;line-height:.96;font-weight:770}
+.dashboardHero p{font-size:13px;color:#9aa7b9}
+.dashboardHero .eyebrow{color:#8fb0ff}
+.heroScore{
+  width:132px;height:132px;
+  background:conic-gradient(from -90deg,#74a4ff var(--score),rgba(124,145,182,.10) var(--score));
+  box-shadow:0 22px 56px rgba(43,67,143,.27),inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.heroScore:before{inset:8px;background:radial-gradient(circle at 38% 26%,#1a2943,#090e17 74%);border-color:rgba(161,188,230,.12)}
+.heroScore span{font-size:38px;font-weight:780}
+.heroScore small{color:#7d899b}
+
+.premiumCard,.card,.coachShell{
+  border:1px solid rgba(158,180,215,.095);
+  border-radius:26px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.012),transparent 28%),
+    linear-gradient(180deg,rgba(12,18,28,.95),rgba(7,11,18,.97));
+  box-shadow:var(--luxGlow),inset 0 1px rgba(255,255,255,.028);
+  padding:24px;
+}
+.premiumCard:hover,.card:hover{border-color:rgba(165,189,226,.14)}
+.sectionHead{margin-bottom:20px}
+.sectionHead h2{font-size:28px}
+.sectionHead h3{font-size:20px}
+.sectionHead h2,.sectionHead h3{font-weight:730;letter-spacing:-.045em}
+.kicker,.eyebrow{font-size:8px;letter-spacing:.20em;color:#89aaff}
+
+.todayGrid,.grid2{gap:16px}
+.quickLogCard,.focusCard{min-height:100%}
+.snapshotMetric{
+  padding:14px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(18,27,42,.72),rgba(8,13,22,.78));
+  border-color:rgba(164,187,224,.08);
+}
+.snapshotMetric span{font-size:7px;color:#758198;letter-spacing:.11em}
+.snapshotMetric strong{font-size:18px}
+.metricStrip{gap:11px}
+.metricCard{
+  padding:20px 19px;border-radius:20px;
+  background:
+    radial-gradient(circle at 100% 0,rgba(100,139,255,.07),transparent 45%),
+    linear-gradient(180deg,rgba(17,25,39,.82),rgba(8,13,22,.86));
+  border-color:rgba(160,183,219,.085);
+}
+.metricIcon{border-radius:10px;width:32px;height:32px}
+.metricCard strong{font-size:29px}
+.metricCard small{font-size:7px;letter-spacing:.11em}
+.metricCard em{font-size:8px;color:#657186}
+
+button,.fileBtn{
+  border-radius:14px;
+  min-height:44px;
+  background:linear-gradient(180deg,rgba(25,35,52,.96),rgba(14,21,33,.98));
+  border-color:rgba(155,179,216,.13);
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 8px 20px rgba(0,0,0,.16);
+}
+.primary{
+  background:
+    linear-gradient(135deg,#557ff1 0%,#6d60f2 48%,#8051e8 100%);
+  border-color:rgba(151,178,255,.40);
+  box-shadow:0 14px 34px rgba(76,83,224,.28),inset 0 1px rgba(255,255,255,.18);
+}
+.primary:hover{transform:translateY(-1px);box-shadow:0 18px 42px rgba(76,83,224,.34),inset 0 1px rgba(255,255,255,.22)}
+input,select,textarea{
+  border-radius:14px;
+  min-height:46px;
+  background:linear-gradient(180deg,rgba(6,10,17,.96),rgba(10,15,24,.96));
+  border-color:rgba(156,179,216,.13);
+  color:#f7faff;
+  box-shadow:inset 0 1px rgba(255,255,255,.018);
+}
+input:focus,select:focus,textarea:focus{
+  border-color:rgba(112,154,255,.78);
+  box-shadow:0 0 0 4px rgba(88,133,255,.10),0 10px 30px rgba(28,48,99,.16);
+}
+
+.scheduleCard,.driftCard{
+  background:
+    radial-gradient(480px 160px at 95% 0,rgba(84,125,255,.10),transparent 70%),
+    linear-gradient(180deg,rgba(12,18,28,.96),rgba(7,11,18,.98));
+}
+.scheduleGrid,.driftControls{gap:9px}
+.scheduleGrid label,.driftControls label,.form label,.metricEntryGrid label,.activityForm label,.mealStructureControls label,.dayStructure label{
+  font-size:7.5px;letter-spacing:.09em;color:#7e8a9d;
+}
+.runwayCoachNote,.dailyRunway,.adherenceNudge,.runwayRecommendations,.driftIntervention,.reminderPanel{
+  border-color:rgba(154,177,214,.09)!important;
+  background:linear-gradient(180deg,rgba(7,12,20,.62),rgba(5,9,15,.68))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.015);
+}
+.runwayItem{padding:13px 14px}
+.runwayItem>span{font-size:10px;color:#8aafff}
+.runwayItem strong{font-size:11px}
+.runwayItem small{font-size:8.5px}
+.reminderGrid label:has(input[type="checkbox"]){
+  border-color:rgba(154,177,214,.08);
+  background:rgba(7,12,20,.54);
+  border-radius:13px;
+}
+
+.foodLogTabs{
+  border-radius:15px;padding:4px;background:rgba(5,9,15,.7);
+  border-color:rgba(156,179,216,.10)
+}
+.foodLogTabs button{border-radius:11px}
+.foodLogTabs button.active{
+  background:linear-gradient(180deg,rgba(92,132,230,.22),rgba(55,78,137,.13));
+  border-color:rgba(118,158,255,.20)
+}
+.foodLogger,.savedFoodLogger{
+  border-radius:18px!important;
+  background:linear-gradient(180deg,rgba(7,12,20,.58),rgba(5,9,15,.62))!important;
+}
+.diaryEntry{padding:12px 0}
+.diaryEntry strong{font-size:12px}
+.diaryEntry small{font-size:9px}
+
+.workout{
+  padding:20px!important;border-radius:28px!important;
+  border-color:rgba(158,181,217,.10)!important;
+  background:
+    radial-gradient(400px 160px at 90% 0,rgba(80,122,255,.075),transparent 70%),
+    linear-gradient(180deg,rgba(12,18,28,.96),rgba(6,10,17,.985))!important;
+  box-shadow:var(--luxGlow)!important;
+}
+.workoutHeader{padding:4px 3px 16px!important}
+.workoutHeader h3{font-size:23px}
+.exerciseCard{
+  padding:16px!important;border-radius:19px!important;
+  background:linear-gradient(180deg,rgba(9,14,23,.72),rgba(5,9,15,.74))!important;
+  border-color:rgba(155,178,214,.085)!important;
+}
+.exName strong{font-size:15px}
+.coachSetRow input{
+  min-height:42px;background:rgba(5,9,15,.86);border-radius:12px;
+}
+.executionGuide,.trainingCheck,.exerciseIssue{
+  border-radius:16px!important;
+  background:rgba(6,10,17,.52)!important;
+}
+
+.coachShell{
+  background:
+    radial-gradient(520px 220px at 100% 0,rgba(112,82,255,.10),transparent 70%),
+    linear-gradient(180deg,rgba(11,17,27,.96),rgba(6,10,17,.98));
+}
+.coachChat{
+  background:linear-gradient(180deg,rgba(5,9,15,.72),rgba(6,10,17,.76))!important;
+  border-radius:20px!important
+}
+.chatMsg{padding:13px 14px!important;border-radius:17px!important}
+.chatMsg.coach{background:linear-gradient(180deg,rgba(22,33,52,.92),rgba(12,19,31,.94))!important}
+.chatMsg.user{background:linear-gradient(135deg,rgba(79,115,221,.27),rgba(93,72,204,.24))!important}
+
+.notificationCenter{
+  border-radius:24px;
+  background:linear-gradient(180deg,rgba(10,15,24,.975),rgba(6,10,17,.985));
+  border-color:rgba(157,180,216,.14);
+  box-shadow:0 32px 110px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.03);
+}
+.notificationItem{border-radius:14px!important}
+.integrationCard{border-radius:18px}
+
+@media(max-width:760px){
+  body{padding-bottom:100px}
+  .appHeader{padding:15px 16px 10px}
+  .brandMark{width:46px;height:46px;border-radius:15px}
+  .brandCopy h1{font-size:22px}
+  main{padding:5px 14px 34px}
+  .dashboardHero{min-height:184px;padding:25px 22px;border-radius:27px;margin-top:6px}
+  .dashboardHero h2{font-size:34px}
+  .heroScore{width:98px;height:98px}
+  .premiumCard,.card,.coachShell{padding:18px;border-radius:22px}
+  .sectionHead h2{font-size:23px}.sectionHead h3{font-size:18px}
+  .metricCard{border-radius:18px}
+  .appNav{
+    left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));
+    height:68px;
+    padding:6px 4px!important;
+    border-radius:22px;
+    background:linear-gradient(180deg,rgba(12,17,26,.94),rgba(6,10,17,.96));
+    border-color:rgba(164,187,224,.13);
+    box-shadow:0 22px 70px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.04);
+  }
+  .appNav button{min-height:54px!important;border-radius:14px!important}
+  .appNav button svg{width:17px!important;height:17px!important}
+  .appNav button span{font-size:7px!important;font-weight:700!important;letter-spacing:-.01em}
+  .appNav button.active{
+    background:
+      radial-gradient(circle at 50% 0,rgba(117,157,255,.20),transparent 68%),
+      linear-gradient(180deg,rgba(62,86,147,.42),rgba(29,40,70,.34))!important;
+    border-color:rgba(126,164,255,.28)!important;
+    box-shadow:0 8px 22px rgba(26,46,98,.30),inset 0 1px rgba(255,255,255,.07)!important;
+  }
+  .appNav button.active:after{bottom:2px;width:14px}
+  .scheduleGrid,.driftControls{gap:8px}
+}
+@media(max-width:430px){
+  .dashboardHero{padding:22px 18px}
+  .dashboardHero h2{font-size:31px}
+  .dashboardHero p{font-size:10.5px}
+  .heroScore{width:88px;height:88px}.heroScore span{font-size:25px}
+  .appNav button span{font-size:6.7px!important}
+  .appNav button svg{width:16px!important;height:16px!important}
+  .metricStrip{gap:8px}
+  .metricCard{padding:15px 14px}
+}
