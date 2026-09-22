@@ -8,6 +8,64 @@ function rangeTouched(id,outId){const input=el(id);if(!input)return;input.datase
 function setRangeValue(id,outId,value,fallback){const input=el(id);if(!input)return;const has=value!==null&&value!==undefined&&value!=='';input.value=has?value:fallback;input.dataset.empty=has?'0':'1';const out=el(outId);if(out)out.textContent=has?input.value:'—'}
 function smartVal(id){const x=el(id);if(!x||x.value==='')return null;if(x.type==='range'&&x.dataset.empty==='1')return null;const n=+x.value;return Number.isFinite(n)?n:null}
 function syncRangeOutputs(){document.querySelectorAll('input[type="range"]').forEach(x=>{const out=el(x.id+'Out');if(out)out.textContent=x.dataset.empty==='1'?'—':x.value})}
+function deviceTimezone(){return Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time'}
+function formatLocalClock(d=new Date()){return new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).format(d)}
+function minutesFromTime(t){const [h,m]=(t||'00:00').split(':').map(Number);return h*60+m}
+function timeFromMinutes(total){total=((total%1440)+1440)%1440;return String(Math.floor(total/60)).padStart(2,'0')+':'+String(total%60).padStart(2,'0')}
+function eventLocalDateTime(date,time){return date.replaceAll('-','')+'T'+(time||'00:00').replace(':','')+'00'}
+function addMinutesToTime(date,time,minutes){const d=new Date(date+'T'+time+':00');d.setMinutes(d.getMinutes()+minutes);return {date:localDate(d),time:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}}
+function escapeICS(v){return String(v||'').replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
+function saveSchedule(){
+  state.schedule={checkin:el('scheduleCheckin').value||'08:00',workout:el('scheduleWorkout').value||'17:30',meal:el('scheduleMeal').value||'08:00',mealGap:+el('scheduleMealGap').value||4,reminder:+el('scheduleReminder').value||0};
+  state.timezone=deviceTimezone();save();renderSchedule();alert('Routine saved in '+state.timezone+'. Calendar exports will use your current device timezone.');
+}
+function loadSchedule(){
+  if(!el('scheduleCheckin'))return;const s=state.schedule||{};
+  el('scheduleCheckin').value=s.checkin||'08:00';el('scheduleWorkout').value=s.workout||'17:30';el('scheduleMeal').value=s.meal||'08:00';el('scheduleMealGap').value=String(s.mealGap||4);el('scheduleReminder').value=String(s.reminder??15);
+}
+function scheduleEventsForDate(date){
+  const s=state.schedule||{},events=[],day=dayType(date),mealCount=(state.dayMealPrefs?.[(new Date(date+'T12:00:00').getDay()+6)%7]?.meals||state.mealPrefs?.meals||state.profile.meals||4)+(state.dayMealPrefs?.[(new Date(date+'T12:00:00').getDay()+6)%7]?.snacks||state.mealPrefs?.snacks||0);
+  events.push({title:'PhysiqueOS check-in',date,time:s.checkin||'08:00',minutes:10,desc:'Log weight/recovery/steps/sleep and review today’s plan.'});
+  if(day.type==='training')events.push({title:'PhysiqueOS • '+day.title,date,time:s.workout||'17:30',minutes:state.profile.sessionLength||60,desc:'Planned training session. Open PhysiqueOS for readiness, execution cues and live modifications.'});
+  else events.push({title:'PhysiqueOS • '+(day.type==='rest'?'Recovery day':'Cardio / recovery'),date,time:s.workout||'17:30',minutes:30,desc:cardioPrescription().text});
+  const start=minutesFromTime(s.meal||'08:00'),gap=(+s.mealGap||4)*60;
+  for(let n=0;n<Math.min(6,mealCount);n++)events.push({title:'PhysiqueOS • '+(n<mealCount-(state.mealPrefs?.snacks||0)?'Meal '+(n+1):'Snack'),date,time:timeFromMinutes(start+n*gap),minutes:25,desc:'Planned nutrition touchpoint. Log what you eat or use a saved meal/day template.'});
+  return events;
+}
+function icsEvent(e,index){
+  const tz=deviceTimezone(),end=addMinutesToTime(e.date,e.time,e.minutes||30),alarm=+(state.schedule?.reminder||0);
+  return ['BEGIN:VEVENT','UID:physiqueos-'+e.date+'-'+index+'-'+Date.now()+'@local','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),'DTSTART;TZID='+tz+':'+eventLocalDateTime(e.date,e.time),'DTEND;TZID='+tz+':'+eventLocalDateTime(end.date,end.time),'SUMMARY:'+escapeICS(e.title),'DESCRIPTION:'+escapeICS(e.desc),...(alarm?['BEGIN:VALARM','TRIGGER:-PT'+alarm+'M','ACTION:DISPLAY','DESCRIPTION:'+escapeICS(e.title),'END:VALARM']:[]),'END:VEVENT'].join('\r\n');
+}
+function downloadWeekCalendar(){
+  const blocks=[];for(let d=0;d<7;d++){const x=new Date();x.setHours(12,0,0,0);x.setDate(x.getDate()+d);blocks.push(...scheduleEventsForDate(localDate(x)))}
+  const body=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PhysiqueOS//Beta//EN','CALSCALE:GREGORIAN','X-WR-CALNAME:PhysiqueOS Plan',...blocks.map(icsEvent),'END:VCALENDAR'].join('\r\n');
+  const blob=new Blob([body],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='PhysiqueOS_7_Day_Plan.ics';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function addTodayToGoogleCalendar(){
+  const events=scheduleEventsForDate(today()),main=events.find(x=>x.title.includes('PhysiqueOS •'))||events[0],end=addMinutesToTime(main.date,main.time,main.minutes||30),tz=deviceTimezone();
+  const qs=new URLSearchParams({action:'TEMPLATE',text:main.title,dates:eventLocalDateTime(main.date,main.time)+'/'+eventLocalDateTime(end.date,end.time),details:main.desc||'',ctz:tz});
+  window.open('https://calendar.google.com/calendar/render?'+qs.toString(),'_blank');
+}
+function adherenceTasks(){
+  if(!state.profile.age)return[{title:'Complete your profile',detail:'About 3 minutes',tab:'onboarding',done:false}];
+  const x=currentLog()||{},food=dayFoodTotals(today()),day=dayType(today()),tasks=[];
+  tasks.push({title:'Daily check-in',detail:'Log recovery + body metrics',tab:'dailylog',done:!!(x.sleep||x.energy||x.recovery||x.weight)});
+  if(state.macro)tasks.push({title:'Nutrition',detail:Math.round(food.cal)+' / '+state.macro.calories+' kcal • '+Math.round(food.p)+' / '+state.macro.protein+'g protein',tab:'dailylog',done:food.cal>=state.macro.calories*.8&&food.p>=state.macro.protein*.85});
+  tasks.push({title:'Steps',detail:(x.steps||0).toLocaleString()+' / '+(state.profile.stepGoal||8000).toLocaleString(),tab:'dailylog',done:(x.steps||0)>=(state.profile.stepGoal||8000)});
+  tasks.push({title:'Hydration',detail:(state.profile.units==='metric'?((x.water||0)/33.814).toFixed(1)+' L':Math.round(x.water||0)+' oz'),tab:'dailylog',done:(x.water||0)>=(state.profile.waterGoalOz||100)*.9});
+  if(day.type==='training')tasks.push({title:'Training',detail:day.title,tab:'training',done:state.workoutLogs.some(w=>w.date===today()&&w.workout===day.title)});
+  else tasks.push({title:'Recovery / activity',detail:day.type==='rest'?'Protect recovery':'Complete planned cardio/recovery',tab:'dailylog',done:state.recoveryLogs.some(r=>r.date===today())||state.activityLogs.some(r=>r.date===today())});
+  return tasks;
+}
+function renderSchedule(){
+  if(!el('timezoneStatus'))return;
+  const tz=deviceTimezone();if(state.timezone!==tz){state.timezone=tz;save()}
+  el('timezoneStatus').innerHTML='<strong>'+formatLocalClock()+'</strong><small>'+escapeHtml(tz)+'</small>';
+  const events=scheduleEventsForDate(today()).sort((a,b)=>a.time.localeCompare(b.time));
+  el('dailyRunway').innerHTML=events.map(e=>'<div class="runwayItem"><span>'+e.time+'</span><div><strong>'+escapeHtml(e.title.replace('PhysiqueOS • ',''))+'</strong><small>'+escapeHtml(e.desc)+'</small></div></div>').join('');
+  const tasks=adherenceTasks(),next=tasks.find(x=>!x.done);
+  el('adherenceNudge').innerHTML=next?'<div class="nudgeHero"><span class="pulseDot"></span><div><strong>'+escapeHtml(next.title)+'</strong><p>'+escapeHtml(next.detail)+'</p></div></div><button class="primary fullBtn" onclick="showTab(\''+next.tab+'\')">Do this now</button>':'<div class="nudgeComplete"><strong>100% of today’s core actions are covered.</strong><p>Keep the rest of the day simple. Consistency beats adding unnecessary work.</p></div>';
+}
 
 let state=JSON.parse(localStorage.getItem('physiqueOS')||'null')||{};
 state.profile=state.profile||{};
@@ -30,6 +88,8 @@ state.favoriteFoods=Array.isArray(state.favoriteFoods)?state.favoriteFoods:[];
 state.foodDayTemplates=Array.isArray(state.foodDayTemplates)?state.foodDayTemplates:[];
 state.foodWeekTemplates=Array.isArray(state.foodWeekTemplates)?state.foodWeekTemplates:[];
 state.workoutFavorites=Array.isArray(state.workoutFavorites)?state.workoutFavorites:[];
+state.schedule=state.schedule||{checkin:'08:00',workout:'17:30',meal:'08:00',mealGap:4,reminder:15};
+state.timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Local time';
 
 const FAQ_LIBRARY={
 'Getting started':[
@@ -1067,6 +1127,7 @@ function renderAdjustment(){
   el('adjustmentPanel').innerHTML=html;el('coachAdjustment').innerHTML=html;
 }
 function renderDashboard(){
+  renderSchedule();
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome, '+state.profile.name+'.':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore'))el('dailyScore').textContent=dailyScore();if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+' • '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
@@ -1115,14 +1176,15 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{checkin:'08:00',workout:'17:30',meal:'08:00',mealGap:4,reminder:15};state.timezone=deviceTimezone();save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 async function resetAll(){
   if(!confirm('Erase ALL local PhysiqueOS data on this device, including progress photos? This cannot be undone.'))return;
   localStorage.removeItem('physiqueOS');
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();loadSchedule();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=26').catch(()=>{});
+setInterval(()=>{if(el('timezoneStatus'))renderSchedule()},60000);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=27').catch(()=>{});
