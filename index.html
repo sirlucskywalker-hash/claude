@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="styles.css?v=35">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
   </div>
   <div class="headerActions">
     <div class="systemStatus"><span></span><div><strong>System online</strong><small>Local-first beta</small></div></div>
-    <button class="ghostBtn iconButton notificationBell" onclick="toggleNotificationCenter()" title="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notificationBadge" class="notificationBadge hidden">0</span></button><button class="ghostBtn iconButton menuTrigger" onclick="toggleAppMenu()" title="Open menu" aria-label="Open menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><button class="ghostBtn iconButton" onclick="exportData()" title="Export backup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button>
+    <button class="ghostBtn iconButton notificationBell" onclick="toggleNotificationCenter()" title="Notifications"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span id="notificationBadge" class="notificationBadge hidden">0</span></button><button id="menuTrigger" class="ghostBtn iconButton menuTrigger" onclick="toggleAppMenu()" title="Menu" aria-label="Open navigation menu" aria-expanded="false" aria-controls="appMenu"><span class="hamburgerIcon" aria-hidden="true"><i></i><i></i><i></i></span></button><button class="ghostBtn iconButton" onclick="exportData()" title="Export backup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></button>
   </div>
 </header>
 <nav class="appNav" aria-label="Primary navigation">
@@ -31,9 +31,9 @@
 <button data-tab="data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5V5Zm4 0v14m6-14v14M5 9h14m-14 6h14"/></svg><span>Data</span></button>
 </nav>
 <div id="appMenuBackdrop" class="appMenuBackdrop hidden" onclick="closeAppMenu()"></div>
-<aside id="appMenu" class="appMenu hidden" aria-label="App menu">
+<aside id="appMenu" class="appMenu appMenuDropdown hidden" aria-label="Navigation menu">
   <div class="appMenuHead">
-    <div><span class="kicker">PHYSIQUEOS</span><h3>Navigation</h3></div>
+    <div><span class="kicker">PHYSIQUEOS MENU</span><h3>Go anywhere</h3></div>
     <button class="menuClose" onclick="closeAppMenu()" aria-label="Close menu">×</button>
   </div>
   <button class="menuProfileCard" onclick="menuGo('onboarding')">
@@ -56,7 +56,7 @@
     <button data-menu-tab="onboarding" onclick="menuGo('onboarding')"><span>User Profile</span><small>Goals, preferences & setup</small></button>
     <button data-menu-tab="data" onclick="menuGo('data')"><span>Data & Integrations</span><small>Backups, devices & connections</small></button>
   </div>
-  <div class="menuFooter"><span class="menuOnlineDot"></span><span>PhysiqueOS Apex</span><small>v34</small></div>
+  <div class="menuFooter"><span class="menuOnlineDot"></span><span>PhysiqueOS Apex</span><small>v35</small></div>
 </aside>
 <aside id="notificationCenter" class="notificationCenter hidden" aria-label="Notifications">
   <div class="notificationCenterHead"><div><span class="kicker">ACCOUNTABILITY</span><h3>Notifications</h3></div><button onclick="toggleNotificationCenter()" aria-label="Close notifications">×</button></div>
@@ -407,5 +407,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=34"></script><script src="app.js?v=34"></script>
+<script src="data.js?v=35"></script><script src="app.js?v=35"></script>
 </body></html>
