@@ -1256,3 +1256,8 @@ button,.fileBtn{letter-spacing:-.012em}
 /* V42 — meal target alignment */
 .dayCard summary small{font-variant-numeric:tabular-nums}
 .structureChip span{line-height:1.45}
+
+/* V43 — visible meal budget + target integrity */
+.mealBudgetPanel{display:grid;grid-template-columns:1fr minmax(180px,260px);gap:16px;align-items:center;margin:12px 0 14px;padding:14px 15px;border:1px solid rgba(126,160,242,.16);border-radius:18px;background:linear-gradient(135deg,rgba(75,110,210,.08),rgba(6,10,17,.72))}
+.mealBudgetPanel strong,.mealBudgetPanel small{display:block}.mealBudgetPanel strong{font-size:13px;margin-top:3px}.mealBudgetPanel small{font-size:8.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+@media(max-width:560px){.mealBudgetPanel{grid-template-columns:1fr}.mealBudgetPanel .moneyInput{width:100%}}
