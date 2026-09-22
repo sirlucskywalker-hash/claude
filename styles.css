@@ -1252,3 +1252,7 @@ button,.fileBtn{letter-spacing:-.012em}
 .moneyInput{display:grid;grid-template-columns:38px 1fr;align-items:center;margin-top:6px;border:1px solid rgba(160,183,220,.12);border-radius:14px;background:linear-gradient(180deg,rgba(5,9,15,.97),rgba(8,13,21,.97));overflow:hidden}
 .moneyInput>span{display:grid;place-items:center;height:100%;color:#8ea9e9;font-weight:800;border-right:1px solid rgba(160,183,220,.08)}
 .moneyInput input{margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+
+/* V42 — meal target alignment */
+.dayCard summary small{font-variant-numeric:tabular-nums}
+.structureChip span{line-height:1.45}
