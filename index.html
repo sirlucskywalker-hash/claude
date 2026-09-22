@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=37">
+<link rel="stylesheet" href="styles.css?v=38">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -77,11 +77,17 @@
     <div class="heroScore"><span id="dailyScore">—</span><small>Daily score</small><em class="scoreStatus">Live</em></div>
   </div>
 
+  <div class="conciergeNow">
+    <div class="conciergeNowLead"><span class="kicker">RIGHT NOW</span><strong id="conciergeNowTitle">Your next best move</strong><small id="conciergeNowDetail">PhysiqueOS will keep this simple.</small></div>
+    <button id="conciergeNowButton" class="primary conciergeNowButton" onclick="showTab('dailylog')">Do this now</button>
+    <div class="conciergePulse"><div><span>Training</span><strong id="conciergeTraining">—</strong></div><div><span>Nutrition</span><strong id="conciergeNutrition">—</strong></div><div><span>Recovery</span><strong id="conciergeRecovery">—</strong></div></div>
+  </div>
+
   <div class="todayGrid">
     <div class="premiumCard quickLogCard">
-      <div class="sectionHead"><div><span class="kicker">TODAY'S DATA</span><h3>Your latest inputs</h3></div><span class="readOnlyBadge">READ ONLY</span></div>
+      <div class="sectionHead"><div><span class="kicker">TODAY'S DATA</span><h3>Today at a glance</h3></div><span class="readOnlyBadge">LIVE</span></div>
       <div id="todayMetricsSnapshot" class="todayMetricsSnapshot"></div>
-      <button class="primary fullBtn" onclick="showTab('dailylog')">Update in Log</button>
+      <div class="quickCardActions"><button onclick="toggleSnapshot(this)">View all data</button><button class="primary" onclick="showTab('dailylog')">Update check-in</button></div>
     </div>
 
     <div class="premiumCard focusCard">
@@ -92,8 +98,8 @@
 
   <div class="premiumCard scheduleCard">
     <div class="sectionHead">
-      <div><span class="kicker">ADHERENCE ENGINE</span><h3>Schedule & stay on track</h3><p class="muted">PhysiqueOS follows your device’s local timezone automatically, including travel and daylight-saving changes.</p></div>
-      <div id="timezoneStatus" class="timezoneBadge"></div>
+      <div><span class="kicker">ADHERENCE ENGINE</span><h3>Plan my day</h3><p class="muted">Your timing, reminders and calendar stay tucked away until you need them.</p></div>
+      <div class="sectionActions"><div id="timezoneStatus" class="timezoneBadge"></div><button class="cardExpandButton" onclick="toggleDenseCard('scheduleCard',this)">Customize</button></div>
     </div>
     <div class="scheduleGrid">
       <label>Wake time<input id="scheduleWake" type="time" value="07:00"></label>
@@ -135,8 +141,8 @@
 
   <div class="premiumCard driftCard">
     <div class="sectionHead">
-      <div><span class="kicker">DRIFT MONITOR</span><h3>Catch slippage before it becomes a setback</h3><p class="muted">Watches logging consistency, training completion, nutrition execution, recovery and multi-week progress. The goal is early correction, not punishment.</p></div>
-      <div id="driftStatus" class="driftStatus"></div>
+      <div><span class="kicker">DRIFT MONITOR</span><h3>Stay on course</h3><p class="muted">PhysiqueOS watches quietly and only brings this forward when it matters.</p></div>
+      <div class="sectionActions"><div id="driftStatus" class="driftStatus"></div><button class="cardExpandButton" onclick="toggleDenseCard('driftCard',this)">Details</button></div>
     </div>
     <div id="driftSignals" class="driftSignals"></div>
     <div class="driftControls">
@@ -149,6 +155,7 @@
     <div class="buttons"><button class="primary" onclick="activateRescueMode()">Start 3-day rescue</button><button onclick="downloadRescueCalendar()">Calendar rescue plan</button><button onclick="dismissDrift()">I’m back on track</button></div>
   </div>
 
+  <details class="dashboardInsights"><summary><span><span class="kicker">DEEPER VIEW</span><strong>Trends, intelligence & setup</strong><small>Open this when you want the detail.</small></span><em>View insights</em></summary><div class="dashboardInsightsBody">
   <div class="metricStrip">
     <div class="metricCard"><span class="metricIcon">◎</span><small>Calories</small><strong id="dashCalories">—</strong><em>daily target</em></div>
     <div class="metricCard"><span class="metricIcon">↘</span><small>Weight</small><strong id="dashWeight">—</strong><em>latest check-in</em></div>
@@ -164,7 +171,7 @@
   <div class="grid2">
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div>
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div>
-  </div>
+  </div></div></details>
 </section>
 
 <section id="dailylog" class="tab">
@@ -422,5 +429,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=37"></script><script src="app.js?v=37"></script>
+<script src="data.js?v=38"></script><script src="app.js?v=38"></script>
 </body></html>
