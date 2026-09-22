@@ -16,6 +16,8 @@ state.coachMessages=Array.isArray(state.coachMessages)?state.coachMessages:[];
 state.foodLogs=Array.isArray(state.foodLogs)?state.foodLogs:[];
 state.activityLogs=Array.isArray(state.activityLogs)?state.activityLogs:[];
 state.recoveryLogs=Array.isArray(state.recoveryLogs)?state.recoveryLogs:[];
+state.mealPrefs=state.mealPrefs||{meals:Number(state.profile.meals)||4,snacks:1,distribution:'balanced'};
+state.dayMealPrefs=state.dayMealPrefs||{};
 
 function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
 function showTab(id){
@@ -193,51 +195,61 @@ function foodChoice(list,d,i){
   const span=variety==='simple'?Math.min(2,list.length):variety==='balanced'?Math.min(4,list.length):list.length;
   return list[(d+i)%Math.max(1,span)];
 }
-function buildMeal(d,i,n){
-  const m=state.macro,ps=pool('protein'),cs=pool('carb'),vs=pool('veg'),fs=pool('fat');
-  if(!ps.length||!cs.length||!vs.length||!fs.length)throw new Error('Your restrictions leave an empty food category. Adjust preferences or exclusions.');
-  const pf=foodChoice(ps,d,i),cf=foodChoice(cs,d,i+1),vf=foodChoice(vs,d,i+2),ff=foodChoice(fs,d,i+3);
-  const pg=gramsFor(pf,'p',m.protein/n),cg=gramsFor(cf,'c',m.carbs/n);
+function snackPool(cat){
+  const base=pool(cat);
+  const names=cat==='protein'?['Greek yogurt','cottage','Whey','Plant protein','Whole eggs','Egg whites','tofu']:
+    cat==='carb'?['berries','Banana','Apple','Oats','Cream of rice','bread']:
+    cat==='fat'?['Almond butter','Peanut butter','Avocado']:[];
+  const filtered=base.filter(f=>names.some(n=>f.name.toLowerCase().includes(n.toLowerCase())));
+  return filtered.length?filtered:base;
+}
+function mealStructure(meals,snacks,distribution='balanced'){
+  meals=clamp(Number(meals)||3,2,6);snacks=clamp(Number(snacks)||0,0,3);
+  const snackEach=snacks?Math.min(.12,(.30/snacks)):0,totalSnack=snackEach*snacks,mealPool=1-totalSnack;
+  let weights=Array.from({length:meals},()=>1);
+  if(distribution==='largerDinner')weights[weights.length-1]=1.45;
+  if(distribution==='largerBreakfast')weights[0]=1.45;
+  if(distribution==='training'&&weights.length>=3){weights[Math.floor(weights.length/2)]=1.25;weights[Math.min(weights.length-1,Math.floor(weights.length/2)+1)]=1.2}
+  const sum=weights.reduce((s,x)=>s+x,0);
+  const parts=weights.map((w,idx)=>({kind:'meal',label:'Meal '+(idx+1),share:mealPool*w/sum}));
+  for(let s=0;s<snacks;s++)parts.push({kind:'snack',label:'Snack '+(s+1),share:snackEach});
+  return parts;
+}
+function previewMealStructure(){
+  if(!el('mealStructurePreview'))return;
+  const meals=+el('planMealsPerDay').value||4,snacks=+el('planSnacksPerDay').value||0,dist=el('mealDistribution').value||'balanced',parts=mealStructure(meals,snacks,dist),m=state.macro;
+  el('mealStructurePreview').innerHTML=parts.map(p=>'<div class="structureChip"><strong>'+p.label+'</strong><span>'+(m?Math.round(m.calories*p.share)+' kcal • '+Math.round(m.protein*p.share)+'P':' '+Math.round(p.share*100)+'% of day')+'</span></div>').join('');
+}
+function buildMeal(d,i,share,kind='meal',label='Meal'){
+  const m=state.macro,ps=kind==='snack'?snackPool('protein'):pool('protein'),cs=kind==='snack'?snackPool('carb'):pool('carb'),vs=pool('veg'),fs=kind==='snack'?snackPool('fat'):pool('fat');
+  if(!ps.length||!cs.length||!fs.length||(kind==='meal'&&!vs.length))throw new Error('Your restrictions leave an empty food category. Adjust preferences or exclusions.');
+  const pf=foodChoice(ps,d,i),cf=foodChoice(cs,d,i+1),vf=kind==='meal'?foodChoice(vs,d,i+2):null,ff=foodChoice(fs,d,i+3);
+  const targetP=m.protein*share,targetC=m.carbs*share,targetF=m.fat*share;
+  const pg=gramsFor(pf,'p',targetP),cg=gramsFor(cf,'c',targetC);
   const usedFat=macro(pf,pg).f+macro(cf,cg).f;
-  const fg=gramsFor(ff,'f',Math.max(3,m.fat/n-usedFat));
-  const items=[pf&&{name:pf.name,g:pg,cat:'protein',price:pf.price},cf&&{name:cf.name,g:cg,cat:'carb',price:cf.price},vf&&{name:vf.name,g:100,cat:'veg',price:vf.price},ff&&{name:ff.name,g:fg,cat:'fat',price:ff.price}].filter(Boolean);
-  return{items,sum:sumMeal(items)};
+  const fg=gramsFor(ff,'f',Math.max(2,targetF-usedFat));
+  const items=[pf&&{name:pf.name,g:pg,cat:'protein',price:pf.price},cf&&{name:cf.name,g:cg,cat:'carb',price:cf.price},vf&&{name:vf.name,g:kind==='meal'?100:0,cat:'veg',price:vf.price},ff&&{name:ff.name,g:fg,cat:'fat',price:ff.price}].filter(x=>x&&x.g>0);
+  return{kind,label,share,items,sum:sumMeal(items)};
 }
-function planCost(plan,rounded){
-  const totals={};plan.forEach(d=>d.meals.forEach(m=>m.items.forEach(x=>{totals[x.name]=(totals[x.name]||0)+x.g})));
-  return Object.entries(totals).reduce((s,[name,g])=>{const f=FOOD_DB.find(x=>x.name===name);if(!f)return s;const q=rounded?Math.ceil(g/f.packageG)*f.packageG:g;return s+q/1000*f.price},0);
-}
-function cheaperEquivalent(item){
-  const old=FOOD_DB.find(x=>x.name===item.name),key=primaryKey(item.cat);if(!old||!key)return null;
-  const target=old[key]*item.g/100;
-  const opts=pool(item.cat).filter(x=>x.name!==old.name&&x[key]>0).map(x=>({f:x,g:gramsFor(x,key,target)})).sort((a,b)=>(a.g/1000*a.f.price)-(b.g/1000*b.f.price));
-  return opts[0]||null;
-}
-function optimizeBudget(plan){
-  const budget=Number(state.profile.budget)||0;if(!budget)return plan;
-  let guard=0;
-  while(planCost(plan,true)>budget&&guard<120){
-    guard++;
-    let best=null;
-    plan.forEach((d,di)=>d.meals.forEach((m,mi)=>m.items.forEach((it,ii)=>{
-      const alt=cheaperEquivalent(it);if(!alt)return;
-      const oldCost=it.g/1000*it.price,newCost=alt.g/1000*alt.f.price,saving=oldCost-newCost;
-      if(saving>0&&(!best||saving>best.saving))best={di,mi,ii,alt,saving};
-    })));
-    if(!best)break;
-    const meal=plan[best.di].meals[best.mi],a=best.alt;
-    meal.items[best.ii]={name:a.f.name,g:a.g,cat:a.f.cat,price:a.f.price};meal.sum=sumMeal(meal.items);
-  }
-  return plan;
+function buildMealDay(dayIndex,meals,snacks,distribution){
+  const parts=mealStructure(meals,snacks,distribution);
+  return{day:dayIndex+1,meals:parts.map((p,i)=>buildMeal(dayIndex,i,p.share,p.kind,p.label)),prefs:{meals:+meals,snacks:+snacks,distribution}};
 }
 function generateMeals(){
   try{
     if(safetyBlockers(state.profile).length)return alert('Meal-plan automation is paused by the safety screening.');
     if(!state.macro)return alert('Complete onboarding first.');
-    const n=Number(state.profile.meals)||4,days=[];
-    for(let d=0;d<7;d++){const meals=[];for(let i=0;i<n;i++)meals.push(buildMeal(d,i,n));days.push({day:d+1,meals})}
+    const meals=+el('planMealsPerDay').value||Number(state.profile.meals)||4,snacks=+el('planSnacksPerDay').value||0,distribution=el('mealDistribution').value||'balanced';
+    state.mealPrefs={meals,snacks,distribution};state.dayMealPrefs={};
+    const days=[];for(let d=0;d<7;d++)days.push(buildMealDay(d,meals,snacks,distribution));
     state.mealPlan=optimizeBudget(days);save();renderMeals();
   }catch(e){console.error(e);el('mealPlan').innerHTML='<div class="notice dangerNotice">Meal generator error: '+String(e.message||e)+'</div>'}
+}
+function rebuildMealDay(di){
+  try{
+    const meals=+el('dayMeals_'+di).value||3,snacks=+el('daySnacks_'+di).value||0,distribution=el('dayDist_'+di).value||state.mealPrefs.distribution||'balanced';
+    state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);save();renderMeals();
+  }catch(e){alert('Could not rebuild this day: '+e.message)}
 }
 function swapIngredient(di,mi,ii){
   const meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
@@ -249,8 +261,9 @@ function swapIngredient(di,mi,ii){
 }
 function replaceMeal(di,mi){
   const old=state.mealPlan[di]?.meals?.[mi];if(!old)return;
-  let fresh=buildMeal(di+mi+3,mi+2,state.profile.meals||4);
-  fresh.items.forEach((x,ii)=>{if(old.items[ii]&&x.name===old.items[ii].name){const opts=pool(x.cat).filter(z=>z.name!==x.name);if(opts.length){const oldF=FOOD_DB.find(z=>z.name===x.name),key=primaryKey(x.cat),n=opts[0];let g=x.g;if(key&&oldF&&n[key]>0)g=gramsFor(n,key,oldF[key]*x.g/100);fresh.items[ii]={name:n.name,g,cat:n.cat,price:n.price}}}});
+  const share=old.share||1/Math.max(1,state.mealPlan[di].meals.length),kind=old.kind||'meal',label=old.label||(kind==='snack'?'Snack':'Meal '+(mi+1));
+  let fresh=buildMeal(di+mi+3,mi+2,share,kind,label);
+  fresh.items.forEach((x,ii)=>{if(old.items[ii]&&x.name===old.items[ii].name){const opts=(kind==='snack'?snackPool(x.cat):pool(x.cat)).filter(z=>z.name!==x.name);if(opts.length){const oldF=FOOD_DB.find(z=>z.name===x.name),key=primaryKey(x.cat),n=opts[0];let g=x.g;if(key&&oldF&&n[key]>0)g=gramsFor(n,key,oldF[key]*x.g/100);fresh.items[ii]={name:n.name,g,cat:n.cat,price:n.price}}}});
   fresh.sum=sumMeal(fresh.items);state.mealPlan[di].meals[mi]=fresh;save();renderMeals();
 }
 function groceryTotals(){
@@ -275,21 +288,30 @@ function displayPackage(g,packs){
   return packs+' × '+displayGroceryWeight(g);
 }
 function renderMeals(){
+  if(el('planMealsPerDay'))el('planMealsPerDay').value=state.mealPrefs.meals||state.profile.meals||4;
+  if(el('planSnacksPerDay'))el('planSnacksPerDay').value=state.mealPrefs.snacks??1;
+  if(el('mealDistribution'))el('mealDistribution').value=state.mealPrefs.distribution||'balanced';
+  previewMealStructure();
   if(!state.mealPlan.length){
-    el('mealPlan').innerHTML='<div class="notice">Generate a plan first.</div>';
+    el('mealPlan').innerHTML='<div class="notice">Choose your meal + snack structure above, then generate a plan.</div>';
     el('grocery').innerHTML='<div class="notice">The grocery list will use your generated plan, budget, ZIP and preferred stores.</div>';
     el('swaps').innerHTML='<div class="notice">Ingredient and meal replacements appear after generation.</div>';return;
   }
-  el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>'<details class="meal" '+(d.day===1?'open':'')+'><summary>Day '+d.day+'</summary>'+d.meals.map((m,mi)=>'<div class="meal"><div class="row"><strong>Meal '+(mi+1)+'</strong><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log meal</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('')+'</details>').join('');
-  const totals=groceryTotals(),rows=Object.entries(totals);
-  let roundedCost=0;
-  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
+  el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>{
+    const pref=d.prefs||state.dayMealPrefs[di]||state.mealPrefs,total=d.meals.reduce((s,m)=>({k:s.k+m.sum.k,p:s.p+m.sum.p,c:s.c+m.sum.c,f:s.f+m.sum.f}),{k:0,p:0,c:0,f:0});
+    const controls='<div class="dayStructure"><label>Meals<select id="dayMeals_'+di+'">'+[2,3,4,5,6].map(n=>'<option '+(n==pref.meals?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Snacks<select id="daySnacks_'+di+'">'+[0,1,2,3].map(n=>'<option '+(n==pref.snacks?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Distribution<select id="dayDist_'+di+'"><option value="balanced" '+(pref.distribution==='balanced'?'selected':'')+'>Balanced</option><option value="largerDinner" '+(pref.distribution==='largerDinner'?'selected':'')+'>Larger dinner</option><option value="largerBreakfast" '+(pref.distribution==='largerBreakfast'?'selected':'')+'>Larger breakfast</option><option value="training" '+(pref.distribution==='training'?'selected':'')+'>Training-focused</option></select></label><button onclick="rebuildMealDay('+di+')">Rebuild day</button></div>';
+    const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('');
+    return'<details class="meal dayCard" '+(d.day===1?'open':'')+'><summary><span>Day '+d.day+'</span><small>'+Math.round(total.k)+' kcal • '+Math.round(total.p)+'P '+Math.round(total.c)+'C '+Math.round(total.f)+'F</small></summary>'+controls+cards+'</details>';
+  }).join('');
+  const totals=groceryTotals(),rows=Object.entries(totals);let roundedCost=0;
+  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);if(!f)return'';const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
   const budget=Number(state.profile.budget)||0;
   const budgetMsg=budget?(roundedCost<=budget?'<div class="notice success">Estimated basket fits the entered budget.</div>':'<div class="notice warning">Estimated packaged basket is about $'+(roundedCost-budget).toFixed(2)+' over budget. The generator has already prioritized cheaper macro-equivalent foods where possible.</div>'):'';
   const cards=storeNames().map(s=>{const est=roundedCost*storeMultiplier(s);return'<div class="meal"><strong>'+s+'</strong><div>Planning estimate: $'+est.toFixed(2)+'</div><button onclick="window.open(\''+storeSearchUrl(s)+'\',\'_blank\')">Find near '+(state.profile.zip||'ZIP')+'</button></div>'}).join('');
   el('grocery').innerHTML='<p><strong>ZIP:</strong> '+(state.profile.zip||'Not set')+' • <strong>Budget:</strong> '+(budget?'$'+budget:'Not set')+'</p>'+budgetMsg+'<h4>Shopping quantities</h4><table>'+qtyRows+'</table><h4>Store options</h4><small>Estimates are not live retailer prices or inventory.</small>'+cards;
   el('swaps').innerHTML=['protein','carb','fat','veg'].map(cat=>'<div class="meal"><strong>'+cat+'</strong><div>'+pool(cat).map(x=>x.name).join(' • ')+'</div></div>').join('');
 }
+
 function openStores(){window.open('https://www.google.com/maps/search/'+encodeURIComponent((state.profile.stores||'grocery stores')+' near '+(state.profile.zip||'')),'_blank')}
 
 function split(days){
@@ -329,7 +351,7 @@ function swapExercise(di,ei){
 function normalizeSetResults(x){
   if(Array.isArray(x.results))return x.results;
   if(Array.isArray(x.setData))return x.setData;
-  if(Number.isFinite(x.reps))return[{weight:Number(x.weight)||0,reps:Number(x.reps)||0,rir:Number(x.rir)||0}];
+  if(Number.isFinite(x.reps)){const rir=Number(x.rir)||0;return[{weight:Number(x.weight)||0,reps:Number(x.reps)||0,rir,rpe:10-rir}]};
   return[];
 }
 function progression(name,min,max,targetRir){
@@ -345,27 +367,42 @@ function progression(name,min,max,targetRir){
   if(previous.length&&total>prevTotal)return'Progressing. Keep the load and continue adding total reps across the sets.';
   return'Hold the load and beat total reps, RIR, or execution quality next session.';
 }
+function syncEffort(di,ei,si,source){
+  const rpeEl=el('rpe_'+di+'_'+ei+'_'+si),rirEl=el('rir_'+di+'_'+ei+'_'+si);if(!rpeEl||!rirEl)return;
+  if(source==='rpe'&&rpeEl.value!==''){const rpe=clamp(+rpeEl.value,1,10);rirEl.value=Math.max(0,(10-rpe)).toFixed(rpe%1?1:0)}
+  if(source==='rir'&&rirEl.value!==''){const rir=clamp(+rirEl.value,0,9);rpeEl.value=Math.max(1,10-rir).toFixed(rir%1?1:0)}
+}
+function changeSetCount(di,ei,delta){
+  const item=state.trainingPlan[di]?.items?.[ei];if(!item)return;item.sets=clamp((item.sets||3)+delta,1,8);save();renderTraining();
+}
 function logWorkout(di){
   const day=state.trainingPlan[di];if(!day)return;
   const exercises=day.items.map((x,ei)=>{
     const results=[];
     for(let si=0;si<x.sets;si++){
-      const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0,rir=+el('rir_'+di+'_'+ei+'_'+si).value;
-      if(reps>0)results.push({set:si+1,weight,reps,rir:Number.isFinite(rir)?rir:0});
+      const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0;
+      let rpe=el('rpe_'+di+'_'+ei+'_'+si).value!==''?+el('rpe_'+di+'_'+ei+'_'+si).value:null,rir=el('rir_'+di+'_'+ei+'_'+si).value!==''?+el('rir_'+di+'_'+ei+'_'+si).value:null;
+      if(rpe!=null&&rir==null)rir=Math.max(0,10-rpe);if(rir!=null&&rpe==null)rpe=Math.max(1,10-rir);
+      if(reps>0)results.push({set:si+1,weight,reps,rpe,rir});
     }
     return{name:x.name,results};
   }).filter(x=>x.results.length);
   if(!exercises.length)return alert('Enter at least one completed set.');
-  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe:+el('sessionRpe_'+di).value||null,notes:el('sessionNotes_'+di).value||'',exercises});save();renderTraining();alert('Workout logged. Set-by-set progression guidance updated.');
+  state.workoutLogs.push({date:today(),workout:day.name,sessionRpe:+el('sessionRpe_'+di).value||null,notes:el('sessionNotes_'+di).value||'',exercises});save();renderTraining();alert('Workout logged. Set-by-set effort and progression guidance updated.');
 }
 function renderTraining(){
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
-  el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>'<div class="workout"><div class="row"><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div>'+d.items.map((x,ei)=>{
-    const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="6" inputmode="numeric"></label></div>').join('');
-    return'<div class="exerciseCard"><div class="row"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><button onclick="swapExercise('+di+','+ei+')">Swap exercise</button></div><div class="setRows">'+setRows+'</div></div>';
-  }).join('')+'<button class="primary" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>').join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+(w.sessionRpe?'<div class="muted">Session RPE '+w.sessionRpe+(w.notes?' • '+escapeHtml(w.notes):'')+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+s.rir+' RIR').join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>{
+    const sessionHeader='<div class="workoutHeader"><div><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div><label class="sessionRpeTop"><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" placeholder="1–10"></label></div>';
+    const exercises=d.items.map((x,ei)=>{
+      const targetRpe=Math.max(1,10-(x.rir??3));
+      const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setRow effortRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric"></label><label>RPE<input id="rpe_'+di+'_'+ei+'_'+si+'" type="number" min="1" max="10" step=".5" inputmode="decimal" oninput="syncEffort('+di+','+ei+','+si+',\'rpe\')"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="9" step=".5" inputmode="decimal" oninput="syncEffort('+di+','+ei+','+si+',\'rir\')"></label></div>').join('');
+      return'<div class="exerciseCard"><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+targetRpe+' RPE / '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="changeSetCount('+di+','+ei+',-1)">− set</button><button onclick="changeSetCount('+di+','+ei+',1)">+ set</button><button onclick="swapExercise('+di+','+ei+')">Swap</button></div></div><div class="setRows">'+setRows+'</div></div>';
+    }).join('');
+    return'<div class="workout">'+sessionHeader+exercises+'<label class="sessionNote">Session notes<input id="sessionNotes_'+di+'" placeholder="Energy, pain, performance, technique notes..."></label><button class="primary fullBtn" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>';
+  }).join('');
+  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+(w.sessionRpe?'<div class="muted">Session RPE '+w.sessionRpe+(w.notes?' • '+escapeHtml(w.notes):'')+'</div>':'')+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+(s.rpe!=null?s.rpe+' RPE / ':'')+(s.rir!=null?s.rir+' RIR':'—')).join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
 function shiftLogDate(delta){
@@ -406,7 +443,7 @@ function addCustomFood(){
 }
 function logPlannedMeal(di,mi){
   const m=state.mealPlan[di]?.meals?.[mi];if(!m)return;const names=m.items.map(x=>x.name).join(' + ');
-  state.foodLogs.push({id:Date.now()+'_'+Math.random(),date:today(),meal:['Breakfast','Lunch','Dinner','Snack'][mi]||'Meal '+(mi+1),name:names,calories:m.sum.k,protein:m.sum.p,carbs:m.sum.c,fat:m.sum.f,source:'plan'});
+  state.foodLogs.push({id:Date.now()+'_'+Math.random(),date:today(),meal:m.kind==='snack'?'Snack':(['Breakfast','Lunch','Dinner'][mi]||'Meal '+(mi+1)),name:names,calories:m.sum.k,protein:m.sum.p,carbs:m.sum.c,fat:m.sum.f,source:'plan'});
   if(el('foodLogDate'))el('foodLogDate').value=today();syncFoodToDailyLog(today());save();renderAll();alert('Planned meal logged to today.');
 }
 function deleteFoodLog(id){
@@ -711,9 +748,9 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
 function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();renderRecentFoods();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderAdjustment();renderWeeklyReview();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=19').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=20').catch(()=>{});
