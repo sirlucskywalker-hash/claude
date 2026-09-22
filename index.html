@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=23">
+<link rel="stylesheet" href="styles.css?v=24">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -256,7 +256,7 @@
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">WEEKLY REVIEW</span><h3>Seven-day intelligence</h3></div><button onclick="renderWeeklyReview()">Refresh</button></div><div id="weeklyReview"></div></div>
 <div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p><div class="notice"><strong>Full-version vision analysis:</strong> planned photo-based meal estimation, physique change analysis, standardized comparison overlays and confidence-aware recommendations. Beta stores photos only and does not pretend to infer body fat from an image.</div>
 <div class="form"><label>Date<input id="photoDate" type="date"></label><label>Front<input id="photoFront" type="file" accept="image/*"></label><label>Side<input id="photoSide" type="file" accept="image/*"></label><label>Back<input id="photoBack" type="file" accept="image/*"></label></div>
-<button onclick="savePhotos()">Save photo set</button><div id="photoGallery" class="photoGrid"></div></div>
+<div class="buttons"><button class="primary" onclick="savePhotos()">Save photo set</button><button class="danger" onclick="deleteAllPhotos()">Delete all photos</button></div><div id="photoGallery" class="photoGrid"></div></div>
 <div class="card"><h3>History</h3><div id="history"></div></div>
 </section>
 
@@ -289,8 +289,8 @@
   </div>
 </section>
 
-<section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
+<section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=23"></script><script src="app.js?v=23"></script>
+<script src="data.js?v=24"></script><script src="app.js?v=24"></script>
 </body></html>
