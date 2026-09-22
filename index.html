@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=14">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -140,9 +140,9 @@
 
 <section id="progress" class="tab">
 <div class="card"><h2>Check-in</h2><div class="form">
-<label>Date<input id="logDate" type="date"></label><label>Weight<input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label>
+<label>Date<input id="logDate" type="date"></label><label>Weight <span class="muted">(your selected units)</span><input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label>
 <label>Chest<input id="logChest" type="number" step=".1"></label><label>Arm<input id="logArm" type="number" step=".1"></label><label>Thigh<input id="logThigh" type="number" step=".1"></label>
-<label>Steps<input id="logSteps" type="number"></label><label>Water oz<input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
+<label>Steps<input id="logSteps" type="number"></label><label>Water <span class="muted">(oz or L)</span><input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
 <label>Calories eaten<input id="logCalories" type="number"></label><label>Adherence %<input id="logAdherence" type="number" min="0" max="100"></label>
 <label>Hunger 1–10<input id="logHunger" type="number" min="1" max="10"></label><label>Energy 1–10<input id="logEnergy" type="number" min="1" max="10"></label><label>Stress 1–10<input id="logStress" type="number" min="1" max="10"></label>
 <label>Recovery 1–10<input id="logRecovery" type="number" min="1" max="10"></label><label>Soreness 1–10<input id="logSoreness" type="number" min="1" max="10"></label><label>Digestion 1–10<input id="logDigestion" type="number" min="1" max="10"></label>
@@ -179,5 +179,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=13"></script><script src="app.js?v=13"></script>
+<script src="data.js?v=14"></script><script src="app.js?v=14"></script>
 </body></html>
