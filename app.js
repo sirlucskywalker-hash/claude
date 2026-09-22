@@ -1347,8 +1347,28 @@ function renderAdjustment(){
   const html=a?'<div class="notice warning"><strong>Suggested target change:</strong> '+(a.delta>0?'+':'')+a.delta+' kcal/day → '+a.next+' kcal.<br>'+a.reason+'<div class="buttons"><button class="primary" onclick="applyAdjustment()">Apply adjustment</button></div></div>':'';
   el('adjustmentPanel').innerHTML=html;el('coachAdjustment').innerHTML=html;
 }
+function toggleDenseCard(cls,btn){
+  const card=document.querySelector('.'+cls);if(!card)return;
+  const open=card.classList.toggle('expanded');
+  if(btn)btn.textContent=open?'Hide':(cls==='scheduleCard'?'Customize':'Details');
+}
+function toggleSnapshot(btn){
+  const card=document.querySelector('.quickLogCard');if(!card)return;
+  const open=card.classList.toggle('expanded');
+  if(btn)btn.textContent=open?'Show less':'View all data';
+}
+function renderConciergeNow(){
+  if(!el('conciergeNowTitle'))return;
+  const tasks=adherenceTasks(),next=tasks.find(x=>!x.done),day=dayType(today()),food=dayFoodTotals(today()),r=readinessAdvice();
+  const btn=el('conciergeNowButton');
+  if(next){el('conciergeNowTitle').textContent=next.title;el('conciergeNowDetail').textContent=next.detail;btn.textContent='Do this now';btn.onclick=()=>showTab(next.tab)}
+  else{el('conciergeNowTitle').textContent='You’re covered for today';el('conciergeNowDetail').textContent='Core actions are done. Keep the rest simple and recover well.';btn.textContent='Ask AI Coach';btn.onclick=()=>showTab('coach')}
+  el('conciergeTraining').textContent=day.type==='training'?(state.workoutLogs.some(w=>w.date===today()&&w.workout===day.title)?'Done':day.title):day.type==='rest'?'Recovery':'Cardio';
+  el('conciergeNutrition').textContent=state.macro?Math.round(food.p)+'/'+state.macro.protein+'g P':'Set target';
+  el('conciergeRecovery').textContent=r.score!=null?r.score+'/100':'Log check-in';
+}
 function renderDashboard(){
-  renderSchedule();renderDriftMonitor();renderProfilePhoto();
+  renderSchedule();renderDriftMonitor();renderProfilePhoto();renderConciergeNow();
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome back, '+state.profile.name+'.':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore(),ring=el('dailyScore').parentElement;el('dailyScore').textContent=ds||'—';ring.style.setProperty('--score',(ds||0)+'%');const st=ring.querySelector('.scoreStatus');if(st)st.textContent=ds>=90?'Elite':ds>=75?'Strong':ds>=55?'Building':ds?'Recover':'Live'};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
@@ -1411,4 +1431,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=37').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=38').catch(()=>{});
