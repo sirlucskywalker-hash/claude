@@ -470,3 +470,21 @@ canvas{border-radius:14px}
   .scheduleActions button{width:100%}
   .workout{padding:14px!important}.exerciseCard{padding:12px!important}
 }
+
+/* V30 ACCOUNTABILITY + CORE NAV */
+.notificationBell{position:relative}.notificationBadge{position:absolute;right:-5px;top:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:var(--red);color:white;font-size:8px;font-weight:800;border:2px solid #080b12}
+.notificationCenter{position:fixed;right:18px;top:82px;z-index:120;width:min(390px,calc(100vw - 28px));max-height:74vh;overflow:auto;padding:16px;border:1px solid rgba(145,169,204,.16);border-radius:22px;background:rgba(7,11,18,.96);backdrop-filter:blur(26px) saturate(145%);box-shadow:0 28px 90px rgba(0,0,0,.55)}
+.notificationCenterHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.notificationCenterHead h3{margin:2px 0 0}.notificationCenterHead>button{width:34px;min-height:34px;padding:0;border-radius:50%}
+.notificationPermissionState{padding:10px 12px;border:1px solid var(--line);border-radius:13px;background:rgba(10,17,28,.7);margin-bottom:10px}.notificationPermissionState strong,.notificationPermissionState span{display:block}.notificationPermissionState strong{font-size:10px}.notificationPermissionState span{font-size:8px;color:var(--muted);margin-top:3px;line-height:1.4}
+.notificationList{margin-top:10px}.notificationItem{display:block;width:100%;text-align:left;padding:12px;margin-top:7px;background:rgba(8,14,23,.72);border-color:rgba(145,169,204,.09);box-shadow:none}.notificationItem.unread{border-color:rgba(101,148,255,.25);background:linear-gradient(180deg,rgba(73,111,202,.11),rgba(8,14,23,.78))}.notificationItem strong,.notificationItem p,.notificationItem small{display:block}.notificationItem strong{font-size:11px;margin:3px 0}.notificationItem p{font-size:9px;line-height:1.45;color:var(--muted);margin:0 0 5px}.notificationItem small{font-size:7px;color:var(--muted2)}.notificationType{font-size:7px;text-transform:uppercase;letter-spacing:.1em;color:#83a8ff}
+.reminderPanel{margin:12px 0 14px;padding:14px;border:1px solid rgba(145,169,204,.1);border-radius:17px;background:rgba(6,11,19,.48)}.reminderPanelHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}.reminderPanelHead strong{display:block;font-size:11px;margin-top:3px}.notificationStatusPill{font-size:7px;text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;border-radius:999px;border:1px solid var(--lineStrong);color:var(--muted)}.notificationStatusPill.on{color:var(--green);border-color:rgba(78,227,162,.25);background:rgba(78,227,162,.05)}.notificationStatusPill.blocked{color:var(--red);border-color:rgba(255,111,143,.25)}
+.reminderGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.reminderGrid label{font-size:8px;color:#7b899d}.reminderGrid label:has(input[type="checkbox"]){display:flex;align-items:center;gap:7px;min-height:44px;padding:10px;border:1px solid rgba(145,169,204,.09);border-radius:12px;background:rgba(5,10,17,.42)}.reminderGrid input[type="checkbox"]{width:15px;height:15px;min-height:0;accent-color:var(--blue);padding:0}.reminderPanel>small{display:block;margin-top:10px;font-size:8px;line-height:1.45;color:var(--muted2)}
+@media(max-width:900px){.reminderGrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){
+  .appNav{grid-template-columns:repeat(5,1fr)}
+  .appNav button{display:none!important}
+  .appNav button[data-tab="dashboard"],.appNav button[data-tab="dailylog"],.appNav button[data-tab="training"],.appNav button[data-tab="coach"],.appNav button[data-tab="progress"]{display:flex!important}
+  .notificationCenter{right:12px;top:68px;width:calc(100vw - 24px);max-height:76vh}
+  .reminderGrid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){.reminderGrid{grid-template-columns:1fr 1fr}.reminderPanelHead{align-items:flex-start}.notificationStatusPill{max-width:110px;text-align:center}}
