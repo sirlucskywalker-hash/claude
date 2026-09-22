@@ -491,8 +491,43 @@ function pool(cat){
   return a;
 }
 function gramsFor(f,key,target){if(!f||!f[key])return 0;return Math.max(0,Math.round((target/(f[key]/100))/5)*5)}
-function macro(f,g){const q=g/100;return{p:f.p*q,c:f.c*q,f:f.f*q,k:f.k*q}}
-function sumMeal(items){return items.map(x=>{const f=FOOD_DB.find(z=>z.name===x.name);return f?macro(f,x.g):{p:0,c:0,f:0,k:0}}).reduce((a,x)=>({p:a.p+x.p,c:a.c+x.c,f:a.f+x.f,k:a.k+x.k}),{p:0,c:0,f:0,k:0})}
+function macro(f,g){
+  const q=g/100,p=(f.p||0)*q,c=(f.c||0)*q,fat=(f.f||0)*q;
+  return{p,c,f:fat,k:p*4+c*4+fat*9};
+}
+function sumMeal(items){
+  const total=items.map(x=>{const f=FOOD_DB.find(z=>z.name===x.name);return f?macro(f,x.g):{p:0,c:0,f:0,k:0}})
+    .reduce((a,x)=>({p:a.p+x.p,c:a.c+x.c,f:a.f+x.f,k:a.k+x.k}),{p:0,c:0,f:0,k:0});
+  total.k=total.p*4+total.c*4+total.f*9;
+  return total;
+}
+function targetMealMacros(share){const m=state.macro;return{p:m.protein*share,c:m.carbs*share,f:m.fat*share,k:m.calories*share}}
+function tuneMealItems(items,share){
+  const target=targetMealMacros(share),out=items.map(x=>({...x}));
+  const idxFor=cat=>out.findIndex(x=>x.cat===cat);
+  for(let pass=0;pass<7;pass++){
+    const total=sumMeal(out);
+    for(const [cat,key] of [['protein','p'],['carb','c'],['fat','f']]){
+      const idx=idxFor(cat);if(idx<0)continue;
+      const food=FOOD_DB.find(z=>z.name===out[idx].name);if(!food||!food[key])continue;
+      const error=target[key]-total[key];
+      const delta=(error/(food[key]/100));
+      out[idx].g=Math.max(5,Math.round((out[idx].g+delta)/5)*5);
+    }
+  }
+  return out;
+}
+function alignMealToTarget(meal){
+  if(!meal||!meal.items||!state.macro)return meal;
+  meal.items=tuneMealItems(meal.items,meal.share||0);
+  meal.sum=sumMeal(meal.items);
+  return meal;
+}
+function alignMealPlanToTargets(plan){
+  if(!Array.isArray(plan)||!state.macro)return plan;
+  plan.forEach(day=>(day.meals||[]).forEach(alignMealToTarget));
+  return plan;
+}
 function primaryKey(cat){return cat==='protein'?'p':cat==='carb'?'c':cat==='fat'?'f':null}
 function foodChoice(list,d,i){
   const variety=state.profile.mealVariety||'balanced';
@@ -522,17 +557,21 @@ function mealStructure(meals,snacks,distribution='balanced'){
 function previewMealStructure(){
   if(!el('mealStructurePreview'))return;
   const meals=+el('planMealsPerDay').value||4,snacks=+el('planSnacksPerDay').value||0,dist=el('mealDistribution').value||'balanced',parts=mealStructure(meals,snacks,dist),m=state.macro;
-  el('mealStructurePreview').innerHTML=parts.map(p=>'<div class="structureChip"><strong>'+p.label+'</strong><span>'+(m?Math.round(m.calories*p.share)+' kcal • '+Math.round(m.protein*p.share)+'P':' '+Math.round(p.share*100)+'% of day')+'</span></div>').join('');
+  el('mealStructurePreview').innerHTML=parts.map(p=>'<div class="structureChip"><strong>'+p.label+'</strong><span>'+(m?Math.round(m.calories*p.share)+' kcal • '+Math.round(m.protein*p.share)+'P • '+Math.round(m.carbs*p.share)+'C • '+Math.round(m.fat*p.share)+'F':' '+Math.round(p.share*100)+'% of day')+'</span></div>').join('');
 }
 function buildMeal(d,i,share,kind='meal',label='Meal'){
   const m=state.macro,ps=kind==='snack'?snackPool('protein'):pool('protein'),cs=kind==='snack'?snackPool('carb'):pool('carb'),vs=pool('veg'),fs=kind==='snack'?snackPool('fat'):pool('fat');
   if(!ps.length||!cs.length||!fs.length||(kind==='meal'&&!vs.length))throw new Error('Your restrictions leave an empty food category. Adjust preferences or exclusions.');
   const pf=foodChoice(ps,d,i),cf=foodChoice(cs,d,i+1),vf=kind==='meal'?foodChoice(vs,d,i+2):null,ff=foodChoice(fs,d,i+3);
-  const targetP=m.protein*share,targetC=m.carbs*share,targetF=m.fat*share;
-  const pg=gramsFor(pf,'p',targetP),cg=gramsFor(cf,'c',targetC);
-  const usedFat=macro(pf,pg).f+macro(cf,cg).f;
-  const fg=gramsFor(ff,'f',Math.max(2,targetF-usedFat));
-  const items=[pf&&{name:pf.name,g:pg,cat:'protein',price:pf.price},cf&&{name:cf.name,g:cg,cat:'carb',price:cf.price},vf&&{name:vf.name,g:kind==='meal'?100:0,cat:'veg',price:vf.price},ff&&{name:ff.name,g:fg,cat:'fat',price:ff.price}].filter(x=>x&&x.g>0);
+  const target=targetMealMacros(share);
+  const vegItem=vf?{name:vf.name,g:100,cat:'veg',price:vf.price}:null,vegMacros=vf?macro(vf,100):{p:0,c:0,f:0};
+  const pg=gramsFor(pf,'p',Math.max(1,target.p-vegMacros.p));
+  const proteinMacros=macro(pf,pg);
+  const cg=gramsFor(cf,'c',Math.max(1,target.c-vegMacros.c-proteinMacros.c));
+  const carbMacros=macro(cf,cg);
+  const fg=gramsFor(ff,'f',Math.max(1,target.f-vegMacros.f-proteinMacros.f-carbMacros.f));
+  let items=[{name:pf.name,g:pg,cat:'protein',price:pf.price},{name:cf.name,g:cg,cat:'carb',price:cf.price},vegItem,{name:ff.name,g:fg,cat:'fat',price:ff.price}].filter(x=>x&&x.g>0);
+  items=tuneMealItems(items,share);
   return{kind,label,share,items,sum:sumMeal(items)};
 }
 function buildMealDay(dayIndex,meals,snacks,distribution){
@@ -565,7 +604,7 @@ function cheapestCompatible(item){
 }
 function optimizeBudget(days){
   const budget=Number(state.profile.budget)||0;
-  if(!budget)return days;
+  if(!budget)return alignMealPlanToTargets(days);
   let plan=JSON.parse(JSON.stringify(days)),cost=estimateMealPlanCost(plan);
   if(cost<=budget)return plan;
   const candidates=[];
@@ -583,6 +622,7 @@ function optimizeBudget(days){
     plan[c.di].meals[c.mi].sum=sumMeal(plan[c.di].meals[c.mi].items);
     cost-=c.savings;
   }
+  alignMealPlanToTargets(plan);
   plan.budgetEstimate=estimateMealPlanCost(plan);
   return plan;
 }
@@ -600,7 +640,7 @@ function generateMeals(){
 function rebuildMealDay(di){
   try{
     const meals=+el('dayMeals_'+di).value||3,snacks=+el('daySnacks_'+di).value||0,distribution=el('dayDist_'+di).value||state.mealPrefs.distribution||'balanced';
-    state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);save();renderMeals();
+    state.dayMealPrefs[di]={meals,snacks,distribution};state.mealPlan[di]=buildMealDay(di,meals,snacks,distribution);alignMealPlanToTargets(state.mealPlan);save();renderMeals();
   }catch(e){alert('Could not rebuild this day: '+e.message)}
 }
 function swapIngredient(di,mi,ii){
@@ -609,14 +649,14 @@ function swapIngredient(di,mi,ii){
   if(!options.length)return alert('No compatible alternative is available.');
   const currentIndex=Number(item.swapIndex)||0,next=options[currentIndex%options.length];
   let g=item.g;if(key&&old&&next[key]>0){const target=old[key]*item.g/100;g=gramsFor(next,key,target)}
-  meal.items[ii]={name:next.name,g,cat:next.cat,price:next.price,swapIndex:currentIndex+1};meal.sum=sumMeal(meal.items);save();renderMeals();
+  meal.items[ii]={name:next.name,g,cat:next.cat,price:next.price,swapIndex:currentIndex+1};alignMealToTarget(meal);save();renderMeals();
 }
 function replaceMeal(di,mi){
   const old=state.mealPlan[di]?.meals?.[mi];if(!old)return;
   const share=old.share||1/Math.max(1,state.mealPlan[di].meals.length),kind=old.kind||'meal',label=old.label||(kind==='snack'?'Snack':'Meal '+(mi+1));
   let fresh=buildMeal(di+mi+3,mi+2,share,kind,label);
   fresh.items.forEach((x,ii)=>{if(old.items[ii]&&x.name===old.items[ii].name){const opts=(kind==='snack'?snackPool(x.cat):pool(x.cat)).filter(z=>z.name!==x.name);if(opts.length){const oldF=FOOD_DB.find(z=>z.name===x.name),key=primaryKey(x.cat),n=opts[0];let g=x.g;if(key&&oldF&&n[key]>0)g=gramsFor(n,key,oldF[key]*x.g/100);fresh.items[ii]={name:n.name,g,cat:n.cat,price:n.price}}}});
-  fresh.sum=sumMeal(fresh.items);state.mealPlan[di].meals[mi]=fresh;save();renderMeals();
+  alignMealToTarget(fresh);state.mealPlan[di].meals[mi]=fresh;save();renderMeals();
 }
 function groceryTotals(){
   const totals={};state.mealPlan.forEach(d=>d.meals.forEach(m=>m.items.forEach(x=>{totals[x.name]=(totals[x.name]||0)+x.g})));return totals;
@@ -640,6 +680,7 @@ function displayPackage(g,packs){
   return packs+' × '+displayGroceryWeight(g);
 }
 function renderMeals(){
+  if(state.mealPlan.length&&state.macro)alignMealPlanToTargets(state.mealPlan);
   if(el('mealBudget'))el('mealBudget').value=state.profile.budget||'';
   if(el('planMealsPerDay'))el('planMealsPerDay').value=state.mealPrefs.meals||state.profile.meals||4;
   if(el('planSnacksPerDay'))el('planSnacksPerDay').value=state.mealPrefs.snacks??1;
@@ -651,10 +692,10 @@ function renderMeals(){
     el('swaps').innerHTML='<div class="notice">Ingredient and meal replacements appear after generation.</div>';return;
   }
   el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>{
-    const pref=d.prefs||state.dayMealPrefs[di]||state.mealPrefs,total=d.meals.reduce((s,m)=>({k:s.k+m.sum.k,p:s.p+m.sum.p,c:s.c+m.sum.c,f:s.f+m.sum.f}),{k:0,p:0,c:0,f:0});
+    const pref=d.prefs||state.dayMealPrefs[di]||state.mealPrefs,total=d.meals.reduce((s,m)=>({k:s.k+m.sum.k,p:s.p+m.sum.p,c:s.c+m.sum.c,f:s.f+m.sum.f}),{k:0,p:0,c:0,f:0}),target=state.macro||{},deltaK=Math.round(total.k-(target.calories||0));
     const controls='<div class="dayStructure"><label>Meals<select id="dayMeals_'+di+'">'+[2,3,4,5,6].map(n=>'<option '+(n==pref.meals?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Snacks<select id="daySnacks_'+di+'">'+[0,1,2,3].map(n=>'<option '+(n==pref.snacks?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Distribution<select id="dayDist_'+di+'"><option value="balanced" '+(pref.distribution==='balanced'?'selected':'')+'>Balanced</option><option value="largerDinner" '+(pref.distribution==='largerDinner'?'selected':'')+'>Larger dinner</option><option value="largerBreakfast" '+(pref.distribution==='largerBreakfast'?'selected':'')+'>Larger breakfast</option><option value="training" '+(pref.distribution==='training'?'selected':'')+'>Training-focused</option></select></label><button onclick="rebuildMealDay('+di+')">Rebuild day</button></div>';
     const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('');
-    return'<details class="meal dayCard" '+(d.day===1?'open':'')+'><summary><span>Day '+d.day+'</span><small>'+Math.round(total.k)+' kcal • '+Math.round(total.p)+'P '+Math.round(total.c)+'C '+Math.round(total.f)+'F</small></summary>'+controls+cards+'</details>';
+    return'<details class="meal dayCard" '+(d.day===1?'open':'')+'><summary><span>Day '+d.day+'</span><small>'+Math.round(total.k)+' / '+Math.round(target.calories||total.k)+' kcal • '+Math.round(total.p)+'P '+Math.round(total.c)+'C '+Math.round(total.f)+'F'+(Math.abs(deltaK)>25?' • '+(deltaK>0?'+':'')+deltaK+' kcal':' • on target')+'</small></summary>'+controls+cards+'</details>';
   }).join('');
   const totals=groceryTotals(),rows=Object.entries(totals);let roundedCost=0;
   const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);if(!f)return'';const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
@@ -1481,4 +1522,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=41').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=42').catch(()=>{});
