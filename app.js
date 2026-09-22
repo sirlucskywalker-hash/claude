@@ -13,6 +13,7 @@ state.trainingPlan=Array.isArray(state.trainingPlan)?state.trainingPlan:[];
 state.workoutLogs=Array.isArray(state.workoutLogs)?state.workoutLogs:[];
 state.pendingAdjustment=state.pendingAdjustment||null;
 state.coachMessages=Array.isArray(state.coachMessages)?state.coachMessages:[];
+state.foodLogs=Array.isArray(state.foodLogs)?state.foodLogs:[];
 
 function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
 function showTab(id){
@@ -23,14 +24,14 @@ function showTab(id){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 
-el('logDate').value=today(); el('photoDate').value=today();
-el('equipment').innerHTML=EQUIPMENT.map(e=>'<label><input type="checkbox" class="eq" value="'+e+'"> '+e+'</label>').join(' ');
+el('logDate').value=today(); el('photoDate').value=today(); if(el('foodLogDate'))el('foodLogDate').value=today();
+el('equipment').innerHTML=EQUIPMENT.map(e=>'<label><input type="checkbox" class="eq" value="'+e+'"> '+e+'</label>').join(' '); if(el('foodSelect'))el('foodSelect').innerHTML=FOOD_DB.map((f,idx)=>'<option value="'+idx+'">'+f.name+'</option>').join('');
 
 function toggleUnits(){
   const metric=el('units').value==='metric';
   el('imperialHeight').classList.toggle('hidden',metric);
   el('metricHeight').classList.toggle('hidden',!metric);
-  el('weightUnit').textContent=metric?'kg':'lb'; el('goalWeightUnit').textContent=metric?'kg':'lb'; if(el('waterGoalUnit'))el('waterGoalUnit').textContent=metric?'L':'oz'; if(el('quickWaterUnit'))el('quickWaterUnit').textContent=metric?'L':'oz'; if(el('quickWeightUnit'))el('quickWeightUnit').textContent=metric?'kg':'lb'; if(el('waterGoal')){const v=+el('waterGoal').value||0;if(metric&&v>20)el('waterGoal').value=(v/33.814).toFixed(1);if(!metric&&v>0&&v<20)el('waterGoal').value=Math.round(v*33.814)}
+  el('weightUnit').textContent=metric?'kg':'lb'; el('goalWeightUnit').textContent=metric?'kg':'lb'; if(el('waterGoalUnit'))el('waterGoalUnit').textContent=metric?'L':'oz'; if(el('quickWaterUnit'))el('quickWaterUnit').textContent=metric?'L':'oz'; if(el('quickWeightUnit'))el('quickWeightUnit').textContent=metric?'kg':'lb'; if(el('dailyWeightUnit'))el('dailyWeightUnit').textContent=metric?'kg':'lb'; if(el('dailyMeasureUnit'))el('dailyMeasureUnit').textContent=metric?'cm':'in'; if(el('dailyWaterUnit'))el('dailyWaterUnit').textContent=metric?'L':'oz'; if(el('waterGoal')){const v=+el('waterGoal').value||0;if(metric&&v>20)el('waterGoal').value=(v/33.814).toFixed(1);if(!metric&&v>0&&v<20)el('waterGoal').value=Math.round(v*33.814)}
 }
 function safetyBlockers(p){
   const out=[];
@@ -277,7 +278,7 @@ function renderMeals(){
     el('grocery').innerHTML='<div class="notice">The grocery list will use your generated plan, budget, ZIP and preferred stores.</div>';
     el('swaps').innerHTML='<div class="notice">Ingredient and meal replacements appear after generation.</div>';return;
   }
-  el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>'<details class="meal" '+(d.day===1?'open':'')+'><summary>Day '+d.day+'</summary>'+d.meals.map((m,mi)=>'<div class="meal"><div class="row"><strong>Meal '+(mi+1)+'</strong><button onclick="replaceMeal('+di+','+mi+')">Replace meal</button></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('')+'</details>').join('');
+  el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>'<details class="meal" '+(d.day===1?'open':'')+'><summary>Day '+d.day+'</summary>'+d.meals.map((m,mi)=>'<div class="meal"><div class="row"><strong>Meal '+(mi+1)+'</strong><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log meal</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('')+'</details>').join('');
   const totals=groceryTotals(),rows=Object.entries(totals);
   let roundedCost=0;
   const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
@@ -355,6 +356,74 @@ function renderTraining(){
   el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+s.rir+' RIR').join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
+function selectedFoodDate(){return el('foodLogDate')?.value||today()}
+function dayFoodEntries(date=selectedFoodDate()){return state.foodLogs.filter(x=>x.date===date)}
+function dayFoodTotals(date=selectedFoodDate()){
+  return dayFoodEntries(date).reduce((s,x)=>({cal:s.cal+(+x.calories||0),p:s.p+(+x.protein||0),c:s.c+(+x.carbs||0),f:s.f+(+x.fat||0)}),{cal:0,p:0,c:0,f:0});
+}
+function syncFoodToDailyLog(date=selectedFoodDate()){
+  const total=dayFoodTotals(date),existing=state.logs.find(x=>x.date===date)||{date};
+  const next={...existing,calories:Math.round(total.cal)};
+  if(state.macro?.calories)next.adherence=Math.round(clamp(100-Math.abs(total.cal-state.macro.calories)/state.macro.calories*100,0,100));
+  state.logs=state.logs.filter(x=>x.date!==date);state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));
+}
+function setFoodLogMode(mode,btn){
+  el('foodDbLogger').classList.toggle('hidden',mode!=='database');el('customFoodLogger').classList.toggle('hidden',mode!=='custom');
+  document.querySelectorAll('.foodLogTabs button').forEach(x=>x.classList.remove('active'));if(btn)btn.classList.add('active');
+}
+function addDatabaseFood(){
+  const idx=+el('foodSelect').value,f=FOOD_DB[idx],g=+el('foodGrams').value||0;if(!f||g<=0)return alert('Choose a food and enter an amount.');
+  const m=macro(f,g);state.foodLogs.push({id:Date.now()+'_'+Math.random(),date:selectedFoodDate(),meal:el('foodMealSlot').value,name:f.name,grams:g,calories:m.k,protein:m.p,carbs:m.c,fat:m.f,source:'database'});
+  syncFoodToDailyLog();save();renderFoodDiary();renderAll();
+}
+function addCustomFood(){
+  const name=el('customFoodName').value.trim()||'Custom entry',cal=+el('customCalories').value||0,p=+el('customProtein').value||0,c=+el('customCarbs').value||0,f=+el('customFat').value||0;
+  if(!cal&&!p&&!c&&!f)return alert('Enter calories or macros.');
+  const derived=cal||p*4+c*4+f*9;state.foodLogs.push({id:Date.now()+'_'+Math.random(),date:selectedFoodDate(),meal:el('customMealSlot').value,name,calories:derived,protein:p,carbs:c,fat:f,source:'custom'});
+  ['customFoodName','customCalories','customProtein','customCarbs','customFat'].forEach(id=>el(id).value='');syncFoodToDailyLog();save();renderFoodDiary();renderAll();
+}
+function logPlannedMeal(di,mi){
+  const m=state.mealPlan[di]?.meals?.[mi];if(!m)return;const names=m.items.map(x=>x.name).join(' + ');
+  state.foodLogs.push({id:Date.now()+'_'+Math.random(),date:today(),meal:['Breakfast','Lunch','Dinner','Snack'][mi]||'Meal '+(mi+1),name:names,calories:m.sum.k,protein:m.sum.p,carbs:m.sum.c,fat:m.sum.f,source:'plan'});
+  if(el('foodLogDate'))el('foodLogDate').value=today();syncFoodToDailyLog(today());save();renderAll();alert('Planned meal logged to today.');
+}
+function deleteFoodLog(id){
+  state.foodLogs=state.foodLogs.filter(x=>x.id!==id);syncFoodToDailyLog();save();renderAll();
+}
+function macroBar(label,value,target,unit='g'){
+  const pct=target?clamp(value/target*100,0,125):0,over=value>target;
+  return'<div class="macroLine"><div class="row"><span>'+label+'</span><strong>'+Math.round(value)+' / '+Math.round(target||0)+' '+unit+'</strong></div><div class="progressTrack"><span class="'+(over?'over':'')+'" style="width:'+Math.min(100,pct)+'%"></span></div></div>';
+}
+function renderFoodDiary(){
+  if(!el('foodDiary'))return;const date=selectedFoodDate(),entries=dayFoodEntries(date),tot=dayFoodTotals(date),m=state.macro;
+  el('macroProgress').innerHTML=m?'<div class="nutritionRings"><div><strong>'+Math.round(tot.cal)+'</strong><small>of '+m.calories+' kcal</small></div><div><strong>'+Math.round(Math.max(0,m.calories-tot.cal))+'</strong><small>remaining</small></div></div>'+macroBar('Protein',tot.p,m.protein)+macroBar('Carbs',tot.c,m.carbs)+macroBar('Fat',tot.f,m.fat):'<div class="notice">Complete your profile to see macro targets.</div>';
+  const groups={};entries.forEach(x=>(groups[x.meal]??=[]).push(x));
+  el('foodDiary').innerHTML=entries.length?Object.entries(groups).map(([meal,arr])=>'<div class="diaryMeal"><div class="row"><h4>'+meal+'</h4><span>'+Math.round(arr.reduce((s,x)=>s+x.calories,0))+' kcal</span></div>'+arr.map(x=>'<div class="diaryEntry"><div><strong>'+escapeHtml(x.name)+'</strong><small>'+Math.round(x.calories)+' kcal • '+Math.round(x.protein)+'P '+Math.round(x.carbs)+'C '+Math.round(x.fat)+'F'+(x.grams?' • '+Math.round(x.grams)+'g':'')+'</small></div><button onclick="deleteFoodLog(\''+x.id+'\')">×</button></div>').join('')+'</div>').join(''):'<div class="emptyState">Nothing logged for this day yet. Add food above or log a meal from your generated plan.</div>';
+}
+function loadDailyMetrics(){
+  if(!el('dailyWeight'))return;const date=selectedFoodDate(),x=state.logs.find(v=>v.date===date),metric=state.profile.units==='metric';
+  el('dailyWeight').value=x?.weight?(metric?(x.weight/2.20462).toFixed(1):x.weight):'';
+  el('dailyWaist').value=x?.waist?(metric?(x.waist*2.54).toFixed(1):x.waist):'';
+  el('dailySteps').value=x?.steps||'';el('dailyWater').value=x?.water?(metric?(x.water/33.814).toFixed(1):x.water):'';el('dailySleep').value=x?.sleep||'';el('dailyRhr').value=x?.rhr||'';
+  el('dailyHunger').value=x?.hunger||'';el('dailyEnergy').value=x?.energy||'';el('dailyStress').value=x?.stress||'';el('dailyRecovery').value=x?.recovery||'';el('dailyDigestion').value=x?.digestion||'';el('dailySoreness').value=x?.soreness||'';el('dailyNotes').value=x?.notes||'';
+  renderDailyMetricSummary(x);
+}
+function saveDailyMetrics(){
+  const date=selectedFoodDate(),existing=state.logs.find(x=>x.date===date)||{date},metric=state.profile.units==='metric',val=id=>el(id).value!==''?+el(id).value:null;
+  const next={...existing,date},w=val('dailyWeight'),waist=val('dailyWaist'),water=val('dailyWater');
+  if(w!=null)next.weight=metric?w*2.20462:w;if(waist!=null)next.waist=metric?waist/2.54:waist;if(water!=null)next.water=metric?water*33.814:water;
+  for(const [id,key] of [['dailySteps','steps'],['dailySleep','sleep'],['dailyRhr','rhr'],['dailyHunger','hunger'],['dailyEnergy','energy'],['dailyStress','stress'],['dailyRecovery','recovery'],['dailyDigestion','digestion'],['dailySoreness','soreness']]){const v=val(id);if(v!=null)next[key]=v}
+  next.notes=el('dailyNotes').value;const tot=dayFoodTotals(date);if(tot.cal)next.calories=Math.round(tot.cal);if(state.macro?.calories&&tot.cal)next.adherence=Math.round(clamp(100-Math.abs(tot.cal-state.macro.calories)/state.macro.calories*100,0,100));
+  state.logs=state.logs.filter(x=>x.date!==date);state.logs.push(next);state.logs.sort((x,y)=>x.date.localeCompare(y.date));save();renderAll();
+}
+function renderDailyMetricSummary(x){
+  if(!el('dailyMetricSummary'))return;if(!x){el('dailyMetricSummary').innerHTML='<div class="emptyState">No daily metrics saved for this date yet.</div>';return}
+  const metric=state.profile.units==='metric',items=[
+    ['Weight',x.weight?(metric?(x.weight/2.20462).toFixed(1)+' kg':x.weight.toFixed(1)+' lb'):'—'],
+    ['Steps',x.steps?x.steps.toLocaleString():'—'],['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—'],['Sleep',x.sleep?x.sleep+' h':'—'],['Resting HR',x.rhr?x.rhr+' bpm':'—'],['Calories',x.calories||'—']
+  ];
+  el('dailyMetricSummary').innerHTML='<div class="summaryGrid">'+items.map(x=>'<div><small>'+x[0]+'</small><strong>'+x[1]+'</strong></div>').join('')+'</div>';
+}
 function currentLog(){return state.logs.find(x=>x.date===today())||null}
 function loadQuickMetrics(){
   const x=currentLog();if(!el('quickSteps'))return;
@@ -455,11 +524,11 @@ function renderDashboard(){
 }
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function coachContext(){
-  const t=trend(),x=currentLog(),m=state.macro,p=state.profile,work=todaysWorkout();
-  return{t,x,m,p,work};
+  const t=trend(),x=currentLog(),m=state.macro,p=state.profile,work=todaysWorkout(),food=dayFoodTotals(today());
+  return{t,x,m,p,work,food};
 }
 function coachReply(q){
-  const {t,x,m,p,work}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
+  const {t,x,m,p,work,food}=coachContext(),s=q.toLowerCase(),name=p.name?(', '+p.name):'';
   if(s.includes('chest pain')||s.includes('faint')||s.includes('passed out')||s.includes('severe pain'))return'I don’t want to coach through that symptom. Stop the session and get appropriate medical evaluation, especially for chest pain, fainting, trouble breathing, or severe/unusual symptoms.';
   if(s.includes('hungry')||s.includes('hunger'))return'Your hunger'+name+' should be interpreted with adherence and recovery, not in isolation. '+(x?.hunger>=8?'You logged high hunger today. ':'')+(t?.sleep&&t.sleep<6.5?'Sleep has also been low, which can amplify appetite. ':'')+'Keep protein on target, use high-volume produce and lean protein, distribute meals around the hardest part of your day, and don’t cut calories further just because hunger is present.';
   if(s.includes('stall')||s.includes('plateau')||s.includes('scale'))return t?'Your current trend is '+Math.abs(t.weekly).toFixed(2)+' lb/week '+(t.weekly>=0?'down':'up')+' with roughly '+(t.adh?t.adh.toFixed(0):'unknown')+'% adherence. '+(t.days<14?'That is not enough time for a confident plateau call yet. Keep collecting data.':t.adh<85?'I would fix execution before changing the prescription.':getAdjustment()?'Your data qualifies for a small target adjustment. Review the recommendation above.':'I would hold the plan right now; the data does not justify a change.'):'I need at least 7–14 days of weight and adherence data before calling a plateau.';
@@ -467,7 +536,7 @@ function coachReply(q){
   if(s.includes('step')||s.includes('walk'))return'Your daily step target is '+(p.stepGoal||8000).toLocaleString()+'. '+(x?.steps?'You are at '+x.steps.toLocaleString()+' today. ':'')+(x?.steps<(p.stepGoal||8000)?'A short walk after meals is the easiest way to close the gap without adding much fatigue.':'You’ve reached the target today; more is optional, not mandatory.');
   if(s.includes('sore')||s.includes('recovery')||s.includes('fatigue'))return(t?.recovery&&t.recovery<=4?'Recovery has been trending low. ':'')+'Keep the distinction between normal muscular soreness and injury-type pain. For normal soreness, preserve movement, sleep, protein and hydration, and reduce training effort if performance is clearly suppressed. Sharp, unstable, or worsening pain should not be trained through.';
   if(s.includes('missed')||s.includes('skip')||s.includes('workout'))return work?'Today’s programmed session is '+work.name+'. If you missed a prior session, don’t double up as punishment. Move the highest-priority session forward and continue the sequence; cut low-priority isolation volume before compressing recovery.':'Generate your training plan first and I can anchor the advice to your actual split.';
-  if(s.includes('meal')||s.includes('food')||s.includes('macro')||s.includes('protein'))return m?'Your current target is '+m.calories+' kcal with '+m.protein+'g protein, '+m.carbs+'g carbs and '+m.fat+'g fat. Use the Meal tab to regenerate around your preferences or swap individual ingredients while preserving the nutrition role.':'Complete your profile first so I can coach against an actual calorie and macro target.';
+  if(s.includes('meal')||s.includes('food')||s.includes('macro')||s.includes('protein'))return m?'Your target is '+m.calories+' kcal with '+m.protein+'g protein, '+m.carbs+'g carbs and '+m.fat+'g fat. Today you have logged '+Math.round(food.cal)+' kcal, '+Math.round(food.p)+'g protein, '+Math.round(food.c)+'g carbs and '+Math.round(food.f)+'g fat. '+(food.cal<m.calories?'You have about '+Math.max(0,Math.round(m.calories-food.cal))+' kcal remaining. ':'You are at or above the calorie target, so focus on accuracy rather than forcing extra food.')+' Use the Log tab for actual intake and the Meals tab for planning.':'Complete your profile first so I can coach against an actual calorie and macro target.';
   if(s.includes('travel')||s.includes('restaurant'))return'For travel, simplify the hierarchy: protein first, stay reasonably near calories, keep steps up, hydrate, and choose meals you can estimate. One imperfect travel meal matters far less than turning the entire trip into an untracked stretch.';
   if(s.includes('adjust')||s.includes('calorie')||s.includes('change plan')){const adj=getAdjustment();return adj?'Based on your logged trend and adherence, I’d propose '+(adj.delta>0?'+':'')+adj.delta+' kcal/day, bringing you to about '+adj.next+' kcal. You can apply that recommendation above.':'I would not adjust calories yet. The current data does not meet the beta’s threshold for a justified change.'}
   if(s.includes('progress')||s.includes('review')||s.includes('how am i doing'))return adaptive();
@@ -490,9 +559,9 @@ function askCoachPreset(mode){
 function coach(mode){if(el('coachOut'))el('coachOut').textContent=mode==='review'?adaptive():coachReply(mode);renderCoachChat();renderAdjustment();}
 
 function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='physiqueos-'+today()+'.json';a.click();URL.revokeObjectURL(u)}
-function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
+function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
-function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderCoachChat();renderAdjustment();renderPhotoGallery()}
+function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();loadDailyMetrics();renderCoachChat();renderAdjustment();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=14').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=15').catch(()=>{});
