@@ -968,3 +968,260 @@ body.menuOpen{overflow:hidden}
   .welcomeProfileCopy strong{font-size:27px}
   .welcomeProfileCopy em{font-size:7px}
 }
+
+/* =========================================================
+   V37 OBSIDIAN — ultra-premium mobile product pass
+   ========================================================= */
+:root{
+  --obsidian:#020409;
+  --panelTop:rgba(14,20,31,.96);
+  --panelBottom:rgba(6,10,16,.985);
+  --edge:rgba(165,188,224,.105);
+  --edgeHot:rgba(132,166,255,.24);
+  --ice:#ecf3ff;
+  --electric:#7da2ff;
+  --royal:#755cff;
+}
+body{
+  background:
+    radial-gradient(850px 500px at 50% -10%,rgba(76,108,231,.115),transparent 64%),
+    radial-gradient(500px 460px at 100% 25%,rgba(93,63,210,.055),transparent 68%),
+    linear-gradient(180deg,#03050a 0,#020409 48%,#04060a 100%)!important;
+}
+.ambientGrid{
+  opacity:.12!important;background-size:96px 96px!important;
+  background-image:
+    linear-gradient(rgba(169,190,225,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(169,190,225,.025) 1px,transparent 1px)!important;
+}
+.appHeader{border-bottom:0}
+.appHeader:after{
+  content:"";position:absolute;left:30px;right:30px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(149,174,216,.08),transparent)
+}
+.brandMark{
+  box-shadow:
+    0 18px 50px rgba(57,76,178,.28),
+    0 0 0 1px rgba(153,181,255,.12),
+    inset 0 1px rgba(255,255,255,.22)!important;
+}
+.brandCopy h1{color:#fbfcff;text-shadow:0 1px 20px rgba(255,255,255,.04)}
+
+.mobileMenuTrigger{display:none}
+.hamburgerIcon i{height:2px!important}
+
+.appNav{
+  border-color:rgba(161,184,220,.115)!important;
+  background:
+    linear-gradient(180deg,rgba(17,23,34,.90),rgba(7,11,18,.94))!important;
+  box-shadow:
+    0 24px 80px rgba(0,0,0,.48),
+    inset 0 1px rgba(255,255,255,.04),
+    0 0 0 1px rgba(255,255,255,.012)!important;
+}
+.appNav button.active{
+  background:
+    radial-gradient(circle at 50% -10%,rgba(131,166,255,.22),transparent 60%),
+    linear-gradient(180deg,rgba(60,83,145,.48),rgba(27,38,67,.36))!important;
+  border-color:rgba(128,163,250,.30)!important
+}
+
+.dashboardHero{
+  overflow:hidden;
+  border-color:rgba(159,184,225,.13)!important;
+  background:
+    linear-gradient(118deg,rgba(255,255,255,.021),transparent 20%),
+    radial-gradient(520px 320px at 78% 35%,rgba(62,92,192,.34),transparent 67%),
+    radial-gradient(300px 220px at 100% 100%,rgba(111,74,234,.12),transparent 68%),
+    linear-gradient(135deg,#111a2b 0%,#080d17 58%,#080b13 100%)!important;
+  box-shadow:
+    0 40px 120px rgba(0,0,0,.46),
+    inset 0 1px rgba(255,255,255,.055),
+    0 0 0 1px rgba(76,112,211,.04)!important
+}
+.dashboardHero:before{
+  background:
+    linear-gradient(110deg,rgba(255,255,255,.025),transparent 28%),
+    repeating-linear-gradient(135deg,transparent 0 20px,rgba(255,255,255,.006) 20px 21px)!important
+}
+.dashboardHero:after{filter:blur(18px)}
+.heroScore{
+  position:relative;
+  box-shadow:
+    0 28px 70px rgba(45,64,147,.30),
+    0 0 0 1px rgba(133,164,239,.10),
+    inset 0 0 35px rgba(91,126,224,.10)!important
+}
+.heroScore:after{
+  content:"";position:absolute;inset:14px;border-radius:50%;
+  border:1px solid rgba(161,185,226,.075);pointer-events:none
+}
+.scoreStatus{
+  position:absolute!important;left:50%;bottom:18px;transform:translateX(-50%);
+  font-style:normal!important;font-size:6px!important;letter-spacing:.15em!important;
+  text-transform:uppercase;color:#789cff!important
+}
+
+.premiumCard,.card,.coachShell,.workout{
+  border-color:var(--edge)!important;
+  background:
+    linear-gradient(125deg,rgba(255,255,255,.012),transparent 24%),
+    linear-gradient(180deg,var(--panelTop),var(--panelBottom))!important;
+  box-shadow:
+    0 28px 90px rgba(0,0,0,.28),
+    inset 0 1px rgba(255,255,255,.026),
+    0 0 0 1px rgba(255,255,255,.008)!important
+}
+.premiumCard:after,.card:after{
+  content:"";position:absolute;left:24px;right:24px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(135,168,233,.11),transparent);pointer-events:none
+}
+.sectionHead h2,.sectionHead h3{color:#f8faff}
+.kicker,.eyebrow{color:#88a7f8!important;text-shadow:0 0 18px rgba(105,143,244,.18)}
+
+.snapshotMetric,.metricCard,.summaryGrid>div{
+  background:
+    radial-gradient(circle at 100% 0,rgba(90,129,236,.055),transparent 45%),
+    linear-gradient(180deg,rgba(14,21,33,.82),rgba(7,12,19,.9))!important;
+  border-color:rgba(155,179,216,.09)!important
+}
+.snapshotMetric{
+  min-height:82px!important;padding:13px 14px!important;border-radius:18px!important;
+  display:flex!important;flex-direction:column;justify-content:space-between
+}
+.snapshotMetric strong{font-size:20px!important;color:#f5f8ff}
+.snapshotMetric span{color:#718098!important}
+.metricCard{min-height:132px}
+.metricCard strong{color:#f8faff}
+.metricIcon{
+  background:linear-gradient(145deg,rgba(88,129,235,.17),rgba(74,70,192,.08))!important;
+  border-color:rgba(120,156,244,.16)!important;color:#9bb7ff!important
+}
+
+input,select,textarea{
+  border-color:rgba(160,183,220,.12)!important;
+  background:linear-gradient(180deg,rgba(5,9,15,.97),rgba(8,13,21,.97))!important
+}
+input:focus,select:focus,textarea:focus{
+  border-color:rgba(116,158,255,.74)!important;
+  box-shadow:0 0 0 4px rgba(86,128,239,.09),0 16px 38px rgba(20,35,78,.18)!important
+}
+button,.fileBtn{letter-spacing:-.012em}
+.primary{
+  background:
+    linear-gradient(135deg,#5b83f2 0%,#6c62f0 48%,#7b4fe2 100%)!important;
+  box-shadow:
+    0 18px 44px rgba(73,80,216,.28),
+    inset 0 1px rgba(255,255,255,.20)!important
+}
+
+.dailyRunway,.adherenceNudge,.runwayRecommendations,.runwayCoachNote,.driftIntervention,.reminderPanel,.foodLogger,.savedFoodLogger,.executionGuide,.trainingCheck,.exerciseIssue{
+  background:linear-gradient(180deg,rgba(6,10,16,.74),rgba(4,8,13,.80))!important;
+  border-color:rgba(154,177,215,.085)!important
+}
+.runwayItem:hover,.driftSignal:hover,.integrationCard:hover{border-color:rgba(126,160,242,.16)!important}
+.integrationCard,.driftSignal{
+  background:linear-gradient(180deg,rgba(10,16,25,.80),rgba(6,10,17,.86))!important
+}
+
+/* persistent menu: visible even when header scrolls offscreen */
+@media(max-width:760px){
+  .mobileMenuTrigger{
+    display:grid;position:fixed;z-index:190;
+    top:max(12px,env(safe-area-inset-top));right:12px;
+    width:46px;height:46px;place-items:center;padding:0;border-radius:16px;
+    color:#f5f8ff;
+    background:
+      radial-gradient(circle at 30% 15%,rgba(255,255,255,.10),transparent 32%),
+      linear-gradient(180deg,rgba(21,30,46,.96),rgba(8,13,21,.98));
+    border:1px solid rgba(154,182,228,.18);
+    box-shadow:0 14px 40px rgba(0,0,0,.48),inset 0 1px rgba(255,255,255,.07);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)
+  }
+  .mobileMenuTrigger .hamburgerIcon{width:20px;height:15px}
+  .mobileMenuTrigger[aria-expanded="true"]{
+    background:linear-gradient(180deg,rgba(60,83,144,.95),rgba(27,38,68,.98));
+    border-color:rgba(127,164,255,.35)
+  }
+  .mobileMenuTrigger[aria-expanded="true"] .hamburgerIcon i:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+  .mobileMenuTrigger[aria-expanded="true"] .hamburgerIcon i:nth-child(2){opacity:0}
+  .mobileMenuTrigger[aria-expanded="true"] .hamburgerIcon i:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+  .headerActions .menuTrigger{display:none!important}
+
+  .appHeader{padding-right:68px!important}
+  .appNav{
+    position:fixed!important;top:auto!important;
+    bottom:max(8px,env(safe-area-inset-bottom))!important;
+    left:8px!important;right:8px!important;margin:0!important;
+    width:auto!important;max-width:none!important;
+    height:70px!important;
+    grid-template-columns:repeat(7,minmax(0,1fr))!important;
+    padding:6px 5px!important;
+    border-radius:23px!important;
+    overflow:visible!important;
+    background:
+      radial-gradient(380px 90px at 50% -20%,rgba(95,126,215,.12),transparent 70%),
+      linear-gradient(180deg,rgba(14,20,31,.965),rgba(5,9,15,.985))!important;
+    box-shadow:
+      0 30px 90px rgba(0,0,0,.66),
+      inset 0 1px rgba(255,255,255,.045),
+      0 0 0 1px rgba(139,165,211,.045)!important
+  }
+  .appNav button{
+    display:none!important;min-height:56px!important;padding:5px 1px!important;
+    border-radius:14px!important;gap:4px!important
+  }
+  .appNav button[data-tab="dashboard"],
+  .appNav button[data-tab="training"],
+  .appNav button[data-tab="progress"],
+  .appNav button[data-tab="nutrition"],
+  .appNav button[data-tab="meals"],
+  .appNav button[data-tab="dailylog"],
+  .appNav button[data-tab="coach"]{display:flex!important}
+  .appNav button span{font-size:6.4px!important;font-weight:720!important;color:#8792a5}
+  .appNav button svg{width:17px!important;height:17px!important}
+  .appNav button.active span{color:#f4f7fd!important}
+  .appNav button.active svg{stroke:#9ab7ff!important}
+
+  main{padding-top:10px!important}
+  .dashboardHero{
+    min-height:198px!important;padding:24px 20px!important;border-radius:29px!important;
+    margin-bottom:16px!important
+  }
+  .welcomeProfileLink{max-width:calc(100% - 92px);gap:11px!important}
+  .heroProfilePhoto{width:54px!important;height:54px!important;flex-basis:54px!important}
+  .welcomeProfileCopy strong{font-size:30px!important;line-height:.98!important;max-width:320px}
+  .welcomeProfileCopy small{font-size:10.5px!important;line-height:1.48!important}
+  .heroScore{width:92px!important;height:92px!important}
+  .heroScore span{font-size:27px!important}
+  .heroScore small{font-size:6px!important}
+
+  .todayMetricsSnapshot{
+    display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important
+  }
+  .snapshotMetric{min-height:78px!important;padding:12px!important}
+  .snapshotMetric strong{font-size:18px!important}
+  .premiumCard,.card,.coachShell{border-radius:24px!important;padding:17px!important}
+  .quickLogCard .sectionHead{margin-bottom:12px!important}
+  .metricStrip{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .metricCard{min-height:120px!important}
+  body{padding-bottom:108px!important}
+
+  .appMenuDropdown{
+    top:max(66px,calc(env(safe-area-inset-top) + 58px))!important;
+    right:10px!important;
+    width:min(360px,calc(100vw - 20px))!important;
+    transform-origin:top right!important
+  }
+  .appMenuDropdown:before{right:17px!important}
+}
+@media(max-width:390px){
+  .mobileMenuTrigger{width:43px;height:43px;right:10px}
+  .appNav button span{font-size:6px!important}
+  .appNav button svg{width:16px!important;height:16px!important}
+  .dashboardHero{padding:21px 17px!important}
+  .welcomeProfileCopy strong{font-size:27px!important}
+  .heroProfilePhoto{width:48px!important;height:48px!important;flex-basis:48px!important}
+  .heroScore{width:84px!important;height:84px!important}
+}
