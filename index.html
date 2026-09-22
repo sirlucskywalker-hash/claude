@@ -5,33 +5,73 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=12">
+<link rel="stylesheet" href="styles.css?v=13">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
-<header><div><h1>PhysiqueOS</h1><p>Your adaptive fitness operating system</p></div><button onclick="exportData()">Export Backup</button></header>
-<nav>
-<button data-tab="dashboard" class="active">Today</button>
-<button data-tab="onboarding">Onboarding</button>
-<button data-tab="nutrition">Nutrition</button>
-<button data-tab="meals">Meals</button>
-<button data-tab="training">Training</button>
-<button data-tab="progress">Progress</button>
-<button data-tab="coach">Coach</button>
-<button data-tab="data">Data</button>
+<header class="appHeader">
+  <div class="brandBlock"><div class="brandMark">P</div><div><div class="eyebrow">ADAPTIVE PERFORMANCE</div><h1>PhysiqueOS</h1><p>Your plan. Your data. Your evolution.</p></div></div>
+  <div class="headerActions"><span class="betaBadge">BETA</span><button class="ghostBtn" onclick="exportData()">Backup</button></div>
+</header>
+<nav class="appNav">
+<button data-tab="dashboard" class="active"><span>◉</span>Today</button>
+<button data-tab="onboarding"><span>◎</span>Profile</button>
+<button data-tab="nutrition"><span>◇</span>Nutrition</button>
+<button data-tab="meals"><span>⌁</span>Meals</button>
+<button data-tab="training"><span>△</span>Training</button>
+<button data-tab="progress"><span>↗</span>Progress</button>
+<button data-tab="coach"><span>✦</span>Coach</button>
+<button data-tab="data"><span>···</span>Data</button>
 </nav>
 <main>
 <section id="dashboard" class="tab active">
-<div class="hero"><h2 id="welcome">Build your baseline</h2><p>PhysiqueOS starts with an evidence-based estimate, then adapts from your real results.</p></div>
-<div class="card"><h3>Getting started</h3><div id="gettingStarted"></div></div>
-<div class="card"><h3>Today</h3><div id="todayPanel"></div></div>
-<div class="metrics"><div class="card"><small>Calories</small><strong id="dashCalories">—</strong></div><div class="card"><small>Latest weight</small><strong id="dashWeight">—</strong></div><div class="card"><small>Adherence</small><strong id="dashAdherence">—</strong></div></div>
-<div class="grid2"><div class="card"><h3>Weight trend</h3><canvas id="weightChart" width="600" height="220"></canvas></div><div class="card"><h3>Waist trend</h3><canvas id="waistChart" width="600" height="220"></canvas></div></div>
-<div class="card"><h3>Adaptive review</h3><div id="homeCoach" class="notice"></div><div id="adjustmentPanel"></div></div>
+  <div class="dashboardHero">
+    <div><div class="eyebrow" id="timeGreeting">YOUR DAILY COMMAND CENTER</div><h2 id="welcome">Build your baseline</h2><p id="heroSub">The more consistently you log, the smarter your plan becomes.</p></div>
+    <div class="heroScore"><span id="dailyScore">—</span><small>Daily score</small></div>
+  </div>
+
+  <div class="todayGrid">
+    <div class="premiumCard quickLogCard">
+      <div class="sectionHead"><div><span class="kicker">QUICK LOG</span><h3>Update today</h3></div><span class="liveDot">LOCAL</span></div>
+      <div class="quickMetrics">
+        <label><span>Steps</span><input id="quickSteps" type="number" inputmode="numeric" placeholder="0"></label>
+        <label><span>Water <small id="quickWaterUnit">oz</small></span><input id="quickWater" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
+        <label><span>Sleep <small>hrs</small></span><input id="quickSleep" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
+        <label><span>Weight <small id="quickWeightUnit">lb</small></span><input id="quickWeight" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
+        <label><span>Calories</span><input id="quickCalories" type="number" inputmode="numeric" placeholder="0"></label>
+        <label><span>Adherence <small>%</small></span><input id="quickAdherence" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label>
+        <label><span>Hunger <small>1–10</small></span><input id="quickHunger" type="number" min="1" max="10" inputmode="numeric"></label>
+        <label><span>Energy <small>1–10</small></span><input id="quickEnergy" type="number" min="1" max="10" inputmode="numeric"></label>
+      </div>
+      <button class="primary fullBtn" onclick="saveQuickMetrics()">Save today’s metrics</button>
+    </div>
+
+    <div class="premiumCard focusCard">
+      <div class="sectionHead"><div><span class="kicker">YOUR PLAN</span><h3>Today’s focus</h3></div></div>
+      <div id="todayPanel"></div>
+    </div>
+  </div>
+
+  <div class="metricStrip">
+    <div class="metricCard"><span class="metricIcon">◎</span><small>Calories</small><strong id="dashCalories">—</strong><em>daily target</em></div>
+    <div class="metricCard"><span class="metricIcon">↘</span><small>Weight</small><strong id="dashWeight">—</strong><em>latest check-in</em></div>
+    <div class="metricCard"><span class="metricIcon">✓</span><small>Adherence</small><strong id="dashAdherence">—</strong><em>recent average</em></div>
+    <div class="metricCard"><span class="metricIcon">⚡</span><small>Streak</small><strong id="dashStreak">—</strong><em>logged days</em></div>
+  </div>
+
+  <div class="grid2">
+    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Weight</h3></div></div><canvas id="weightChart" width="600" height="220"></canvas></div>
+    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Waist</h3></div></div><canvas id="waistChart" width="600" height="220"></canvas></div>
+  </div>
+
+  <div class="grid2">
+    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div>
+    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div>
+  </div>
 </section>
 
 <section id="onboarding" class="tab">
-<div class="card"><h2>Client assessment</h2>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZATION</span><h2>Build your profile</h2></div></div>
 <div class="form">
 <label>Name<input id="name"></label><label>Age<input id="age" type="number"></label><label>Sex<select id="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
 <label>Units<select id="units" onchange="toggleUnits()"><option value="imperial">Imperial</option><option value="metric">Metric</option></select></label>
@@ -51,6 +91,8 @@
 <label>Training environment<select id="trainingEnvironment"><option value="gym">Commercial gym</option><option value="home">Home gym</option><option value="mixed">Mixed</option></select></label>
 <label>Preferred training days<input id="preferredDays" placeholder="Mon, Tue, Thu, Fri"></label>
 <label>Cardio preference<select id="cardioPreference"><option value="walking">Walking / steps</option><option value="steady">Steady-state cardio</option><option value="intervals">Intervals</option><option value="mixed">Mixed</option><option value="minimal">Minimal cardio</option></select></label>
+<label>Daily step goal<input id="stepGoal" type="number" value="8000" step="500"></label>
+<label>Daily water goal <span id="waterGoalUnit">oz</span><input id="waterGoal" type="number" value="100" step="5"></label>
 
 <label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
 <label>Meal style<select id="mealStyle"><option value="structured">Structured</option><option value="hybrid" selected>Hybrid</option><option value="flexible">Flexible</option></select></label>
@@ -81,10 +123,10 @@
 </div>
 </section>
 
-<section id="nutrition" class="tab"><div class="card"><h2>Nutrition engine</h2><div id="nutritionOut"></div></div></section>
+<section id="nutrition" class="tab"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">ADAPTIVE TARGETS</span><h2>Nutrition</h2></div></div><div id="nutritionOut"></div></div></section>
 
 <section id="meals" class="tab">
-<div class="card"><h2>Meal planner</h2><p>Generated from your macros, dietary needs, preferences, cooking tolerance, budget and meal style.</p>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div><p>Generated from your macros, dietary needs, preferences, cooking tolerance, budget and meal style.</p>
 <button class="primary" onclick="generateMeals()">Generate / regenerate 7-day plan</button>
 <button onclick="openStores()">Stores near ZIP</button>
 <div id="mealPlan"></div></div>
@@ -92,7 +134,7 @@
 </section>
 
 <section id="training" class="tab">
-<div class="card"><h2>Training plan</h2><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><div id="trainingPlan"></div></div>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PROGRESSIVE PROGRAMMING</span><h2>Training</h2></div></div><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><div id="trainingPlan"></div></div>
 <div class="card"><h3>Workout history & progression</h3><div id="workoutHistory"></div></div>
 </section>
 
@@ -113,10 +155,29 @@
 <div class="card"><h3>History</h3><div id="history"></div></div>
 </section>
 
-<section id="coach" class="tab"><div class="card"><h2>Adaptive Coach</h2><div id="coachOut" class="notice"></div><div id="coachAdjustment"></div><div class="buttons"><button onclick="coach('review')">Weekly review</button><button onclick="coach('hungry')">I'm hungry</button><button onclick="coach('stall')">Scale stalled</button><button onclick="coach('missed')">Missed workout</button><button onclick="coach('travel')">Travel day</button></div></div></section>
+<section id="coach" class="tab">
+  <div class="coachShell">
+    <div class="coachHeader">
+      <div class="coachAvatar">✦</div><div><span class="kicker">PHYSIQUEOS COACH</span><h2>Your adaptive coach</h2><p>Uses your current plan, check-ins, training and recovery data to guide the next move.</p></div>
+    </div>
+    <div id="coachAdjustment"></div>
+    <div class="coachChips">
+      <button onclick="askCoachPreset('review')">Analyze my progress</button>
+      <button onclick="askCoachPreset('hungry')">I’m hungry</button>
+      <button onclick="askCoachPreset('stall')">Scale stalled</button>
+      <button onclick="askCoachPreset('missed')">Missed workout</button>
+      <button onclick="askCoachPreset('sore')">I’m very sore</button>
+      <button onclick="askCoachPreset('travel')">Travel day</button>
+    </div>
+    <div id="coachChat" class="coachChat"></div>
+    <div class="coachComposer"><textarea id="coachInput" rows="2" placeholder="Ask about your meals, macros, workout, recovery, steps, water, plateau..."></textarea><button class="primary sendBtn" onclick="sendCoachMessage()">Send</button></div>
+    <div class="coachPrivacy">Beta coach runs locally from your saved data. It is not medical care.</div>
+    <div id="coachOut" class="hidden"></div>
+  </div>
+</section>
 
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=12"></script><script src="app.js?v=12"></script>
+<script src="data.js?v=13"></script><script src="app.js?v=13"></script>
 </body></html>
