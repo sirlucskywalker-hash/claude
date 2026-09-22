@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=45">
+<link rel="stylesheet" href="styles.css?v=46">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -455,8 +455,18 @@
     <button onclick="closeSwapPicker()" aria-label="Close">×</button>
   </div>
   <div id="swapPickerCurrent" class="swapPickerCurrent"></div>
+  <div class="swapPickerTools">
+    <input id="swapSearch" type="search" placeholder="Search compatible foods…" oninput="renderSwapPickerOptions()">
+    <div class="swapFilters">
+      <button data-swap-filter="recommended" class="active" onclick="setSwapFilter('recommended',this)">Recommended</button>
+      <button data-swap-filter="all" onclick="setSwapFilter('all',this)">All</button>
+      <button data-swap-filter="budget" onclick="setSwapFilter('budget',this)">Budget</button>
+      <button data-swap-filter="preferred" onclick="setSwapFilter('preferred',this)">Preferred</button>
+    </div>
+  </div>
+  <div id="swapPickerCount" class="swapPickerCount"></div>
   <div id="swapPickerOptions" class="swapPickerOptions"></div>
 </div>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=45"></script><script src="app.js?v=45"></script>
+<script src="data.js?v=46"></script><script src="app.js?v=46"></script>
 </body></html>
