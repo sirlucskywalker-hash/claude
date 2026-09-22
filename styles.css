@@ -922,3 +922,49 @@ body.menuOpen{overflow:hidden}
   .menuProfileCard{grid-template-columns:42px 1fr 16px!important}
   .menuAvatar{width:38px!important;height:38px!important;border-radius:12px!important}
 }
+
+/* V36 — profile identity + clickable welcome */
+.welcomeProfileLink{
+  position:relative;z-index:2;display:flex;align-items:center;gap:18px;
+  text-align:left;padding:0;border:0;background:transparent;box-shadow:none;min-height:0;color:inherit;
+}
+.welcomeProfileLink:hover{background:transparent;border:0;box-shadow:none;transform:none}
+.welcomeProfileCopy{display:block}.welcomeProfileCopy .eyebrow,.welcomeProfileCopy strong,.welcomeProfileCopy small,.welcomeProfileCopy em{display:block}
+.welcomeProfileCopy strong{font-size:clamp(36px,5.2vw,58px);letter-spacing:-.065em;line-height:.96;font-weight:770;margin:9px 0 12px}
+.welcomeProfileCopy small{font-size:13px;line-height:1.6;color:#9aa7b9;max-width:580px}
+.welcomeProfileCopy em{margin-top:9px;font-style:normal;font-size:8px;text-transform:uppercase;letter-spacing:.12em;color:#7fa6ff}
+.heroProfilePhoto{
+  width:76px;height:76px;flex:0 0 auto;border-radius:23px;display:grid;place-items:center;overflow:hidden;
+  font-size:26px;font-weight:800;
+  background:linear-gradient(145deg,#18336f,#5b3dc7);
+  border:1px solid rgba(143,176,255,.3);
+  box-shadow:0 18px 50px rgba(48,68,165,.24),inset 0 1px rgba(255,255,255,.12)
+}
+.heroProfilePhoto img,.profilePhotoPreview img,.menuAvatar img{width:100%;height:100%;object-fit:cover;display:block}
+.profileIdentity{
+  display:grid;grid-template-columns:110px 1fr;gap:18px;align-items:center;
+  padding:16px;margin-bottom:18px;border:1px solid rgba(158,181,217,.10);border-radius:20px;
+  background:linear-gradient(135deg,rgba(75,110,210,.08),rgba(93,66,190,.04)),rgba(6,10,17,.5)
+}
+.profilePhotoPreview{
+  width:96px;height:96px;border-radius:28px;display:grid;place-items:center;overflow:hidden;
+  font-size:30px;font-weight:800;background:linear-gradient(145deg,#18336f,#5b3dc7);
+  border:1px solid rgba(143,176,255,.28);box-shadow:0 18px 44px rgba(47,66,150,.22)
+}
+.profilePhotoCopy strong{font-size:14px}.profilePhotoCopy p{margin:5px 0 11px;font-size:10px;line-height:1.5;color:var(--muted)}
+.profilePhotoButton{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin:0}
+.menuAvatar{overflow:hidden}
+.menuAvatar.hasPhoto{padding:0}
+@media(max-width:760px){
+  .welcomeProfileLink{gap:12px}.heroProfilePhoto{width:56px;height:56px;border-radius:18px;font-size:20px}
+  .welcomeProfileCopy strong{font-size:30px;margin:6px 0 8px}
+  .welcomeProfileCopy small{font-size:10.5px}
+  .profileIdentity{grid-template-columns:78px 1fr;gap:13px;padding:13px}
+  .profilePhotoPreview{width:72px;height:72px;border-radius:21px;font-size:24px}
+}
+@media(max-width:430px){
+  .dashboardHero{align-items:center}
+  .heroProfilePhoto{width:50px;height:50px;border-radius:16px}
+  .welcomeProfileCopy strong{font-size:27px}
+  .welcomeProfileCopy em{font-size:7px}
+}
