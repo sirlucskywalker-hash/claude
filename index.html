@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=40">
+<link rel="stylesheet" href="styles.css?v=41">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -358,6 +358,7 @@
   <label>Main meals<select id="planMealsPerDay" onchange="previewMealStructure()"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
   <label>Snacks<select id="planSnacksPerDay" onchange="previewMealStructure()"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></label>
   <label>Distribution<select id="mealDistribution" onchange="previewMealStructure()"><option value="balanced">Balanced</option><option value="largerDinner">Larger dinner</option><option value="largerBreakfast">Larger breakfast</option><option value="training">Training-focused</option></select></label>
+  <label>Weekly grocery budget <span class="muted">optional</span><div class="moneyInput"><span>$</span><input id="mealBudget" type="number" min="0" step="5" placeholder="200" oninput="saveMealBudget()"></div></label>
 </div>
 <div id="mealStructurePreview" class="structurePreview"></div>
 <div class="buttons"><button class="primary" onclick="generateMeals()">Generate / regenerate 7-day plan</button><button onclick="openStores()">Stores near ZIP</button></div>
@@ -442,5 +443,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=40"></script><script src="app.js?v=40"></script>
+<script src="data.js?v=41"></script><script src="app.js?v=41"></script>
 </body></html>
