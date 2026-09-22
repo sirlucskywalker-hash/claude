@@ -394,9 +394,19 @@ function macroBar(label,value,target,unit='g'){
   const pct=target?clamp(value/target*100,0,125):0,over=value>target;
   return'<div class="macroLine"><div class="row"><span>'+label+'</span><strong>'+Math.round(value)+' / '+Math.round(target||0)+' '+unit+'</strong></div><div class="progressTrack"><span class="'+(over?'over':'')+'" style="width:'+Math.min(100,pct)+'%"></span></div></div>';
 }
+function copyYesterdayFood(){
+  const date=selectedFoodDate(),d=new Date(date+'T12:00:00');d.setDate(d.getDate()-1);const prev=d.toISOString().slice(0,10),entries=dayFoodEntries(prev);
+  if(!entries.length)return alert('No food entries found for the previous day.');
+  entries.forEach(x=>state.foodLogs.push({...x,id:Date.now()+'_'+Math.random(),date}));
+  syncFoodToDailyLog(date);save();renderAll();
+}
+function clearFoodDay(){
+  const date=selectedFoodDate();if(!confirm('Clear all food entries for '+date+'?'))return;
+  state.foodLogs=state.foodLogs.filter(x=>x.date!==date);syncFoodToDailyLog(date);save();renderAll();
+}
 function renderFoodDiary(){
   if(!el('foodDiary'))return;const date=selectedFoodDate(),entries=dayFoodEntries(date),tot=dayFoodTotals(date),m=state.macro;
-  el('macroProgress').innerHTML=m?'<div class="nutritionRings"><div><strong>'+Math.round(tot.cal)+'</strong><small>of '+m.calories+' kcal</small></div><div><strong>'+Math.round(Math.max(0,m.calories-tot.cal))+'</strong><small>remaining</small></div></div>'+macroBar('Protein',tot.p,m.protein)+macroBar('Carbs',tot.c,m.carbs)+macroBar('Fat',tot.f,m.fat):'<div class="notice">Complete your profile to see macro targets.</div>';
+  el('macroProgress').innerHTML=(m?'<div class="nutritionRings"><div><strong>'+Math.round(tot.cal)+'</strong><small>of '+m.calories+' kcal</small></div><div><strong>'+Math.round(Math.max(0,m.calories-tot.cal))+'</strong><small>remaining</small></div></div>'+macroBar('Protein',tot.p,m.protein)+macroBar('Carbs',tot.c,m.carbs)+macroBar('Fat',tot.f,m.fat):'<div class="notice">Complete your profile to see macro targets.</div>')+'<div class="diaryActions"><button onclick="copyYesterdayFood()">Copy yesterday</button><button onclick="clearFoodDay()">Clear day</button></div>';
   const groups={};entries.forEach(x=>(groups[x.meal]??=[]).push(x));
   el('foodDiary').innerHTML=entries.length?Object.entries(groups).map(([meal,arr])=>'<div class="diaryMeal"><div class="row"><h4>'+meal+'</h4><span>'+Math.round(arr.reduce((s,x)=>s+x.calories,0))+' kcal</span></div>'+arr.map(x=>'<div class="diaryEntry"><div><strong>'+escapeHtml(x.name)+'</strong><small>'+Math.round(x.calories)+' kcal • '+Math.round(x.protein)+'P '+Math.round(x.carbs)+'C '+Math.round(x.fat)+'F'+(x.grams?' • '+Math.round(x.grams)+'g':'')+'</small></div><button onclick="deleteFoodLog(\''+x.id+'\')">×</button></div>').join('')+'</div>').join(''):'<div class="emptyState">Nothing logged for this day yet. Add food above or log a meal from your generated plan.</div>';
 }
@@ -501,15 +511,17 @@ function todaysWorkout(){
 }
 function renderToday(){
   if(!state.profile.age){el('todayPanel').innerHTML='<div class="notice">Start with your profile. Once onboarding is complete, this becomes your personalized daily plan.</div>';return}
-  const log=currentLog(),work=todaysWorkout(),dayIdx=(new Date().getDay()+6)%7,mealDay=state.mealPlan[dayIdx%Math.max(1,state.mealPlan.length)],meal=mealDay?.meals?.[0];
+  const log=currentLog(),work=todaysWorkout(),dayIdx=(new Date().getDay()+6)%7,mealDay=state.mealPlan[dayIdx%Math.max(1,state.mealPlan.length)],meal=mealDay?.meals?.[0],food=dayFoodTotals(today());
   const stepGoal=state.profile.stepGoal||8000,waterGoal=state.profile.waterGoalOz||100;
   const stepPct=log?.steps?Math.min(100,Math.round(log.steps/stepGoal*100)):0,waterPct=log?.water?Math.min(100,Math.round(log.water/waterGoal*100)):0;
+  const remaining=state.macro?Math.max(0,Math.round(state.macro.calories-food.cal)):null,proteinLeft=state.macro?Math.max(0,Math.round(state.macro.protein-food.p)):null;
   el('todayPanel').innerHTML=
+  '<div class="todayItem"><div class="row"><strong>Nutrition logged</strong><span class="pill">'+Math.round(food.cal)+' kcal</span></div><div>'+(state.macro?(remaining+' kcal remaining • '+proteinLeft+'g protein remaining'):'Complete your profile for targets')+'</div></div>'+
   '<div class="todayItem"><div class="row"><strong>Training</strong><span class="pill">'+(work?'READY':'SETUP')+'</span></div><div>'+(work?work.name+(work.preferredDay?' • '+work.preferredDay:''):'Generate your training plan')+'</div></div>'+
   '<div class="todayItem"><div class="row"><strong>Movement</strong><span>'+stepPct+'%</span></div><div>'+(log?.steps||0).toLocaleString()+' / '+stepGoal.toLocaleString()+' steps</div></div>'+
   '<div class="todayItem"><div class="row"><strong>Hydration</strong><span>'+waterPct+'%</span></div><div>'+(state.profile.units==='metric'?((log?.water||0)/33.814).toFixed(1)+' / '+(waterGoal/33.814).toFixed(1)+' L':Math.round(log?.water||0)+' / '+Math.round(waterGoal)+' oz')+'</div></div>'+
-  '<div class="todayItem"><strong>Next meal</strong><div>'+(meal?meal.items.slice(0,3).map(x=>x.name).join(' • '):'Generate your meal plan')+'</div></div>'+
-  '<div class="buttons"><button onclick="showTab(\'training\')">Open workout</button><button onclick="showTab(\'meals\')">View meals</button></div>';
+  '<div class="todayItem"><strong>Next planned meal</strong><div>'+(meal?meal.items.slice(0,3).map(x=>x.name).join(' • '):'Generate your meal plan')+'</div></div>'+
+  '<div class="buttons"><button class="primary" onclick="showTab(\'dailylog\')">Log food & metrics</button><button onclick="showTab(\'training\')">Open workout</button><button onclick="showTab(\'meals\')">Plan meals</button></div>';
 }
 
 function renderAdjustment(){
@@ -564,4 +576,4 @@ function resetAll(){if(confirm('Erase all local coaching data? Progress photos s
 function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();renderFoodDiary();loadDailyMetrics();renderCoachChat();renderAdjustment();renderPhotoGallery();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=15').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=16').catch(()=>{});
