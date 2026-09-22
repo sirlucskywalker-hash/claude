@@ -1,1 +1,122 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1020"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css?v=5"><title>PhysiqueOS</title></head><body><header><div><h1>PhysiqueOS</h1><p>Your adaptive fitness operating system</p></div><button onclick="exportData()">Export Backup</button></header><nav><button data-tab="dashboard" class="active">Dashboard</button><button data-tab="onboarding">Onboarding</button><button data-tab="nutrition">Nutrition</button><button data-tab="meals">Meals</button><button data-tab="training">Training</button><button data-tab="progress">Progress</button><button data-tab="coach">Coach</button><button data-tab="data">Data</button></nav><main><section id="dashboard" class="tab active"><div class="hero"><h2 id="welcome">Build your baseline</h2><p>Complete onboarding once. PhysiqueOS starts with an evidence-based estimate, then adapts from your actual results.</p></div><div class="metrics"><div class="card"><small>Calories</small><strong id="dashCalories">—</strong></div><div class="card"><small>Latest weight</small><strong id="dashWeight">—</strong></div><div class="card"><small>Adherence</small><strong id="dashAdherence">—</strong></div></div><div class="grid2"><div class="card"><h3>Weight trend</h3><canvas id="weightChart" width="600" height="220"></canvas></div><div class="card"><h3>Waist trend</h3><canvas id="waistChart" width="600" height="220"></canvas></div></div><div class="card"><h3>Adaptive review</h3><div id="homeCoach" class="notice"></div></div></section><section id="onboarding" class="tab"><div class="card"><h2>Client assessment</h2><div class="form"><label>Name<input id="name"></label><label>Age<input id="age" type="number"></label><label>Sex<select id="sex"><option value="male">Male</option><option value="female">Female</option></select></label><label>Height ft<input id="ft" type="number"></label><label>Height in<input id="inch" type="number"></label><label>Weight lb<input id="weight" type="number" step=".1"></label><label>Goal weight lb<input id="goalWeight" type="number" step=".1"></label><label>Body fat % optional<input id="bf" type="number" step=".1"></label><label>Activity<select id="activity"><option value="1.2">Sedentary</option><option value="1.35">Light</option><option value="1.5" selected>Moderate</option><option value="1.7">Very active</option></select></label><label>Goal<select id="goal"><option value="fatloss">Fat loss</option><option value="recomp">Recomp</option><option value="maintain">Maintain</option><option value="gain">Muscle gain</option></select></label><label>Aggressiveness<select id="aggr"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></label><label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label><label>Training days/week<select id="days"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label><label>Experience<select id="experience"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></label><label>Weekly food budget $<input id="budget" type="number"></label><label>ZIP<input id="zip"></label><label>Preferred stores<input id="stores" placeholder="Aldi, Walmart, Publix"></label><label>Grocery priority<select id="groceryPriority"><option value="budget">Lowest cost</option><option value="balanced" selected>Best value</option><option value="premium">Premium quality</option></select></label><label class="wide">Diet / dietary pattern<input id="diet" placeholder="Halal, vegetarian, dairy-free, etc."></label><label class="wide">Allergies / medically required exclusions<textarea id="allergies" placeholder="Peanuts, shellfish, dairy..."></textarea></label><label class="wide">Foods disliked / never include<textarea id="exclude" placeholder="Foods you simply do not want in the plan"></textarea></label><label class="wide">Preferred foods / ingredients<textarea id="preferredFoods" placeholder="Chicken, jasmine rice, Greek yogurt..."></textarea></label><label class="wide">Injuries / limitations<textarea id="injuries"></textarea></label><fieldset class="wide"><legend>Equipment</legend><div id="equipment"></div></fieldset></div><button class="primary" onclick="saveProfile()">Save assessment + calculate</button></div></section><section id="nutrition" class="tab"><div class="card"><h2>Nutrition engine</h2><div id="nutritionOut"></div></div></section><section id="meals" class="tab"><div class="card"><h2>Meal planner</h2><p>Your plan uses your macros, allergies, dislikes, preferred foods, budget and meal frequency.</p><button class="primary" onclick="generateMeals()">Generate 7-day plan</button><button onclick="openStores()">Stores near ZIP</button><div id="mealPlan"></div></div><div class="grid2"><div class="card"><h3>Grocery plan</h3><div id="grocery"></div></div><div class="card"><h3>Replacement options</h3><p>Use Swap beside any ingredient or Replace meal to create an alternative while keeping the same nutrition role.</p><div id="swaps"></div></div></div></section><section id="training" class="tab"><div class="card"><h2>Workout generator</h2><button class="primary" onclick="generateTraining()">Generate program</button><div id="trainingPlan"></div></div></section><section id="progress" class="tab"><div class="card"><h2>Check-in</h2><div class="form"><label>Date<input id="logDate" type="date"></label><label>Weight<input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label><label>Chest<input id="logChest" type="number" step=".1"></label><label>Arm<input id="logArm" type="number" step=".1"></label><label>Thigh<input id="logThigh" type="number" step=".1"></label><label>Steps<input id="logSteps" type="number"></label><label>Water oz<input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label><label>Calories eaten<input id="logCalories" type="number"></label><label>Adherence %<input id="logAdherence" type="number" min="0" max="100"></label><label class="wide">Notes<textarea id="logNotes"></textarea></label></div><button class="primary" onclick="saveLog()">Save check-in</button></div><div class="card"><h3>History</h3><div id="history"></div></div></section><section id="coach" class="tab"><div class="card"><h2>Adaptive Coach</h2><div id="coachOut" class="notice"></div><div class="buttons"><button onclick="coach('review')">Weekly review</button><button onclick="coach('hungry')">I'm hungry</button><button onclick="coach('stall')">Scale stalled</button><button onclick="coach('missed')">Missed workout</button><button onclick="coach('travel')">Travel day</button></div></div></section><section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This zero-cost MVP stores data only on this device/browser. Export a backup before changing devices or clearing browser storage.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section></main><footer>PhysiqueOS MVP • local-first • no required monthly infrastructure</footer><script src="data.js?v=5"></script><script src="app.js?v=5"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css?v=10">
+<title>PhysiqueOS Beta</title>
+</head>
+<body>
+<header><div><h1>PhysiqueOS</h1><p>Your adaptive fitness operating system</p></div><button onclick="exportData()">Export Backup</button></header>
+<nav>
+<button data-tab="dashboard" class="active">Today</button>
+<button data-tab="onboarding">Onboarding</button>
+<button data-tab="nutrition">Nutrition</button>
+<button data-tab="meals">Meals</button>
+<button data-tab="training">Training</button>
+<button data-tab="progress">Progress</button>
+<button data-tab="coach">Coach</button>
+<button data-tab="data">Data</button>
+</nav>
+<main>
+<section id="dashboard" class="tab active">
+<div class="hero"><h2 id="welcome">Build your baseline</h2><p>PhysiqueOS starts with an evidence-based estimate, then adapts from your real results.</p></div>
+<div class="card"><h3>Getting started</h3><div id="gettingStarted"></div></div>
+<div class="card"><h3>Today</h3><div id="todayPanel"></div></div>
+<div class="metrics"><div class="card"><small>Calories</small><strong id="dashCalories">—</strong></div><div class="card"><small>Latest weight</small><strong id="dashWeight">—</strong></div><div class="card"><small>Adherence</small><strong id="dashAdherence">—</strong></div></div>
+<div class="grid2"><div class="card"><h3>Weight trend</h3><canvas id="weightChart" width="600" height="220"></canvas></div><div class="card"><h3>Waist trend</h3><canvas id="waistChart" width="600" height="220"></canvas></div></div>
+<div class="card"><h3>Adaptive review</h3><div id="homeCoach" class="notice"></div><div id="adjustmentPanel"></div></div>
+</section>
+
+<section id="onboarding" class="tab">
+<div class="card"><h2>Client assessment</h2>
+<div class="form">
+<label>Name<input id="name"></label><label>Age<input id="age" type="number"></label><label>Sex<select id="sex"><option value="male">Male</option><option value="female">Female</option></select></label>
+<label>Units<select id="units" onchange="toggleUnits()"><option value="imperial">Imperial</option><option value="metric">Metric</option></select></label>
+<div id="imperialHeight" class="inline2"><label>Height ft<input id="ft" type="number"></label><label>Height in<input id="inch" type="number"></label></div>
+<label id="metricHeight" class="hidden">Height cm<input id="heightCm" type="number" step=".1"></label>
+<label>Current weight <span id="weightUnit">lb</span><input id="weightInput" type="number" step=".1"></label>
+<label>Goal weight <span id="goalWeightUnit">lb</span><input id="goalWeightInput" type="number" step=".1"></label>
+<label>Body fat % optional<input id="bf" type="number" step=".1"></label>
+<label>Activity<select id="activity"><option value="1.2">Sedentary</option><option value="1.35">Light</option><option value="1.5" selected>Moderate</option><option value="1.7">Very active</option></select></label>
+<label>Primary goal<select id="goal"><option value="fatloss">Fat loss</option><option value="recomp">Recomp</option><option value="maintain">Maintain</option><option value="gain">Muscle gain</option></select></label>
+<label>Aggressiveness<select id="aggr"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></label>
+
+<label>Training priority<select id="trainingGoal"><option value="hypertrophy">Build muscle</option><option value="strength">Strength</option><option value="general">General fitness</option><option value="performance">Performance</option></select></label>
+<label>Training days/week<select id="days"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+<label>Experience<select id="experience"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></label>
+<label>Session length<select id="sessionLength"><option value="30">~30 min</option><option value="45">~45 min</option><option value="60" selected>~60 min</option><option value="75">75+ min</option></select></label>
+<label>Training environment<select id="trainingEnvironment"><option value="gym">Commercial gym</option><option value="home">Home gym</option><option value="mixed">Mixed</option></select></label>
+<label>Preferred training days<input id="preferredDays" placeholder="Mon, Tue, Thu, Fri"></label>
+<label>Cardio preference<select id="cardioPreference"><option value="walking">Walking / steps</option><option value="steady">Steady-state cardio</option><option value="intervals">Intervals</option><option value="mixed">Mixed</option><option value="minimal">Minimal cardio</option></select></label>
+
+<label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+<label>Meal style<select id="mealStyle"><option value="structured">Structured</option><option value="hybrid" selected>Hybrid</option><option value="flexible">Flexible</option></select></label>
+<label>Variety<select id="mealVariety"><option value="simple">Simple / repetitive</option><option value="balanced" selected>Balanced</option><option value="variety">Maximum variety</option></select></label>
+<label>Cooking skill<select id="cookingSkill"><option value="minimal">Minimal</option><option value="basic" selected>Basic</option><option value="comfortable">Comfortable</option></select></label>
+<label>Meal-prep tolerance<select id="prepTolerance"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label>
+<label>Meals eaten out/week<input id="mealsOut" type="number" min="0" max="21" value="0"></label>
+<label>Weekly food budget $<input id="budget" type="number"></label>
+<label>ZIP<input id="zip" inputmode="numeric"></label>
+<label>Preferred stores<input id="stores" placeholder="Aldi, Walmart, Publix"></label>
+<label>Grocery priority<select id="groceryPriority"><option value="budget">Lowest cost</option><option value="balanced" selected>Best value</option><option value="premium">Premium quality</option></select></label>
+<label class="wide">Cuisine preferences<input id="cuisines" placeholder="Mexican, Mediterranean, Asian, simple American..."></label>
+<label class="wide">Diet / dietary pattern<input id="diet" placeholder="Vegetarian, pescatarian, dairy-free, gluten-free..."></label>
+<label class="wide">Allergies / required exclusions<textarea id="allergies" placeholder="Peanuts, shellfish, dairy..."></textarea></label>
+<label class="wide">Foods disliked / never include<textarea id="exclude"></textarea></label>
+<label class="wide">Preferred foods / ingredients<textarea id="preferredFoods"></textarea></label>
+<label class="wide">Injuries / limitations<textarea id="injuries"></textarea></label>
+<fieldset class="wide"><legend>Equipment</legend><div id="equipment"></div></fieldset>
+
+<fieldset class="wide safety"><legend>Safety screening</legend>
+<label><input id="pregnant" type="checkbox"> Pregnant or currently trying to manage nutrition during pregnancy</label>
+<label><input id="edRisk" type="checkbox"> Active eating-disorder/disordered-eating concern or history that makes automated calorie restriction inappropriate</label>
+<label><input id="redFlag" type="checkbox"> Chest pain, fainting, unexplained severe symptoms, or another issue needing medical evaluation</label>
+<label><input id="acuteInjury" type="checkbox"> Acute injury that has not been evaluated / is not ready for normal training</label>
+</fieldset>
+</div>
+<button class="primary" onclick="saveProfile()">Save assessment + calculate</button>
+</div>
+</section>
+
+<section id="nutrition" class="tab"><div class="card"><h2>Nutrition engine</h2><div id="nutritionOut"></div></div></section>
+
+<section id="meals" class="tab">
+<div class="card"><h2>Meal planner</h2><p>Generated from your macros, dietary needs, preferences, cooking tolerance, budget and meal style.</p>
+<button class="primary" onclick="generateMeals()">Generate / regenerate 7-day plan</button>
+<button onclick="openStores()">Stores near ZIP</button>
+<div id="mealPlan"></div></div>
+<div class="grid2"><div class="card"><h3>Grocery plan</h3><div id="grocery"></div></div><div class="card"><h3>Replacement options</h3><div id="swaps"></div></div></div>
+</section>
+
+<section id="training" class="tab">
+<div class="card"><h2>Training plan</h2><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><div id="trainingPlan"></div></div>
+<div class="card"><h3>Workout history & progression</h3><div id="workoutHistory"></div></div>
+</section>
+
+<section id="progress" class="tab">
+<div class="card"><h2>Check-in</h2><div class="form">
+<label>Date<input id="logDate" type="date"></label><label>Weight<input id="logWeight" type="number" step=".1"></label><label>Waist<input id="logWaist" type="number" step=".1"></label>
+<label>Chest<input id="logChest" type="number" step=".1"></label><label>Arm<input id="logArm" type="number" step=".1"></label><label>Thigh<input id="logThigh" type="number" step=".1"></label>
+<label>Steps<input id="logSteps" type="number"></label><label>Water oz<input id="logWater" type="number"></label><label>Sleep hours<input id="logSleep" type="number" step=".1"></label>
+<label>Calories eaten<input id="logCalories" type="number"></label><label>Adherence %<input id="logAdherence" type="number" min="0" max="100"></label>
+<label>Hunger 1–10<input id="logHunger" type="number" min="1" max="10"></label><label>Energy 1–10<input id="logEnergy" type="number" min="1" max="10"></label><label>Stress 1–10<input id="logStress" type="number" min="1" max="10"></label>
+<label>Recovery 1–10<input id="logRecovery" type="number" min="1" max="10"></label><label>Soreness 1–10<input id="logSoreness" type="number" min="1" max="10"></label><label>Digestion 1–10<input id="logDigestion" type="number" min="1" max="10"></label>
+<label>Training performance<select id="logPerformance"><option value="">—</option><option value="down">Down</option><option value="same">Stable</option><option value="up">Improving</option></select></label>
+<label class="wide">Notes<textarea id="logNotes"></textarea></label></div>
+<button class="primary" onclick="saveLog()">Save check-in</button></div>
+<div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p>
+<div class="form"><label>Date<input id="photoDate" type="date"></label><label>Front<input id="photoFront" type="file" accept="image/*"></label><label>Side<input id="photoSide" type="file" accept="image/*"></label><label>Back<input id="photoBack" type="file" accept="image/*"></label></div>
+<button onclick="savePhotos()">Save photo set</button><div id="photoGallery" class="photoGrid"></div></div>
+<div class="card"><h3>History</h3><div id="history"></div></div>
+</section>
+
+<section id="coach" class="tab"><div class="card"><h2>Adaptive Coach</h2><div id="coachOut" class="notice"></div><div id="coachAdjustment"></div><div class="buttons"><button onclick="coach('review')">Weekly review</button><button onclick="coach('hungry')">I'm hungry</button><button onclick="coach('stall')">Scale stalled</button><button onclick="coach('missed')">Missed workout</button><button onclick="coach('travel')">Travel day</button></div></div></section>
+
+<section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
+</main>
+<footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
+<script src="data.js?v=10"></script><script src="app.js?v=10"></script>
+</body></html>
