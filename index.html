@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=26">
+<link rel="stylesheet" href="styles.css?v=27">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -41,6 +41,29 @@
     <div class="premiumCard focusCard">
       <div class="sectionHead"><div><span class="kicker">YOUR PLAN</span><h3>Today’s focus</h3></div></div>
       <div id="todayPanel"></div>
+    </div>
+  </div>
+
+  <div class="premiumCard scheduleCard">
+    <div class="sectionHead">
+      <div><span class="kicker">ADHERENCE ENGINE</span><h3>Schedule & stay on track</h3><p class="muted">PhysiqueOS follows your device’s local timezone automatically, including travel and daylight-saving changes.</p></div>
+      <div id="timezoneStatus" class="timezoneBadge"></div>
+    </div>
+    <div class="scheduleGrid">
+      <label>Daily check-in<input id="scheduleCheckin" type="time" value="08:00"></label>
+      <label>Workout time<input id="scheduleWorkout" type="time" value="17:30"></label>
+      <label>First meal<input id="scheduleMeal" type="time" value="08:00"></label>
+      <label>Meal spacing<select id="scheduleMealGap"><option value="3">Every ~3 hours</option><option value="4" selected>Every ~4 hours</option><option value="5">Every ~5 hours</option></select></label>
+      <label>Calendar reminder<select id="scheduleReminder"><option value="0">At event time</option><option value="10">10 min before</option><option value="15" selected>15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select></label>
+    </div>
+    <div class="buttons scheduleActions">
+      <button class="primary" onclick="saveSchedule()">Save routine</button>
+      <button onclick="addTodayToGoogleCalendar()">Add today to Google Calendar</button>
+      <button onclick="downloadWeekCalendar()">Export 7 days (.ics)</button>
+    </div>
+    <div class="scheduleBody">
+      <div><span class="kicker">TODAY'S RUNWAY</span><div id="dailyRunway" class="dailyRunway"></div></div>
+      <div><span class="kicker">NEXT BEST ACTION</span><div id="adherenceNudge" class="adherenceNudge"></div></div>
     </div>
   </div>
 
@@ -295,8 +318,18 @@
   </div>
 </section>
 
-<section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
+<section id="data" class="tab">
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">INTEGRATIONS</span><h2>Connected life</h2><p class="muted">The beta can hand your plan to calendar apps now. Secure two-way calendar and wearable connections belong to the cloud version.</p></div></div>
+<div class="integrationGrid">
+  <div class="integrationCard live"><strong>Calendar</strong><span>Google Calendar handoff + universal .ics export for Apple Calendar, Outlook and others.</span><em>Available in beta</em></div>
+  <div class="integrationCard future"><strong>Apple Health</strong><span>Steps, workouts, heart rate, sleep, weight and supported health metrics.</span><em>Full version</em></div>
+  <div class="integrationCard future"><strong>Health Connect</strong><span>Android health and activity data with permission-based syncing.</span><em>Full version</em></div>
+  <div class="integrationCard future"><strong>WHOOP</strong><span>Recovery, strain, sleep and training context when connected.</span><em>Full version</em></div>
+  <div class="integrationCard future"><strong>Oura</strong><span>Sleep/readiness/activity context when connected.</span><em>Full version</em></div>
+  <div class="integrationCard future"><strong>Garmin / Fitbit</strong><span>Activity, sleep and supported wearable metrics when connected.</span><em>Full version</em></div>
+</div></div>
+<div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=26"></script><script src="app.js?v=26"></script>
+<script src="data.js?v=27"></script><script src="app.js?v=27"></script>
 </body></html>
