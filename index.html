@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=39">
+<link rel="stylesheet" href="styles.css?v=40">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -46,18 +46,18 @@
   </button>
   <div class="menuSectionLabel">Core</div>
   <div class="menuNav">
-    <button data-menu-tab="dashboard" onclick="menuGo('dashboard')"><span>Today</span><small>Daily command center</small></button>
-    <button data-menu-tab="training" onclick="menuGo('training')"><span>Workouts</span><small>Training plan & live sessions</small></button>
-    <button data-menu-tab="progress" onclick="menuGo('progress')"><span>Progress</span><small>Trends, photos & check-ins</small></button>
-    <button data-menu-tab="nutrition" onclick="menuGo('nutrition')"><span>Nutrition</span><small>Targets & adaptive intake</small></button>
-    <button data-menu-tab="meals" onclick="menuGo('meals')"><span>Meals</span><small>Meal planning & groceries</small></button>
-    <button data-menu-tab="dailylog" onclick="menuGo('dailylog')"><span>Check-in</span><small>Daily metrics & logging</small></button>
-    <button data-menu-tab="coach" onclick="menuGo('coach')"><span>AI Coach</span><small>Adaptive guidance</small></button>
+    <button data-menu-tab="dashboard" onclick="menuGo('dashboard')"><span>Today</span><small>What matters today</small></button>
+    <button data-menu-tab="training" onclick="menuGo('training')"><span>Workouts</span><small>Your workout</small></button>
+    <button data-menu-tab="progress" onclick="menuGo('progress')"><span>Progress</span><small>See your progress</small></button>
+    <button data-menu-tab="nutrition" onclick="menuGo('nutrition')"><span>Nutrition</span><small>Calories & macros</small></button>
+    <button data-menu-tab="meals" onclick="menuGo('meals')"><span>Meals</span><small>Meals & grocery list</small></button>
+    <button data-menu-tab="dailylog" onclick="menuGo('dailylog')"><span>Check-in</span><small>Log your day</small></button>
+    <button data-menu-tab="coach" onclick="menuGo('coach')"><span>AI Coach</span><small>Ask anything</small></button>
   </div>
   <div class="menuSectionLabel">Account & system</div>
   <div class="menuNav compact">
-    <button data-menu-tab="onboarding" onclick="menuGo('onboarding')"><span>User Profile</span><small>Goals, preferences & setup</small></button>
-    <button data-menu-tab="data" onclick="menuGo('data')"><span>Data & Integrations</span><small>Backups, devices & connections</small></button>
+    <button data-menu-tab="onboarding" onclick="menuGo('onboarding')"><span>User Profile</span><small>Your settings</small></button>
+    <button data-menu-tab="data" onclick="menuGo('data')"><span>Data & Integrations</span><small>Devices & data</small></button>
   </div>
   <div class="menuFooter"><span class="menuOnlineDot"></span><span>PhysiqueOS Beta</span><small>v1.1</small></div>
 </aside>
@@ -72,7 +72,7 @@
   <div class="dashboardHero">
     <button class="welcomeProfileLink" onclick="showTab('onboarding')" aria-label="Open user profile">
       <span id="heroProfilePhoto" class="heroProfilePhoto"><span>P</span></span>
-      <span class="welcomeProfileCopy"><span class="eyebrow" id="timeGreeting">YOUR DAILY COMMAND CENTER</span><strong id="welcome">Build your baseline</strong><small id="heroSub">The more consistently you log, the smarter your plan becomes.</small><em>View profile</em></span>
+      <span class="welcomeProfileCopy"><span class="eyebrow" id="timeGreeting">TODAY</span><strong id="welcome">Build your baseline</strong><small id="heroSub">Here’s what matters today. Everything else can wait.</small><em>View profile</em></span>
     </button>
     <div class="heroScore"><span id="dailyScore">—</span><small>Daily score</small><em class="scoreStatus">Live</em></div>
   </div>
@@ -82,6 +82,17 @@
     <button id="conciergeNowButton" class="primary conciergeNowButton" onclick="showTab('dailylog')">Do this now</button>
     <div class="conciergePulse"><div><span>Training</span><strong id="conciergeTraining">—</strong></div><div><span>Nutrition</span><strong id="conciergeNutrition">—</strong></div><div><span>Recovery</span><strong id="conciergeRecovery">—</strong></div></div>
   </div>
+
+  <div class="simpleActions" aria-label="Quick actions">
+    <button onclick="showTab('training')"><span class="simpleActionIcon">↗</span><span><strong id="simpleWorkoutLabel">Start workout</strong><small>Open today’s training</small></span></button>
+    <button onclick="showTab('dailylog')"><span class="simpleActionIcon">＋</span><span><strong>Log today</strong><small>Food, weight, steps & recovery</small></span></button>
+    <button onclick="showTab('meals')"><span class="simpleActionIcon">⌁</span><span><strong>Plan meals</strong><small>Meals, favorites & groceries</small></span></button>
+    <button onclick="showTab('coach')"><span class="simpleActionIcon">✦</span><span><strong>Ask Coach</strong><small>Get one clear next step</small></span></button>
+  </div>
+
+  <details class="todayDetails">
+    <summary><span><strong>More about today</strong><small>Schedule, progress, reminders and advanced details</small></span><em>Open</em></summary>
+    <div class="todayDetailsBody">
 
   <div class="todayGrid">
     <div class="premiumCard quickLogCard">
@@ -172,6 +183,8 @@
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div>
     <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div>
   </div></div></details>
+    </div>
+  </details>
 </section>
 
 <section id="dailylog" class="tab">
@@ -429,5 +442,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=39"></script><script src="app.js?v=39"></script>
+<script src="data.js?v=40"></script><script src="app.js?v=40"></script>
 </body></html>
