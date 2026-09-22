@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05070c">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="styles.css?v=32">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -21,12 +21,12 @@
 </header>
 <nav class="appNav" aria-label="Primary navigation">
 <button data-tab="dashboard" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9Zm0-13h6V4h-6v3ZM4 20h6v-3H4v3Z"/></svg><span>Today</span></button>
-<button data-tab="dailylog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6V4Zm3 4h6M9 12h6M9 16h4"/></svg><span>Check-in</span></button>
 <button data-tab="training"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6m4-8v10m8-10v10m4-8v6M8 12h8"/></svg><span>Workouts</span></button>
-<button data-tab="coach"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 12 .8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"/></svg><span>AI Coach</span></button>
 <button data-tab="progress"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8M15 7h5v5"/></svg><span>Progress</span></button>
 <button data-tab="nutrition"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c4 3 6 6 6 10a6 6 0 1 1-12 0c0-4 2-7 6-10Zm-3 10c1.5 1 4.5 1 6 0"/></svg><span>Nutrition</span></button>
 <button data-tab="meals"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v8M4 3v5c0 2 4 2 4 0V3M6 11v10M15 3v18m0-18c3 0 5 2 5 5s-2 5-5 5"/></svg><span>Meals</span></button>
+<button data-tab="dailylog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6V4Zm3 4h6M9 12h6M9 16h4"/></svg><span>Check-in</span></button>
+<button data-tab="coach"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 12 .8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"/></svg><span>AI Coach</span></button>
 <button data-tab="onboarding"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c.7-3.4 3.1-5 7-5s6.3 1.6 7 5"/></svg><span>Profile</span></button>
 <button data-tab="data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5V5Zm4 0v14m6-14v14M5 9h14m-14 6h14"/></svg><span>Data</span></button>
 </nav>
@@ -379,5 +379,5 @@
 <div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=31"></script><script src="app.js?v=31"></script>
+<script src="data.js?v=32"></script><script src="app.js?v=32"></script>
 </body></html>
