@@ -589,9 +589,14 @@ function macro(f,g){
   const q=g/100,p=(f.p||0)*q,c=(f.c||0)*q,fat=(f.f||0)*q;
   return{p,c,f:fat,k:p*4+c*4+fat*9};
 }
+function itemMacro(x){
+  const f=FOOD_DB.find(z=>z.name===x.name);
+  if(f)return macro(f,x.g);
+  if(x.macrosPer100)return macro({p:+x.macrosPer100.p||0,c:+x.macrosPer100.c||0,f:+x.macrosPer100.f||0},x.g);
+  return{p:0,c:0,f:0,k:0};
+}
 function sumMeal(items){
-  const total=items.map(x=>{const f=FOOD_DB.find(z=>z.name===x.name);return f?macro(f,x.g):{p:0,c:0,f:0,k:0}})
-    .reduce((a,x)=>({p:a.p+x.p,c:a.c+x.c,f:a.f+x.f,k:a.k+x.k}),{p:0,c:0,f:0,k:0});
+  const total=items.map(itemMacro).reduce((a,x)=>({p:a.p+x.p,c:a.c+x.c,f:a.f+x.f,k:a.k+x.k}),{p:0,c:0,f:0,k:0});
   total.k=total.p*4+total.c*4+total.f*9;
   return total;
 }
@@ -628,12 +633,27 @@ function solveMealGrams(pf,cf,ff,vf,share,kind){
 }
 function alignMealToTarget(meal){
   if(!meal||!meal.items||!state.macro)return meal;
-  const pfItem=meal.items.find(x=>x.cat==='protein'),cfItem=meal.items.find(x=>x.cat==='carb'),ffItem=meal.items.find(x=>x.cat==='fat'),vfItem=meal.items.find(x=>x.cat==='veg');
+  const extras=meal.items.filter(x=>x.isExtra),extra=sumMeal(extras),target=targetMealMacros(meal.share||0);
+  const pfItem=meal.items.find(x=>x.cat==='protein'&&!x.isExtra),cfItem=meal.items.find(x=>x.cat==='carb'&&!x.isExtra),ffItem=meal.items.find(x=>x.cat==='fat'&&!x.isExtra),vfItem=meal.items.find(x=>x.cat==='veg'&&!x.isExtra);
   if(!pfItem||!cfItem||!ffItem){meal.sum=sumMeal(meal.items);return meal}
   const pf=FOOD_DB.find(x=>x.name===pfItem.name),cf=FOOD_DB.find(x=>x.name===cfItem.name),ff=FOOD_DB.find(x=>x.name===ffItem.name),vf=vfItem?FOOD_DB.find(x=>x.name===vfItem.name):null;
   if(!pf||!cf||!ff){meal.sum=sumMeal(meal.items);return meal}
-  const [pg,cg,fg,vg]=solveMealGrams(pf,cf,ff,vf,meal.share||0,meal.kind||'meal');
-  pfItem.g=pg;cfItem.g=cg;ffItem.g=fg;if(vfItem)vfItem.g=vg;
+  const vegG=vf&&meal.kind!=='snack'?100:0,veg=vf?macro(vf,vegG):{p:0,c:0,f:0};
+  const b=[Math.max(1,target.p-extra.p-veg.p),Math.max(1,target.c-extra.c-veg.c),Math.max(1,target.f-extra.f-veg.f)];
+  const A=[
+    [(pf.p||0)/100,(cf.p||0)/100,(ff.p||0)/100],
+    [(pf.c||0)/100,(cf.c||0)/100,(ff.c||0)/100],
+    [(pf.f||0)/100,(cf.f||0)/100,(ff.f||0)/100]
+  ];
+  let g=solve3x3(A,b);
+  if(!g||g.some(x=>!Number.isFinite(x)||x<0)){
+    const pg=gramsFor(pf,'p',b[0]),pm=macro(pf,pg);
+    const cg=gramsFor(cf,'c',Math.max(1,b[1]-pm.c)),cm=macro(cf,cg);
+    const fg=gramsFor(ff,'f',Math.max(1,b[2]-pm.f-cm.f));
+    g=[pg,cg,fg];
+  }
+  [pfItem.g,cfItem.g,ffItem.g]=g.map(x=>Math.max(5,Math.round(x/5)*5));
+  if(vfItem)vfItem.g=vegG;
   meal.sum=sumMeal(meal.items);return meal;
 }
 function alignMealPlanToTargets(plan){
@@ -855,6 +875,54 @@ function chooseSwap(name){
 }
 function swapIngredient(di,mi,ii){openSwapPicker(di,mi,ii)}
 
+let activeMealAdd=null;
+function openMealAdd(di,mi){
+  const meal=state.mealPlan[di]?.meals?.[mi];if(!meal)return;
+  activeMealAdd={di,mi};
+  if(el('mealAddSearch'))el('mealAddSearch').value='';
+  if(el('mealAddRebalance'))el('mealAddRebalance').checked=true;
+  renderMealAddResults();
+  el('mealAddPicker').classList.remove('hidden');el('mealAddBackdrop').classList.remove('hidden');document.body.classList.add('menuOpen');
+}
+function closeMealAdd(){el('mealAddPicker')?.classList.add('hidden');el('mealAddBackdrop')?.classList.add('hidden');document.body.classList.remove('menuOpen');activeMealAdd=null}
+function mealAddLibrary(){
+  const q=(el('mealAddSearch')?.value||'').trim().toLowerCase();
+  let foods=FOOD_DB.filter(x=>!excluded(x));
+  if(q)foods=foods.filter(x=>x.name.toLowerCase().includes(q));
+  const pref=foods.filter(preferred),rest=foods.filter(x=>!preferred(x));
+  return [...pref,...rest].slice(0,q?60:24);
+}
+function renderMealAddResults(){
+  if(!el('mealAddResults'))return;
+  const foods=mealAddLibrary();
+  el('mealAddResults').innerHTML=foods.length?foods.map(f=>'<button class="swapOption" onclick="promptAddFood(\''+escapeHtml(f.name).replace(/'/g,"\\'")+'\')"><div><strong>'+escapeHtml(f.name)+'</strong><small>'+Math.round(f.k||((f.p||0)*4+(f.c||0)*4+(f.f||0)*9))+' kcal / 100g • '+(f.p||0)+'P '+(f.c||0)+'C '+(f.f||0)+'F</small></div><span>Add</span></button>').join(''):'<div class="emptyState">No matching foods.</div>';
+}
+function promptAddFood(name){
+  const grams=Number(prompt('How many grams of '+name+'?',30));if(!grams||grams<=0)return;
+  addFoodToMeal(name,grams);
+}
+function addFoodToMeal(name,grams){
+  if(!activeMealAdd)return;
+  const {di,mi}=activeMealAdd,meal=state.mealPlan[di]?.meals?.[mi],food=FOOD_DB.find(x=>x.name===name);if(!meal||!food)return;
+  meal.items.push({name:food.name,g:Math.round(grams),cat:food.cat,price:food.price,isExtra:true});
+  if(el('mealAddRebalance')?.checked)alignMealToTarget(meal);else meal.sum=sumMeal(meal.items);
+  state.mealPlanSchema=3;save();closeMealAdd();renderMeals();
+}
+function addCustomFoodToMeal(){
+  if(!activeMealAdd)return;
+  const name=(el('customFoodName')?.value||'').trim(),g=+el('customFoodGrams')?.value||0,p=+el('customFoodProtein')?.value||0,c=+el('customFoodCarbs')?.value||0,f=+el('customFoodFat')?.value||0;
+  if(!name||g<=0)return alert('Enter a food name and serving grams.');
+  const {di,mi}=activeMealAdd,meal=state.mealPlan[di]?.meals?.[mi];if(!meal)return;
+  meal.items.push({name,g:Math.round(g),cat:'extra',isExtra:true,macrosPer100:{p,c,f}});
+  if(el('mealAddRebalance')?.checked)alignMealToTarget(meal);else meal.sum=sumMeal(meal.items);
+  state.mealPlanSchema=3;save();
+  ['customFoodName','customFoodProtein','customFoodCarbs','customFoodFat'].forEach(id=>{if(el(id))el(id).value=''});if(el('customFoodGrams'))el('customFoodGrams').value='30';
+  closeMealAdd();renderMeals();
+}
+function removeMealExtra(di,mi,ii){
+  const meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item||!item.isExtra)return;
+  meal.items.splice(ii,1);alignMealToTarget(meal);save();renderMeals();
+}
 function replaceMeal(di,mi){
   const old=state.mealPlan[di]?.meals?.[mi];if(!old)return;
   const share=old.share||1/Math.max(1,state.mealPlan[di].meals.length),kind=old.kind||'meal',label=old.label||(kind==='snack'?'Snack':'Meal '+(mi+1));
@@ -899,11 +967,11 @@ function renderMeals(){
   el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>{
     const pref=d.prefs||state.dayMealPrefs[di]||state.mealPrefs,total=d.meals.reduce((s,m)=>({k:s.k+m.sum.k,p:s.p+m.sum.p,c:s.c+m.sum.c,f:s.f+m.sum.f}),{k:0,p:0,c:0,f:0}),target=state.macro||{},deltaK=Math.round(total.k-(target.calories||0));
     const controls='<div class="dayStructure"><label>Meals<select id="dayMeals_'+di+'">'+[2,3,4,5,6].map(n=>'<option '+(n==pref.meals?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Snacks<select id="daySnacks_'+di+'">'+[0,1,2,3].map(n=>'<option '+(n==pref.snacks?'selected':'')+'>'+n+'</option>').join('')+'</select></label><label>Distribution<select id="dayDist_'+di+'"><option value="balanced" '+(pref.distribution==='balanced'?'selected':'')+'>Balanced</option><option value="largerDinner" '+(pref.distribution==='largerDinner'?'selected':'')+'>Larger dinner</option><option value="largerBreakfast" '+(pref.distribution==='largerBreakfast'?'selected':'')+'>Larger breakfast</option><option value="training" '+(pref.distribution==='training'?'selected':'')+'>Training-focused</option></select></label><button onclick="rebuildMealDay('+di+')">Rebuild day</button></div>';
-    const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Choose swap</button></div>').join('')+'</div>').join('');
+    const cards=d.meals.map((m,mi)=>'<div class="meal '+(m.kind==='snack'?'snackCard':'')+'"><div class="row"><div><span class="mealType">'+(m.kind==='snack'?'SNACK':'MEAL')+'</span><strong>'+(m.label||((m.kind==='snack'?'Snack ':'Meal ')+(mi+1)))+'</strong></div><div class="rowWrap"><button class="addFoodBtn" onclick="openMealAdd('+di+','+mi+')">+ Add food</button><button onclick="logPlannedMeal('+di+','+mi+')">Log</button><button onclick="replaceMeal('+di+','+mi+')">Replace</button></div></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row '+(x.isExtra?'mealExtraRow':'')+'"><span>'+x.g+'g '+escapeHtml(x.name)+(x.isExtra?' <em>added</em>':'')+'</span><div class="rowWrap">'+(x.isExtra?'<button onclick="removeMealExtra('+di+','+mi+','+ii+')">Remove</button>':'<button onclick="swapIngredient('+di+','+mi+','+ii+')">Choose swap</button>')+'</div></div>').join('')+'</div>').join('');
     return'<details class="meal dayCard" '+(d.day===1?'open':'')+'><summary><span>Day '+d.day+'</span><small>'+Math.round(total.k)+' / '+Math.round(target.calories||total.k)+' kcal • '+Math.round(total.p)+'P '+Math.round(total.c)+'C '+Math.round(total.f)+'F'+(Math.abs(deltaK)>25?' • '+(deltaK>0?'+':'')+deltaK+' kcal':' • on target')+'</small></summary>'+controls+cards+'</details>';
   }).join('');
   const totals=groceryTotals(),rows=Object.entries(totals);let roundedCost=0;
-  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);if(!f)return'';const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
+  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);if(!f)return'<tr><td>'+escapeHtml(name)+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>Custom item</td></tr>';const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
   const budget=Number(state.profile.budget)||0;
   const budgetMsg=budget?(roundedCost<=budget?'<div class="notice success">Estimated basket fits the entered budget.</div>':'<div class="notice warning">Estimated packaged basket is about $'+(roundedCost-budget).toFixed(2)+' over budget. The generator has already prioritized cheaper macro-equivalent foods where possible.</div>'):'';
   const cards=storeNames().map(s=>{const est=roundedCost*storeMultiplier(s);return'<div class="meal"><strong>'+s+'</strong><div>Planning estimate: $'+est.toFixed(2)+'</div><button onclick="window.open(\''+storeSearchUrl(s)+'\',\'_blank\')">Find near '+(state.profile.zip||'ZIP')+'</button></div>'}).join('');
@@ -1727,4 +1795,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=47').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=48').then(r=>r.update()).catch(()=>{});
