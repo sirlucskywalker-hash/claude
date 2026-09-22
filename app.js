@@ -303,10 +303,27 @@ function askFaqQuestion(){
   const q=el('faqQuestion')?.value;if(!q)return;el('coachInput').value=q;sendCoachMessage();
 }
 function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
+function toggleAppMenu(force){
+  const menu=el('appMenu'),back=el('appMenuBackdrop');if(!menu||!back)return;
+  const open=typeof force==='boolean'?force:menu.classList.contains('hidden');
+  menu.classList.toggle('hidden',!open);back.classList.toggle('hidden',!open);
+  document.body.classList.toggle('menuOpen',open);
+  if(open)renderMenuProfile();
+}
+function closeAppMenu(){toggleAppMenu(false)}
+function menuGo(id){closeAppMenu();showTab(id)}
+function renderMenuProfile(){
+  if(!el('menuProfileName'))return;
+  const p=state.profile||{},goal=p.goal==='fatloss'?'Fat loss':p.goal==='gain'?'Muscle gain':p.goal==='recomp'?'Recomposition':p.goal==='maintain'?'Maintenance':'Set your goal';
+  el('menuProfileName').textContent=p.name||'Your profile';
+  el('menuProfileMeta').textContent=(p.age?p.age+' • ':'')+goal;
+  document.querySelectorAll('[data-menu-tab]').forEach(x=>x.classList.toggle('active',x.dataset.menuTab===document.body.dataset.view));
+}
 function showTab(id){
   document.body.dataset.view=id;
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
+  document.querySelectorAll('[data-menu-tab]').forEach(x=>x.classList.toggle('active',x.dataset.menuTab===id));
   const target=document.querySelector('section#'+id+'.tab'); if(target) target.classList.add('active');
   renderAll(); if(window.innerWidth<900)window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1352,10 +1369,11 @@ async function resetAll(){
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 document.body.dataset.view='dashboard';
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=33').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=34').catch(()=>{});
