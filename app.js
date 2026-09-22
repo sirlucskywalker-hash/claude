@@ -319,6 +319,7 @@ function renderMenuProfile(){
   el('menuProfileName').textContent=p.name||'Your profile';
   el('menuProfileMeta').textContent=(p.age?p.age+' • ':'')+goal;
   document.querySelectorAll('[data-menu-tab]').forEach(x=>x.classList.toggle('active',x.dataset.menuTab===document.body.dataset.view));
+  renderProfilePhoto();
 }
 function showTab(id){
   document.body.dataset.view=id;
@@ -1163,7 +1164,39 @@ function draw(id,key,label){
   const v=a.map(x=>x[key]),lo=Math.min(...v),hi=Math.max(...v),span=hi-lo||1;ctx.strokeStyle='#38bdf8';ctx.lineWidth=3;ctx.beginPath();v.forEach((y,i)=>{const px=20+i*(w-40)/(v.length-1),py=h-20-(y-lo)/span*(h-40);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke();ctx.fillStyle='#f4f7fb';ctx.fillText(label+': '+v[v.length-1],20,18);
 }
 
-function openPhotoDB(){return new Promise((res,rej)=>{const r=indexedDB.open('PhysiqueOSPhotos',1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('photos'))r.result.createObjectStore('photos',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function openPhotoDB(){return new Promise((res,rej)=>{const r=indexedDB.open('PhysiqueOSPhotos',2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('photos'))r.result.createObjectStore('photos',{keyPath:'id'});if(!r.result.objectStoreNames.contains('profile'))r.result.createObjectStore('profile',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function saveProfilePhoto(input){
+  const file=input?.files?.[0];if(!file)return;
+  if(!file.type.startsWith('image/'))return alert('Choose an image file.');
+  if(file.size>12*1024*1024)return alert('Choose an image under 12 MB.');
+  try{
+    const db=await openPhotoDB(),tx=db.transaction('profile','readwrite');
+    tx.objectStore('profile').put({id:'avatar',blob:file,updatedAt:Date.now()});
+    tx.oncomplete=()=>{db.close();input.value='';renderProfilePhoto()};
+  }catch(e){console.warn(e);alert('Could not save that profile photo on this device.')}
+}
+async function removeProfilePhoto(){
+  if(!confirm('Remove your profile photo from this device?'))return;
+  try{const db=await openPhotoDB(),tx=db.transaction('profile','readwrite');tx.objectStore('profile').delete('avatar');tx.oncomplete=()=>{db.close();renderProfilePhoto()}}catch(e){console.warn(e)}
+}
+async function getProfilePhoto(){
+  try{
+    const db=await openPhotoDB();return await new Promise(resolve=>{const tx=db.transaction('profile','readonly'),req=tx.objectStore('profile').get('avatar');req.onsuccess=()=>{const x=req.result;db.close();resolve(x?.blob||null)};req.onerror=()=>{db.close();resolve(null)}})
+  }catch(e){return null}
+}
+let profilePhotoObjectUrl='';
+async function renderProfilePhoto(){
+  const blob=await getProfilePhoto();
+  if(profilePhotoObjectUrl){URL.revokeObjectURL(profilePhotoObjectUrl);profilePhotoObjectUrl=''}
+  const targets=[el('profilePhotoPreview'),el('heroProfilePhoto'),document.querySelector('.menuAvatar')].filter(Boolean);
+  if(blob){
+    profilePhotoObjectUrl=URL.createObjectURL(blob);
+    targets.forEach(t=>{t.innerHTML='<img src="'+profilePhotoObjectUrl+'" alt="Profile photo">';t.classList.add('hasPhoto')});
+  }else{
+    const initial=(state.profile?.name||'P').trim().charAt(0).toUpperCase()||'P';
+    targets.forEach(t=>{t.innerHTML='<span>'+escapeHtml(initial)+'</span>';t.classList.remove('hasPhoto')});
+  }
+}
 async function savePhotos(){
   const date=el('photoDate').value||today(),files={front:el('photoFront').files[0],side:el('photoSide').files[0],back:el('photoBack').files[0]};
   if(!files.front&&!files.side&&!files.back)return alert('Choose at least one photo.');
@@ -1314,7 +1347,7 @@ function renderAdjustment(){
   el('adjustmentPanel').innerHTML=html;el('coachAdjustment').innerHTML=html;
 }
 function renderDashboard(){
-  renderSchedule();renderDriftMonitor();
+  renderSchedule();renderDriftMonitor();renderProfilePhoto();
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome back, '+state.profile.name+'.':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore();el('dailyScore').textContent=ds||'—';el('dailyScore').parentElement.style.setProperty('--score',(ds||0)+'%')};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
@@ -1377,4 +1410,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=35').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=36').catch(()=>{});
