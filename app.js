@@ -254,6 +254,21 @@ function groceryTotals(){
 function storeNames(){const typed=(state.profile.stores||'').split(',').map(x=>x.trim()).filter(Boolean);return typed.length?typed:['Aldi','Walmart','Publix']}
 function storeMultiplier(name){const key=Object.keys(STORE_MULTIPLIERS).find(k=>k.toLowerCase()===name.toLowerCase());return key?STORE_MULTIPLIERS[key]:1}
 function storeSearchUrl(store){return'https://www.google.com/maps/search/'+encodeURIComponent(store+' grocery store near '+(state.profile.zip||''))}
+function displayGroceryWeight(g){
+  const grams=Number(g)||0;
+  if(state.profile.units==='metric'){
+    return grams>=1000?(grams/1000).toFixed(2).replace(/\.00$/,'')+' kg':Math.round(grams)+' g';
+  }
+  const oz=grams/28.3495;
+  if(oz>=16){
+    const lb=Math.floor(oz/16),rem=oz-lb*16;
+    return lb+' lb'+(rem>=0.5?' '+rem.toFixed(1).replace(/\.0$/,'')+' oz':'');
+  }
+  return oz.toFixed(1).replace(/\.0$/,'')+' oz';
+}
+function displayPackage(g,packs){
+  return packs+' × '+displayGroceryWeight(g);
+}
 function renderMeals(){
   if(!state.mealPlan.length){
     el('mealPlan').innerHTML='<div class="notice">Generate a plan first.</div>';
@@ -263,7 +278,7 @@ function renderMeals(){
   el('mealPlan').innerHTML=state.mealPlan.map((d,di)=>'<details class="meal" '+(d.day===1?'open':'')+'><summary>Day '+d.day+'</summary>'+d.meals.map((m,mi)=>'<div class="meal"><div class="row"><strong>Meal '+(mi+1)+'</strong><button onclick="replaceMeal('+di+','+mi+')">Replace meal</button></div><small>'+m.sum.k.toFixed(0)+' kcal • '+m.sum.p.toFixed(0)+'P '+m.sum.c.toFixed(0)+'C '+m.sum.f.toFixed(0)+'F</small>'+m.items.map((x,ii)=>'<div class="row"><span>'+x.g+'g '+x.name+'</span><button onclick="swapIngredient('+di+','+mi+','+ii+')">Swap</button></div>').join('')+'</div>').join('')+'</details>').join('');
   const totals=groceryTotals(),rows=Object.entries(totals);
   let roundedCost=0;
-  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+Math.round(g)+'g needed</td><td>'+packs+' × '+Math.round(f.packageG)+'g</td></tr>'}).join('');
+  const qtyRows=rows.map(([name,g])=>{const f=FOOD_DB.find(x=>x.name===name);const packs=Math.ceil(g/f.packageG),buy=packs*f.packageG,cost=buy/1000*f.price;roundedCost+=cost;return'<tr><td>'+name+'</td><td>'+displayGroceryWeight(g)+' needed</td><td>'+displayPackage(f.packageG,packs)+'</td></tr>'}).join('');
   const budget=Number(state.profile.budget)||0;
   const budgetMsg=budget?(roundedCost<=budget?'<div class="notice success">Estimated basket fits the entered budget.</div>':'<div class="notice warning">Estimated packaged basket is about $'+(roundedCost-budget).toFixed(2)+' over budget. The generator has already prioritized cheaper macro-equivalent foods where possible.</div>'):'';
   const cards=storeNames().map(s=>{const est=roundedCost*storeMultiplier(s);return'<div class="meal"><strong>'+s+'</strong><div>Planning estimate: $'+est.toFixed(2)+'</div><button onclick="window.open(\''+storeSearchUrl(s)+'\',\'_blank\')">Find near '+(state.profile.zip||'ZIP')+'</button></div>'}).join('');
@@ -296,25 +311,46 @@ function generateTraining(){
   save();renderTraining();
 }
 function lastExerciseLogs(name){return state.workoutLogs.flatMap(w=>w.exercises||[]).filter(x=>x.name===name).slice(-2)}
+function normalizeSetResults(x){
+  if(Array.isArray(x.results))return x.results;
+  if(Array.isArray(x.setData))return x.setData;
+  if(Number.isFinite(x.reps))return[{weight:Number(x.weight)||0,reps:Number(x.reps)||0,rir:Number(x.rir)||0}];
+  return[];
+}
 function progression(name,min,max,targetRir){
-  const a=lastExerciseLogs(name);if(!a.length)return'Log this exercise to establish a baseline.';
-  const x=a[a.length-1];
-  if(x.reps>=max&&x.rir>=targetRir)return'Next time: add ~2.5–5% load and return toward the lower end of the rep range.';
-  if(x.reps<min||x.rir<=0)return'Next time: hold or reduce load slightly and rebuild clean reps inside the target range.';
-  if(a.length>=2&&x.reps>a[a.length-2].reps)return'Progressing. Keep the load and add reps until you reach the top of the range.';
-  return'Hold load and aim to beat reps or execution quality next session.';
+  const logs=lastExerciseLogs(name);if(!logs.length)return'Log each set to establish a baseline.';
+  const latest=normalizeSetResults(logs[logs.length-1]).filter(s=>s.reps>0);
+  if(!latest.length)return'Log each set to establish a baseline.';
+  const previous=logs.length>1?normalizeSetResults(logs[logs.length-2]).filter(s=>s.reps>0):[];
+  const allTop=latest.every(s=>s.reps>=max&&s.rir>=targetRir);
+  const anyLow=latest.some(s=>s.reps<min||s.rir<=0);
+  const total=latest.reduce((n,s)=>n+s.reps,0),prevTotal=previous.reduce((n,s)=>n+s.reps,0);
+  if(allTop)return'Next time: add ~2.5–5% load, then work back up through the rep range.';
+  if(anyLow)return'Next time: hold or slightly reduce load so every working set lands inside the target range with clean execution.';
+  if(previous.length&&total>prevTotal)return'Progressing. Keep the load and continue adding total reps across the sets.';
+  return'Hold the load and beat total reps, RIR, or execution quality next session.';
 }
 function logWorkout(di){
   const day=state.trainingPlan[di];if(!day)return;
-  const exercises=day.items.map((x,ei)=>({name:x.name,sets:+el('s_'+di+'_'+ei).value||x.sets,weight:+el('w_'+di+'_'+ei).value||0,reps:+el('r_'+di+'_'+ei).value||0,rir:+el('rir_'+di+'_'+ei).value||0})).filter(x=>x.reps>0);
-  if(!exercises.length)return alert('Enter at least one exercise result.');
-  state.workoutLogs.push({date:today(),workout:day.name,exercises});save();renderTraining();alert('Workout logged. Progression guidance updated.');
+  const exercises=day.items.map((x,ei)=>{
+    const results=[];
+    for(let si=0;si<x.sets;si++){
+      const weight=+el('w_'+di+'_'+ei+'_'+si).value||0,reps=+el('r_'+di+'_'+ei+'_'+si).value||0,rir=+el('rir_'+di+'_'+ei+'_'+si).value;
+      if(reps>0)results.push({set:si+1,weight,reps,rir:Number.isFinite(rir)?rir:0});
+    }
+    return{name:x.name,results};
+  }).filter(x=>x.results.length);
+  if(!exercises.length)return alert('Enter at least one completed set.');
+  state.workoutLogs.push({date:today(),workout:day.name,exercises});save();renderTraining();alert('Workout logged. Set-by-set progression guidance updated.');
 }
 function renderTraining(){
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
-  el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>'<div class="workout"><div class="row"><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div>'+d.items.map((x,ei)=>'<div class="exerciseLog"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><label>Sets<input id="s_'+di+'_'+ei+'" type="number" min="1" value="'+x.sets+'"></label><label>Load<input id="w_'+di+'_'+ei+'" type="number" step=".5"></label><label>Reps<input id="r_'+di+'_'+ei+'" type="number"></label><label>RIR<input id="rir_'+di+'_'+ei+'" type="number" min="0" max="6"></label></div>').join('')+'<button class="primary" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>').join('');
-  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong><div>'+w.exercises.map(x=>x.name+': '+x.sets+' sets • '+x.weight+' × '+x.reps+' @ '+x.rir+' RIR').join('<br>')+'</div></div>').join(''):'<div class="notice">No workouts logged yet.</div>';
+  el('trainingPlan').innerHTML=state.trainingPlan.map((d,di)=>'<div class="workout"><div class="row"><h3>'+d.name+'</h3><span class="pill">'+(d.preferredDay||'Session '+(di+1))+'</span></div>'+d.items.map((x,ei)=>{
+    const setRows=Array.from({length:x.sets},(_,si)=>'<div class="setRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal"></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric"></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="6" inputmode="numeric"></label></div>').join('');
+    return'<div class="exerciseCard"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="setRows">'+setRows+'</div></div>';
+  }).join('')+'<button class="primary" onclick="logWorkout('+di+')">Log '+d.name+'</button></div>').join('');
+  el('workoutHistory').innerHTML=state.workoutLogs.length?[...state.workoutLogs].reverse().slice(0,12).map(w=>'<div class="meal"><strong>'+w.date+' • '+w.workout+'</strong>'+w.exercises.map(x=>'<div class="historyExercise"><strong>'+x.name+'</strong><div>'+normalizeSetResults(x).map((s,i)=>'Set '+(s.set||i+1)+': '+s.weight+' × '+s.reps+' @ '+s.rir+' RIR').join('<br>')+'</div></div>').join('')+'</div>').join(''):'<div class="notice">No workouts logged yet.</div>';
 }
 
 function saveLog(){
@@ -391,4 +427,4 @@ function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReade
 function resetAll(){if(confirm('Erase all local coaching data? Progress photos stored in IndexedDB are not erased by this button.')){localStorage.removeItem('physiqueOS');location.reload()}}
 function renderAll(){loadProfile();renderDashboard();renderNutrition();renderMeals();renderTraining();renderHistory();coach('review');renderPhotoGallery()}
 renderAll();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=10').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=12').catch(()=>{});
