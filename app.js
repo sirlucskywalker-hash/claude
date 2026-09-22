@@ -783,21 +783,48 @@ function swapPreview(item,candidate,meal){
   return{grams:newItem.g,meal:cloned,macros:cloned.sum};
 }
 let activeSwap=null;
+let activeSwapFilter='recommended';
+function setSwapFilter(filter,btn){
+  activeSwapFilter=filter;
+  document.querySelectorAll('[data-swap-filter]').forEach(x=>x.classList.toggle('active',x.dataset.swapFilter===filter));
+  renderSwapPickerOptions();
+}
+function filteredSwapOptions(){
+  if(!activeSwap)return[];
+  const {di,mi,ii}=activeSwap,meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return[];
+  let options=swapOptionsFor(item),q=(el('swapSearch')?.value||'').trim().toLowerCase();
+  if(q)options=options.filter(o=>o.food.name.toLowerCase().includes(q));
+  if(activeSwapFilter==='recommended')options=options.slice(0,8);
+  else if(activeSwapFilter==='budget')options=[...options].sort((x,y)=>(x.food.price||0)-(y.food.price||0));
+  else if(activeSwapFilter==='preferred'){
+    const prefs=options.filter(o=>preferred(o.food));if(prefs.length)options=prefs;
+  }
+  return options;
+}
+function renderSwapPickerOptions(){
+  if(!activeSwap||!el('swapPickerOptions'))return;
+  const {di,mi,ii}=activeSwap,meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
+  const allRanked=swapOptionsFor(item),options=filteredSwapOptions();
+  if(el('swapPickerCount'))el('swapPickerCount').textContent=options.length+' option'+(options.length===1?'':'s')+(activeSwapFilter==='recommended'?' • best macro matches first':'');
+  el('swapPickerOptions').innerHTML=options.length?options.map(o=>{
+    const idx=allRanked.findIndex(x=>x.food.name===o.food.name),p=swapPreview(item,o.food,meal),m=p.macros,recommended=idx>=0&&idx<3;
+    return '<button class="swapOption '+(recommended?'recommended':'')+'" onclick="chooseSwap(\''+escapeHtml(o.food.name).replace(/'/g,"\\'")+'\')">'+
+      '<div><strong>'+escapeHtml(o.food.name)+'</strong><small>'+Math.round(p.grams)+'g • '+Math.round(m.k)+' kcal • '+Math.round(m.p)+'P '+Math.round(m.c)+'C '+Math.round(m.f)+'F</small></div>'+
+      '<span>'+(recommended?'Recommended':activeSwapFilter==='budget'?'Budget option':'Choose')+'</span></button>';
+  }).join(''):'<div class="emptyState">No matching foods. Try another search or filter.</div>';
+}
 function openSwapPicker(di,mi,ii){
   const meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii];if(!meal||!item)return;
   const options=swapOptionsFor(item);if(!options.length)return alert('No compatible alternatives are available for this item.');
-  activeSwap={di,mi,ii};
+  activeSwap={di,mi,ii};activeSwapFilter='recommended';
+  if(el('swapSearch'))el('swapSearch').value='';
+  document.querySelectorAll('[data-swap-filter]').forEach(x=>x.classList.toggle('active',x.dataset.swapFilter==='recommended'));
   const old=FOOD_DB.find(x=>x.name===item.name),oldMacro=old?macro(old,item.g):null;
   el('swapPickerCurrent').innerHTML='<span>Current</span><strong>'+escapeHtml(item.name)+'</strong><small>'+Math.round(item.g)+'g'+(oldMacro?' • '+Math.round(oldMacro.k)+' kcal • '+Math.round(oldMacro.p)+'P '+Math.round(oldMacro.c)+'C '+Math.round(oldMacro.f)+'F':'')+'</small>';
-  el('swapPickerOptions').innerHTML=options.map((o,idx)=>{
-    const p=swapPreview(item,o.food,meal),m=p.macros,recommended=idx<3;
-    return '<button class="swapOption '+(recommended?'recommended':'')+'" onclick="chooseSwap(\''+escapeHtml(o.food.name).replace(/'/g,"\\'")+'\')">'+
-      '<div><strong>'+escapeHtml(o.food.name)+'</strong><small>'+Math.round(p.grams)+'g • '+Math.round(m.k)+' kcal • '+Math.round(m.p)+'P '+Math.round(m.c)+'C '+Math.round(m.f)+'F</small></div>'+
-      '<span>'+(recommended?'Recommended':'Choose')+'</span></button>';
-  }).join('');
+  renderSwapPickerOptions();
   el('swapPicker').classList.remove('hidden');el('swapPickerBackdrop').classList.remove('hidden');document.body.classList.add('menuOpen');
 }
-function closeSwapPicker(){el('swapPicker')?.classList.add('hidden');el('swapPickerBackdrop')?.classList.add('hidden');document.body.classList.remove('menuOpen');activeSwap=null}
+function closeSwapPicker(){el('swapPicker')?.classList.add('hidden');el('swapPickerBackdrop')?.classList.add('hidden');document.body.classList.remove('menuOpen');activeSwap=null;activeSwapFilter='recommended';if(el('swapSearch'))el('swapSearch').value=''}
 function chooseSwap(name){
   if(!activeSwap)return;
   const {di,mi,ii}=activeSwap,meal=state.mealPlan[di]?.meals?.[mi],item=meal?.items?.[ii],next=FOOD_DB.find(x=>x.name===name);
@@ -1680,4 +1707,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=45').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=46').then(r=>r.update()).catch(()=>{});
