@@ -823,3 +823,42 @@ input:focus,select:focus,textarea:focus{
   .metricStrip{gap:8px}
   .metricCard{padding:15px 14px}
 }
+
+/* V34 — universal menu + account access */
+.menuTrigger svg{width:18px!important;height:18px!important}
+.appMenuBackdrop{position:fixed;inset:0;z-index:115;background:rgba(1,3,7,.62);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+.appMenu{
+  position:fixed;right:16px;top:78px;z-index:116;
+  width:min(390px,calc(100vw - 24px));max-height:calc(100dvh - 96px);overflow:auto;
+  padding:18px;border-radius:26px;
+  border:1px solid rgba(160,184,220,.14);
+  background:
+    radial-gradient(360px 180px at 100% 0,rgba(92,122,255,.10),transparent 70%),
+    linear-gradient(180deg,rgba(11,16,25,.985),rgba(5,9,15,.99));
+  box-shadow:0 36px 120px rgba(0,0,0,.68),inset 0 1px rgba(255,255,255,.035);
+  animation:menuIn .22s cubic-bezier(.2,.75,.2,1)
+}
+@keyframes menuIn{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
+.appMenuHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.appMenuHead h3{margin:3px 0 0;font-size:22px;letter-spacing:-.045em}.menuClose{width:36px;min-height:36px;padding:0;border-radius:50%;font-size:20px}
+.menuProfileCard{
+  width:100%;display:grid;grid-template-columns:46px 1fr 18px;align-items:center;gap:12px;text-align:left;
+  padding:12px;border-radius:17px;margin-bottom:17px;
+  background:linear-gradient(135deg,rgba(79,116,221,.16),rgba(95,70,195,.10));
+  border-color:rgba(125,159,245,.18)
+}
+.menuProfileCard svg{width:18px;height:18px;fill:none;stroke:#7f8ca0;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.menuProfileCard strong,.menuProfileCard small{display:block}.menuProfileCard strong{font-size:12px}.menuProfileCard small{font-size:8px;color:var(--muted);margin-top:3px}
+.menuAvatar{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:16px;font-weight:800;background:linear-gradient(145deg,#19336d,#5540c7);border:1px solid rgba(142,177,255,.25);box-shadow:0 9px 24px rgba(47,67,155,.2)}
+.menuSectionLabel{margin:13px 6px 7px;font-size:7px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#657187}
+.menuNav{display:grid;gap:4px}.menuNav button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;text-align:left;min-height:52px;padding:10px 12px;background:transparent;border-color:transparent;box-shadow:none}.menuNav button:hover,.menuNav button.active{background:linear-gradient(180deg,rgba(66,96,166,.16),rgba(33,49,88,.10));border-color:rgba(118,154,242,.13)}.menuNav button span{font-size:11px}.menuNav button small{font-size:7.5px;color:#6f7b8e;text-align:right}.menuNav.compact button{min-height:48px}
+.menuFooter{display:flex;align-items:center;gap:7px;margin-top:15px;padding:11px 7px 2px;border-top:1px solid rgba(154,178,215,.08);font-size:8px;color:#7d899b}.menuFooter small{margin-left:auto;color:#566174}.menuOnlineDot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(79,224,162,.45)}
+body.menuOpen{overflow:hidden}
+@media(max-width:760px){
+  .appMenu{top:68px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 88px);border-radius:24px}
+  .headerActions{gap:6px}.headerActions .iconButton{width:38px;min-width:38px;min-height:38px}
+  .menuNav button{min-height:48px}
+}
+@media(max-width:430px){
+  .brandCopy .eyebrow{font-size:6.8px}.brandCopy h1{font-size:20px}
+  .menuNav button small{max-width:135px}
+}
