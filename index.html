@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=16">
+<link rel="stylesheet" href="styles.css?v=17">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -33,18 +33,9 @@
 
   <div class="todayGrid">
     <div class="premiumCard quickLogCard">
-      <div class="sectionHead"><div><span class="kicker">QUICK LOG</span><h3>Update today</h3></div><span class="liveDot">LOCAL</span></div>
-      <div class="quickMetrics">
-        <label><span>Steps</span><input id="quickSteps" type="number" inputmode="numeric" placeholder="0"></label>
-        <label><span>Water <small id="quickWaterUnit">oz</small></span><input id="quickWater" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
-        <label><span>Sleep <small>hrs</small></span><input id="quickSleep" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
-        <label><span>Weight <small id="quickWeightUnit">lb</small></span><input id="quickWeight" type="number" step=".1" inputmode="decimal" placeholder="0"></label>
-        <label><span>Calories</span><input id="quickCalories" type="number" inputmode="numeric" placeholder="0"></label>
-        <label><span>Adherence <small>%</small></span><input id="quickAdherence" type="number" min="0" max="100" inputmode="numeric" placeholder="0"></label>
-        <label><span>Hunger <small>1–10</small></span><input id="quickHunger" type="number" min="1" max="10" inputmode="numeric"></label>
-        <label><span>Energy <small>1–10</small></span><input id="quickEnergy" type="number" min="1" max="10" inputmode="numeric"></label>
-      </div>
-      <button class="primary fullBtn" onclick="saveQuickMetrics()">Save today’s metrics</button>
+      <div class="sectionHead"><div><span class="kicker">TODAY'S DATA</span><h3>Your latest inputs</h3></div><span class="readOnlyBadge">READ ONLY</span></div>
+      <div id="todayMetricsSnapshot" class="todayMetricsSnapshot"></div>
+      <button class="primary fullBtn" onclick="showTab('dailylog')">Update in Log</button>
     </div>
 
     <div class="premiumCard focusCard">
@@ -73,7 +64,7 @@
 
 <section id="dailylog" class="tab">
   <div class="dashboardHero compactHero">
-    <div><div class="eyebrow">DAILY TRACKING</div><h2>Log what actually happened</h2><p>Meals, macros, bodyweight, movement, hydration and recovery all feed the adaptive coaching engine.</p></div>
+    <div><div class="eyebrow">DAILY TRACKING</div><h2>Your editable daily log</h2><p>This is the main place to update meals, calories, weight, steps, water, sleep, adherence, hunger, energy and recovery. Today is your read-only dashboard.</p></div>
     <div class="heroScore"><span id="logDayScore">—</span><small>Day score</small></div>
   </div>
 
@@ -112,6 +103,8 @@
         <label>Water <small id="dailyWaterUnit">oz</small><input id="dailyWater" type="number" step=".1"></label>
         <label>Sleep (hrs)<input id="dailySleep" type="number" step=".1"></label>
         <label>Resting HR<input id="dailyRhr" type="number" placeholder="optional"></label>
+        <label>Calories consumed <small>auto from food log; override optional</small><input id="dailyCalories" type="number" placeholder="auto"></label>
+        <label>Adherence %<input id="dailyAdherence" type="number" min="0" max="100" placeholder="auto / manual"></label>
         <label>Hunger 1–10<input id="dailyHunger" type="number" min="1" max="10"></label>
         <label>Energy 1–10<input id="dailyEnergy" type="number" min="1" max="10"></label>
         <label>Stress 1–10<input id="dailyStress" type="number" min="1" max="10"></label>
@@ -239,5 +232,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=16"></script><script src="app.js?v=16"></script>
+<script src="data.js?v=17"></script><script src="app.js?v=17"></script>
 </body></html>
