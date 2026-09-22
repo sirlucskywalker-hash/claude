@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=17">
+<link rel="stylesheet" href="styles.css?v=18">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -115,6 +115,41 @@
       <label class="wide metricNote">Daily note<textarea id="dailyNotes" placeholder="Anything the coach should know today?"></textarea></label>
       <button class="primary fullBtn" onclick="saveDailyMetrics()">Save daily metrics</button>
       <div id="dailyMetricSummary"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="premiumCard">
+      <div class="sectionHead"><div><span class="kicker">CARDIO / ACTIVITY</span><h3>Log movement outside lifting</h3></div><span class="estimateBadge">ESTIMATE</span></div>
+      <p class="muted">Until wearables are connected, PhysiqueOS estimates exercise energy expenditure from bodyweight, activity, intensity and duration. Treat it as a useful estimate, not a lab measurement.</p>
+      <div class="activityForm">
+        <label>Activity<select id="activityType" onchange="previewActivityBurn()">
+          <option value="walk_easy">Easy walk</option><option value="walk_brisk">Brisk walk</option><option value="incline">Incline treadmill</option>
+          <option value="run">Running</option><option value="bike_easy">Easy cycling</option><option value="bike_mod">Moderate cycling</option>
+          <option value="stairs">Stair climber</option><option value="elliptical">Elliptical</option><option value="row">Rowing</option>
+          <option value="swim">Swimming</option><option value="hiit">Intervals / HIIT</option><option value="sport">Recreational sport</option>
+        </select></label>
+        <label>Intensity<select id="activityIntensity" onchange="previewActivityBurn()"><option value="easy">Easy / recovery</option><option value="moderate" selected>Moderate</option><option value="hard">Hard</option></select></label>
+        <label>Minutes<input id="activityMinutes" type="number" min="1" value="30" oninput="previewActivityBurn()"></label>
+        <label>Avg HR <small>optional</small><input id="activityHr" type="number" placeholder="bpm"></label>
+        <label>Distance <small>optional</small><input id="activityDistance" type="number" step=".1"></label>
+        <label>Machine / wearable kcal <small>optional override</small><input id="activityDeviceKcal" type="number" min="0"></label>
+      </div>
+      <div id="activityBurnPreview" class="burnPreview"></div>
+      <button class="primary fullBtn" onclick="saveActivityLog()">Log cardio / activity</button>
+      <div id="activityHistory"></div>
+    </div>
+
+    <div class="premiumCard">
+      <div class="sectionHead"><div><span class="kicker">REST / RECOVERY</span><h3>Choose today’s recovery protocol</h3></div></div>
+      <div id="dayRecommendation" class="dayRecommendation"></div>
+      <div class="protocolGrid">
+        <button class="protocolCard" onclick="logRecoveryProtocol('full')"><strong>Full rest</strong><span>Normal steps • no structured cardio • prioritize food, hydration and sleep</span></button>
+        <button class="protocolCard" onclick="logRecoveryProtocol('active')"><strong>Active recovery</strong><span>20–40 min easy walk or bike • conversational pace • low fatigue</span></button>
+        <button class="protocolCard" onclick="logRecoveryProtocol('mobility')"><strong>Mobility reset</strong><span>10–20 min mobility • easy walking • focus on restricted areas, not aggressive stretching</span></button>
+        <button class="protocolCard" onclick="logRecoveryProtocol('cardio')"><strong>Cardio day</strong><span>Use your preferred modality and prescribed intensity from the recommendation above</span></button>
+      </div>
+      <div id="recoveryHistory"></div>
     </div>
   </div>
 </section>
@@ -232,5 +267,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=17"></script><script src="app.js?v=17"></script>
+<script src="data.js?v=18"></script><script src="app.js?v=18"></script>
 </body></html>
