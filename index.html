@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=21">
 <title>PhysiqueOS Beta</title>
 </head>
 <body>
@@ -227,7 +227,11 @@
 </section>
 
 <section id="training" class="tab">
-<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PROGRESSIVE PROGRAMMING</span><h2>Training</h2></div></div><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><div id="trainingPlan"></div></div>
+<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PROGRESSIVE PROGRAMMING</span><h2>Training</h2></div></div>
+<div id="readinessPanel"></div>
+<div class="buttons"><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><button onclick="showTab('dailylog')">Update readiness data</button></div>
+<div class="notice trainingTip"><strong>Effort tracking:</strong> log <strong>RIR per set</strong> because effort changes as fatigue accumulates. Session RPE is recorded once at the end to capture how hard the whole workout felt.</div>
+<div id="trainingPlan"></div></div>
 <div class="card"><h3>Workout history & progression</h3><div id="workoutHistory"></div></div>
 </section>
 
@@ -280,5 +284,5 @@
 <section id="data" class="tab"><div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in local browser storage and are not included in JSON backup yet.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
 </main>
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=20"></script><script src="app.js?v=20"></script>
+<script src="data.js?v=21"></script><script src="app.js?v=21"></script>
 </body></html>
