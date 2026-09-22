@@ -1369,6 +1369,7 @@ function renderConciergeNow(){
 }
 function renderDashboard(){
   renderSchedule();renderDriftMonitor();renderProfilePhoto();renderConciergeNow();
+  if(el('simpleWorkoutLabel')){const d=dayType(today());el('simpleWorkoutLabel').textContent=d.type==='training'?'Start workout':d.type==='rest'?'Recovery day':'Cardio / recovery'}
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome back, '+state.profile.name+'.':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore(),ring=el('dailyScore').parentElement;el('dailyScore').textContent=ds||'—';ring.style.setProperty('--score',(ds||0)+'%');const st=ring.querySelector('.scoreStatus');if(st)st.textContent=ds>=90?'Elite':ds>=75?'Strong':ds>=55?'Building':ds?'Recover':'Live'};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
@@ -1431,4 +1432,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=39').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=40').catch(()=>{});
