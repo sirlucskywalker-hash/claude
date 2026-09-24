@@ -1738,3 +1738,83 @@ footer{opacity:.46!important;letter-spacing:.035em!important}
   .simpleActions small{font-size:7.4px!important}
   .simpleActionIcon{width:36px!important;height:36px!important;flex-basis:36px!important}
 }
+
+/* =========================================================
+   V51 — concept-layout implementation
+   Turns the actual DOM into the approved premium mockup hierarchy
+   ========================================================= */
+.appHeader{
+  background-image:linear-gradient(180deg,rgba(2,6,13,.26),rgba(2,6,13,.02)),url('./assets/aurora-mountains.svg');
+  background-repeat:no-repeat;background-position:68% 42%;background-size:min(760px,62vw) 180px
+}
+.flagshipHero,.nutritionHero{
+  background-image:
+    linear-gradient(108deg,rgba(4,8,16,.20),rgba(3,8,16,.68) 65%),
+    url('./assets/aurora-mountains.svg')!important;
+  background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important
+}
+.glanceCard{padding:22px!important}
+.glanceHead{align-items:center!important}
+.textLink{border:0!important;background:transparent!important;padding:6px!important;box-shadow:none!important;color:#a9bae0!important;font-size:10px!important}
+.flagshipSnapshot{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+.flagshipMetric{min-height:145px!important;padding:16px!important;border-radius:22px!important}
+.flagshipMetric span{font-size:9px!important;letter-spacing:.12em;text-transform:uppercase}
+.flagshipMetric strong{font-size:28px!important;margin-top:auto!important}
+.flagshipMetric small{display:block;color:#8f9db3;font-size:9px;margin:5px 0 10px}
+.flagshipMetric b{display:block;height:7px;background:rgba(112,137,178,.14);border-radius:99px;overflow:hidden}
+.flagshipMetric b i{display:block;height:100%;border-radius:99px}
+.flagshipMetric.blue b i{background:linear-gradient(90deg,#4b91ff,#38d6ff)}.flagshipMetric.cyan b i{background:linear-gradient(90deg,#37c8ff,#4df0e1)}.flagshipMetric.coral b i{background:linear-gradient(90deg,#ff8c69,#ffbd58)}.flagshipMetric.violet b i{background:linear-gradient(90deg,#7a5cff,#ad5bff)}
+.quickActionsCard{padding:22px;border:1px solid var(--lux-edge);border-radius:28px;background:linear-gradient(180deg,rgba(10,17,29,.84),rgba(4,9,16,.94));margin-bottom:14px;box-shadow:0 28px 90px rgba(0,0,0,.26)}
+.quickActionsHead{margin-bottom:12px!important}.quickActionsHead h3{font-size:17px!important;margin:4px 0 0}
+.simpleActions button>b{position:relative;z-index:1;margin-left:auto;font-size:27px;font-weight:400;color:#9fc1ff}
+.simpleActions button:nth-child(2)>b{color:#68edc4}.simpleActions button:nth-child(3)>b{color:#d184ff}.simpleActions button:nth-child(4)>b{color:#ffd178}
+.adaptiveInsightCard{display:grid;grid-template-columns:1fr 260px;gap:18px;align-items:center;margin-bottom:14px;padding:22px 24px;border:1px solid rgba(94,145,255,.18);border-radius:28px;background:radial-gradient(420px 170px at 100% 50%,rgba(54,110,255,.11),transparent 70%),linear-gradient(180deg,rgba(9,18,33,.92),rgba(4,9,16,.97));box-shadow:0 24px 80px rgba(0,0,0,.25)}
+.adaptiveInsightCopy strong,.adaptiveInsightCopy small{display:block}.adaptiveInsightCopy strong{font-size:24px;letter-spacing:-.045em;margin:7px 0}.adaptiveInsightCopy small{font-size:11px;line-height:1.55;color:#94a3ba}
+.miniTrend{height:95px;display:flex;align-items:flex-end;gap:10px;padding:12px 4px 8px;border-left:1px solid rgba(150,176,218,.08)}
+.miniTrend i{flex:1;min-width:10px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#5c8dff,#3746be);box-shadow:0 0 20px rgba(72,104,255,.14)}.miniTrend i:nth-child(1){height:24%}.miniTrend i:nth-child(2){height:32%}.miniTrend i:nth-child(3){height:48%}.miniTrend i:nth-child(4){height:58%}.miniTrend i:nth-child(5){height:68%}.miniTrend i:nth-child(6){height:76%}.miniTrend i:nth-child(7){height:92%;background:linear-gradient(180deg,#53caff,#7c62ff)}
+.dashboardAdvanced{margin-top:0!important}
+
+/* nutrition page mirrors concept hierarchy */
+.premiumHero{position:relative;display:grid;grid-template-columns:1fr 180px;align-items:center;gap:20px;min-height:310px;margin-bottom:16px;padding:34px;border:1px solid rgba(83,145,255,.28);border-radius:32px;overflow:hidden;box-shadow:0 38px 120px rgba(0,0,0,.4),inset 0 1px rgba(255,255,255,.08)}
+.nutritionHero h2{font-size:clamp(48px,7vw,76px);line-height:.87;letter-spacing:-.075em;margin:10px 0 15px}.nutritionHero h2 em{display:block;font-style:normal;background:linear-gradient(90deg,#59cfff,#6d83ff,#9d62ff);-webkit-background-clip:text;background-clip:text;color:transparent}.nutritionHero p{max-width:430px;color:#a0afc5;font-size:15px;line-height:1.52}
+.nutritionCalorieRing{position:relative;width:164px;height:164px;border-radius:50%;display:grid;place-content:center;text-align:center;background:radial-gradient(circle,#0c1a31 0,#050a13 68%);border:1px solid rgba(93,151,255,.25);box-shadow:0 22px 70px rgba(55,87,220,.28),inset 0 0 32px rgba(61,121,255,.12)}
+.nutritionCalorieRing:before{content:"";position:absolute;inset:-8px;border-radius:50%;background:conic-gradient(from 215deg,#725bff,#45d1ff,#5af0d1,#5f8cff,#8c5dff);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 0)}
+.nutritionCalorieRing strong{font-size:37px;letter-spacing:-.05em}.nutritionCalorieRing small{font-size:7px;letter-spacing:.18em;color:#91a2bc}.nutritionCalorieRing span{position:absolute;left:50%;bottom:-31px;transform:translateX(-50%);white-space:nowrap;padding:8px 13px;border-radius:999px;border:1px solid rgba(48,229,185,.18);background:rgba(8,26,28,.94);font-size:8px;color:#50e8c0}
+.nutritionPremiumContent{display:grid;gap:14px}.nutritionEnergyGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.nutritionEnergyGrid>div{min-height:170px;padding:18px;border:1px solid rgba(148,176,220,.11);border-radius:22px;background:linear-gradient(180deg,rgba(11,20,34,.88),rgba(5,10,18,.94))}.nutritionEnergyGrid small,.nutritionEnergyGrid strong,.nutritionEnergyGrid em{display:block}.nutritionEnergyGrid small{font-size:11px;margin-top:18px}.nutritionEnergyGrid strong{font-size:34px;margin-top:4px}.nutritionEnergyGrid em{font-style:normal;font-size:9px;color:#8595ad}
+.nutritionOrb{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;font-size:19px;border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 28px rgba(0,0,0,.22)}.nutritionOrb.blue{background:linear-gradient(145deg,#135ec2,#123d8e);color:#65dcff}.nutritionOrb.violet{background:linear-gradient(145deg,#7241c5,#402c89);color:#cf9cff}.nutritionOrb.gold{background:linear-gradient(145deg,#a4661d,#5a3d1d);color:#ffd178}.nutritionOrb.green{background:linear-gradient(145deg,#0d8f68,#09574e);color:#74f1c6}
+.macroTargetGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid rgba(146,174,218,.10);border-radius:22px;overflow:hidden;background:linear-gradient(90deg,rgba(24,125,94,.08),rgba(33,94,150,.04) 45%,rgba(103,55,164,.08))}
+.macroTarget{display:grid;grid-template-columns:54px 1fr;gap:13px;align-items:center;padding:18px;border-right:1px solid rgba(143,171,214,.08)}.macroTarget:last-child{border-right:0}.macroTarget small,.macroTarget strong,.macroTarget em,.macroTarget b{display:block}.macroTarget small{font-size:8px;letter-spacing:.14em;color:#aab7cc}.macroTarget strong{font-size:27px;margin-top:2px}.macroTarget em{font-style:normal;font-size:9px;color:#8d9bb1;margin-top:4px}.macroTarget b{height:7px;margin-top:12px;background:rgba(117,141,180,.13);border-radius:99px;overflow:hidden}.macroTarget b i{display:block;height:100%;border-radius:99px}.macroTarget.protein b i{background:linear-gradient(90deg,#31e4a0,#62efc3)}.macroTarget.carbs b i{background:linear-gradient(90deg,#39bfff,#5b88ff)}.macroTarget.fat b i{background:linear-gradient(90deg,#9b5dff,#c15dff)}
+.groceryPreferenceGrid{display:grid;grid-template-columns:1fr 1fr}.groceryPreferenceGrid>div{display:grid;grid-template-columns:58px 1fr;gap:14px;align-items:center;padding:8px 18px}.groceryPreferenceGrid>div:first-child{border-right:1px solid rgba(143,171,214,.08)}.groceryPreferenceGrid small,.groceryPreferenceGrid strong,.groceryPreferenceGrid em{display:block}.groceryPreferenceGrid small{font-size:9px;color:#8e9db5}.groceryPreferenceGrid strong{font-size:20px;margin:4px 0}.groceryPreferenceGrid em{font-style:normal;font-size:8px;color:#7f8da3}
+
+/* training page concept hierarchy */
+.trainingReadinessHero{min-height:250px!important;padding:30px!important;border-radius:30px!important;background-image:linear-gradient(108deg,rgba(4,9,17,.18),rgba(4,9,17,.68)),url('./assets/aurora-mountains.svg')!important;background-size:cover!important;background-position:center!important}
+.trainingReadinessHero h2{font-size:clamp(38px,6vw,62px);letter-spacing:-.065em;margin:8px 0 12px}.trainingReadinessHero.high h2{background:linear-gradient(90deg,#65f2c6,#f8fbff 48%);-webkit-background-clip:text;background-clip:text;color:transparent}.trainingReadinessHero p{max-width:580px;font-size:14px}.trainingReadinessHero .readinessScore{width:130px!important;height:130px!important;display:grid;place-content:center;text-align:center}.trainingReadinessHero .readinessScore strong{font-size:38px}.trainingReadinessHero .readinessScore small{display:block;font-size:7px;letter-spacing:.15em;color:#92a3bc}
+.trainingSpotlight{display:grid;gap:12px;margin-bottom:14px}.trainingSpotlightCard{display:grid;grid-template-columns:66px 1fr auto;gap:16px;align-items:center;padding:20px 22px;border:1px solid rgba(93,146,255,.18);border-radius:27px;background:radial-gradient(420px 160px at 0 0,rgba(50,109,255,.12),transparent 72%),linear-gradient(180deg,rgba(10,18,31,.93),rgba(5,10,18,.97));box-shadow:0 26px 80px rgba(0,0,0,.26)}.spotlightIcon{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:26px;background:linear-gradient(145deg,#286eff,#5d56e8);border:1px solid rgba(151,187,255,.28);box-shadow:0 12px 34px rgba(60,92,225,.25)}.trainingSpotlightCard h2{font-size:31px;letter-spacing:-.05em;margin:4px 0}.trainingSpotlightCard p{font-size:10px;color:#91a0b7;margin:0}.trainingSpotlightCard .primary{min-width:170px;font-size:13px}
+.recoverySpotlight{display:grid;grid-template-columns:58px 1fr;gap:14px;align-items:center;padding:16px 20px;border:1px solid rgba(255,191,87,.24);border-radius:24px;background:radial-gradient(360px 150px at 0 0,rgba(255,167,65,.12),transparent 72%),linear-gradient(180deg,rgba(24,17,13,.94),rgba(7,10,16,.98))}.recoverySpotlight>span{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(255,174,66,.11);border:1px solid rgba(255,191,87,.24);color:#ffd47d;font-size:23px}.recoverySpotlight small,.recoverySpotlight strong,.recoverySpotlight em{display:block}.recoverySpotlight small{font-size:7px;letter-spacing:.14em;color:#e6b55f}.recoverySpotlight strong{font-size:17px;margin:4px 0}.recoverySpotlight em{font-style:normal;font-size:9px;line-height:1.45;color:#a79783}
+.trainingControls{display:flex;gap:8px;margin-bottom:14px}.trainingProgramShell{padding:20px;border:1px solid var(--lux-edge);border-radius:28px;background:linear-gradient(180deg,rgba(10,17,29,.87),rgba(4,9,16,.95));box-shadow:0 28px 90px rgba(0,0,0,.25)}.trainingProgramShell>.sectionHead{padding:0 3px}
+.trainingProgramShell .workout{padding:18px!important}.trainingProgramShell .workoutHeader{border-bottom:1px solid rgba(145,173,216,.08);padding-bottom:12px}.trainingProgramShell .workoutHeader h3{font-size:24px;letter-spacing:-.045em}.trainingProgramShell .exerciseCard{border-color:rgba(80,139,255,.16)!important}
+.historyDrawer{margin-top:14px;border:1px solid var(--lux-edge);border-radius:24px;background:rgba(6,11,20,.78);overflow:hidden}.historyDrawer>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;list-style:none;cursor:pointer;padding:16px 18px}.historyDrawer>summary::-webkit-details-marker{display:none}.historyDrawer>summary strong,.historyDrawer>summary small{display:block}.historyDrawer>summary strong{font-size:12px}.historyDrawer>summary small{font-size:8px;color:#8290a6;margin-top:3px}.historyDrawer>summary em{font-style:normal;font-size:8px;color:#8eabf7}.historyDrawer>#workoutHistory{padding:0 16px 16px}
+
+/* app dock closer to concept */
+@media(max-width:760px){
+  .appHeader{background-size:640px 150px!important;background-position:58% 50%!important}
+  .flagshipHero{min-height:285px!important;padding:28px 20px!important}
+  .welcomeProfileCopy strong{font-size:42px!important;max-width:265px!important}.welcomeProfileCopy small{font-size:11px!important;max-width:250px!important}
+  .heroScore{width:104px!important;height:104px!important;flex-basis:104px!important}.heroScore span{font-size:31px!important}
+  .glanceCard{padding:17px!important}.glanceHead h3{display:none}.flagshipSnapshot{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}.flagshipMetric{min-height:140px!important;padding:12px 10px!important}.flagshipMetric strong{font-size:22px!important}.flagshipMetric small{font-size:7.5px!important}.flagshipMetric span{font-size:7px!important}
+  .quickActionsCard{padding:17px!important}.quickActionsHead h3{display:none}.simpleActions{grid-template-columns:1fr 1fr!important}.simpleActions button{min-height:96px!important}
+  .adaptiveInsightCard{grid-template-columns:1fr 145px!important;padding:18px!important}.adaptiveInsightCopy strong{font-size:20px}.adaptiveInsightCopy small{font-size:9px}.miniTrend{height:80px;gap:6px}
+  .premiumHero{grid-template-columns:1fr 112px!important;min-height:285px!important;padding:26px 20px!important}.nutritionHero h2{font-size:51px!important}.nutritionHero p{font-size:11px!important;max-width:240px}.nutritionCalorieRing{width:108px;height:108px}.nutritionCalorieRing strong{font-size:26px}.nutritionCalorieRing span{bottom:-27px;font-size:6.5px;padding:7px 10px}
+  .nutritionEnergyGrid{grid-template-columns:repeat(3,1fr)!important;gap:7px}.nutritionEnergyGrid>div{min-height:150px;padding:12px}.nutritionEnergyGrid strong{font-size:25px}.nutritionEnergyGrid small{font-size:9px}.nutritionOrb{width:42px;height:42px}
+  .macroTargetGrid{grid-template-columns:1fr!important}.macroTarget{border-right:0;border-bottom:1px solid rgba(143,171,214,.08);padding:14px}.macroTarget:last-child{border-bottom:0}.groceryPreferenceGrid{grid-template-columns:1fr}.groceryPreferenceGrid>div:first-child{border-right:0;border-bottom:1px solid rgba(143,171,214,.08)}
+  .trainingReadinessHero{min-height:250px!important;padding:24px 19px!important}.trainingReadinessHero h2{font-size:39px!important;max-width:210px}.trainingReadinessHero p{font-size:10px;max-width:225px}.trainingReadinessHero .readinessScore{width:100px!important;height:100px!important}.trainingReadinessHero .readinessScore strong{font-size:30px}
+  .trainingSpotlightCard{grid-template-columns:48px 1fr;gap:11px;padding:16px}.spotlightIcon{width:44px;height:44px;border-radius:14px}.trainingSpotlightCard h2{font-size:23px}.trainingSpotlightCard .primary{grid-column:1/-1;width:100%}
+  .trainingControls{display:grid;grid-template-columns:1fr 1fr}.trainingProgramShell{padding:13px;border-radius:24px}.trainingProgramShell .exerciseCard{padding:14px!important}
+}
+@media(max-width:430px){
+  .flagshipHero{min-height:265px!important}.welcomeProfileCopy strong{font-size:36px!important;max-width:225px!important}.heroScore{width:90px!important;height:90px!important;flex-basis:90px!important}
+  .flagshipSnapshot{grid-template-columns:1fr 1fr!important}.flagshipMetric{min-height:112px!important}.flagshipMetric strong{font-size:23px!important}
+  .adaptiveInsightCard{grid-template-columns:1fr!important}.miniTrend{border-left:0;border-top:1px solid rgba(150,176,218,.08)}
+  .premiumHero{grid-template-columns:1fr!important;min-height:340px!important}.nutritionCalorieRing{position:absolute;right:22px;bottom:25px}
+  .nutritionHero p{max-width:210px}.nutritionHero h2{font-size:45px!important}
+}
