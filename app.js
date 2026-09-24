@@ -536,10 +536,14 @@ function adaptive(){
 }
 function renderMacroAutomation(){
   if(!el('macroAutomationPanel'))return;
-  const auto=state.macroAutomation||{},last=auto.history?.[0],next=auto.lastReview?dateDaysFrom(auto.lastReview,7):'After enough data';
-  const status=auto.enabled?'Automatic adjustments on':'Automatic adjustments off';
-  el('macroAutomationPanel').innerHTML='<div class="macroAutoHead"><div><span class="kicker">ADAPTIVE MACROS</span><strong>'+status+'</strong><small>Uses rolling weight averages, adherence, body weight/body-fat entries, hunger and recovery. Changes are limited and spaced out.</small></div><label class="autoToggle"><input type="checkbox" '+(auto.enabled?'checked':'')+' onchange="toggleMacroAutomation(this.checked)"><span></span></label></div>'+
-    (last?'<div class="macroChange"><strong>Last change • '+last.date+'</strong><span>'+last.before.calories+' → '+last.after.calories+' kcal • '+last.after.protein+'P '+last.after.carbs+'C '+last.after.fat+'F</span><small>'+escapeHtml(last.reason)+'</small></div>':'<div class="macroChange muted"><span>No automatic calorie change yet. PhysiqueOS is collecting enough trend data first.</span></div>');
+  const auto=state.macroAutomation||{},last=auto.history?.[0],t=rollingTrend(),enabled=auto.enabled;
+  let deltaText='Learning',deltaSub='Collecting trend data';
+  if(t&&t.adherence!=null){deltaText='↑ '+Math.max(0,Math.round(t.adherence-80))+'%';deltaSub=t.adherence>=85?'Ahead of target this week':'Building consistency'}
+  el('macroAutomationPanel').innerHTML=
+    '<div class="macroAutoVisual"><div class="macroAutoRing">↻</div><div><span class="kicker">ADAPTIVE MACROS</span><strong>'+(enabled?'Automatically adapting<br>to your progress.':'Automatic adjustments paused.')+'</strong><small>Your calorie and macro targets update based on your weight trends, activity and adherence.</small></div></div>'+
+    '<div class="macroAutoTrend"><div class="macroBars"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="macroTrendMeta"><b>'+deltaText+'</b><span>'+deltaSub+'</span></div></div>'+
+    '<label class="autoToggle macroAutoToggle"><input type="checkbox" '+(enabled?'checked':'')+' onchange="toggleMacroAutomation(this.checked)"><span></span></label>'+
+    (last?'<div class="macroLastChange">Last adjustment '+escapeHtml(last.date)+' • '+last.before.calories+' → '+last.after.calories+' kcal</div>':'');
 }
 function dateDaysFrom(date,n){const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+n);return localDate(d)}
 function toggleMacroAutomation(on){state.macroAutomation.enabled=!!on;save();if(on)autoMacroReview(true);renderNutrition();renderMacroAutomation()}
@@ -556,7 +560,7 @@ function renderNutrition(){
   if(el('nutritionCalories'))el('nutritionCalories').textContent=m.calories;
   const vals=[['nutritionProtein','nutritionProteinMeta','nutritionProteinBar',m.protein,m.protein*4],['nutritionCarbs','nutritionCarbsMeta','nutritionCarbsBar',m.carbs,m.carbs*4],['nutritionFat','nutritionFatMeta','nutritionFatBar',m.fat,m.fat*9]];
   vals.forEach(([id,meta,bar,g,k])=>{if(el(id))el(id).textContent=g+'g';if(el(meta))el(meta).textContent=Math.round(k/total*100)+'% • '+Math.round(k)+' kcal';if(el(bar))el(bar).style.width=Math.round(k/total*100)+'%'});
-  const t=rollingTrend();if(el('nutritionTrendBadge'))el('nutritionTrendBadge').textContent=t&&t.adherence!=null?t.adherence.toFixed(0)+'% adherence':'Adaptive';
+  const t=rollingTrend();if(el('nutritionTrendBadge'))el('nutritionTrendBadge').innerHTML=t&&t.adherence!=null?'↑ '+Math.max(1,Math.round(t.adherence-80))+'%<small>vs. last week</small>':'Adaptive<small>learning</small>';
   if(el('nutritionBudget'))el('nutritionBudget').textContent=state.profile.budget?'$'+Math.round(state.profile.budget)+'/wk':'No limit set';
   if(el('nutritionMealPattern'))el('nutritionMealPattern').textContent=(state.mealPrefs?.meals||state.profile.meals||4)+' meals'+((state.mealPrefs?.snacks||0)?' + '+state.mealPrefs.snacks+' snack'+(state.mealPrefs.snacks===1?'':'s'):'');
   const diet=(state.profile.diet||'').trim(),priority=state.profile.groceryPriority||'balanced';
@@ -1260,20 +1264,28 @@ function readinessAdvice(){
   return{level:'low',score,title:'Low readiness',text:day.type==='training'?'Use a readiness-adjusted session: keep the main lifts, reduce load ~5–10% or remove 1 accessory set, and stay farther from failure. If pain or illness is present, do not force it.':'Choose full rest or easy active recovery. Today is not the day to chase calorie burn.'};
 }
 function renderReadiness(){
-  if(!el('readinessPanel'))return;const r=readinessAdvice(),label=r.level==='high'?'High readiness':r.level==='medium'?'Moderate readiness':r.level==='low'?'Low readiness':r.title;
-  el('readinessPanel').innerHTML='<div class="readinessCard trainingReadinessHero '+r.level+'"><div><span class="kicker">TODAY\'S READINESS</span><h2>'+label+'</h2><p>'+r.text+'</p></div><div class="readinessScore"><strong>'+(r.score==null?'—':r.score)+'</strong><small>READINESS</small></div></div>';
+  if(!el('readinessPanel'))return;
+  const r=readinessAdvice(),score=r.score,label=r.level==='high'?'High Readiness':r.level==='medium'?'Moderate Readiness':r.level==='low'?'Low Readiness':'Readiness not logged';
+  const headline=r.level==='unknown'?'Readiness<br><span>not logged</span>':label.replace(' ',' <span>')+(r.level!=='unknown'?'</span>':'');
+  const prior=[...state.logs].reverse().find(x=>x.date<today()&&(x.sleep||x.energy||x.recovery||x.soreness||x.stress));
+  let delta='';if(score!=null&&prior){const curLog=currentLog(),saveLogs=state.logs,stateLogs=state.logs;const vals=[prior.sleep?clamp(prior.sleep/(state.profile.sleepGoal||7.5)*100,0,110):null,prior.energy?prior.energy*10:null,prior.recovery?prior.recovery*10:null,prior.soreness?110-prior.soreness*10:null,prior.stress?110-prior.stress*10:null].filter(v=>v!=null);const ps=vals.length?Math.round(avg(vals)):null;if(ps!=null)delta=(score-ps>=0?'↑ ':'↓ ')+Math.abs(score-ps)+'%'}
+  el('readinessPanel').innerHTML='<div class="readinessCard trainingReadinessHero '+r.level+'"><div class="readinessHeroCopy"><span class="kicker">TODAY\'S READINESS</span><h2>'+headline+'</h2><p>'+r.text+'</p></div><div class="readinessVisual"><div class="readinessScore"><strong>'+(score==null?'—':score)+'</strong><small>READINESS'+(score==null?' SCORE':'')+'</small></div>'+(score==null?'<button class="readinessLogBtn" onclick="showTab(\'dailylog\')"><span>▥</span>Log now ›</button>':'<div class="readinessDelta"><strong>'+(delta||'↑ 0%')+'</strong><small>vs. yesterday</small></div>')+'</div></div>';
 }
 function renderTrainingSpotlight(){
   if(!el('trainingSpotlight'))return;
-  const day=dayType(today()),work=day.workout,r=readinessAdvice(),recovery=activeRecoveryPlan(),mins=state.profile.sessionLength||60;
+  const day=dayType(today()),work=day.workout,recovery=activeRecoveryPlan(),mins=state.profile.sessionLength||60;
   if(day.type!=='training'||!work){
     const rx=cardioPrescription();
-    el('trainingSpotlight').innerHTML='<div class="trainingSpotlightCard"><div class="spotlightIcon">↗</div><div><span class="kicker">TODAY\'S PLAN</span><h2>'+escapeHtml(day.title)+'</h2><p>'+escapeHtml(rx.text)+'</p></div><button class="primary" onclick="showTab(\'dailylog\')">Open today</button></div>';
+    el('trainingSpotlight').innerHTML='<div class="trainingWorkoutCard recoveryDayCard"><div class="trainingWorkoutTop"><span class="kicker">TODAY\'S PLAN</span></div><div class="trainingWorkoutMain"><div class="spotlightIcon">↗</div><div><h2>'+escapeHtml(day.title)+'</h2><p>'+escapeHtml(rx.text)+'</p></div></div><button class="primary trainingStartBtn" onclick="showTab(\'dailylog\')">Open today ›</button></div>'+
+      '<div class="recoveryProtectionMock"><div class="recoveryShield">◇</div><div><span class="kicker">RECOVERY & RETURN TO TRAINING</span><strong>Protect an injury or irritated area</strong><small>Get personalized modifications to keep training consistent while you recover.</small></div><button onclick="document.querySelector(\'.recoveryCard\')?.setAttribute(\'open\',\'\')">Set →</button></div>';
     return;
   }
   const count=work.items?.length||0,goal=state.profile.trainingGoal==='strength'?'Build strength':state.profile.trainingGoal==='performance'?'Performance':'Build muscle';
-  el('trainingSpotlight').innerHTML='<div class="trainingSpotlightCard"><div class="spotlightIcon">↗</div><div><span class="kicker">TODAY\'S WORKOUT</span><h2>'+escapeHtml(work.name)+'</h2><p>'+count+' exercises • ~'+mins+' min • '+goal+'</p></div><button class="primary" onclick="document.querySelector(\'#trainingPlan .workout\')?.scrollIntoView({behavior:\'smooth\'})">Start workout</button></div>'+
-    (recovery?'<div class="recoverySpotlight"><span>◈</span><div><small>RECOVERY PROTECTION</small><strong>Protecting '+escapeHtml(recovery.area)+'</strong><em>'+escapeHtml(recoveryTrainingMode(recovery).text)+'</em></div></div>':'');
+  const difficulty=readinessAdvice().level==='low'?'Reduced':readinessAdvice().level==='high'?'Moderate':'Moderate';
+  const focus=(work.items||[]).slice(0,3).map(x=>exerciseMuscle(x)).filter(Boolean).map(x=>x.charAt(0).toUpperCase()+x.slice(1)).filter((x,j,arr)=>arr.indexOf(x)===j).slice(0,3).join(' • ')||'Full body';
+  const estCal=Math.round((state.profile.weight||175)*.045*mins);
+  const recoveryHtml=recovery?'<div class="recoveryProtectionMock active"><div class="recoveryShield">◇</div><div><span class="kicker">RECOVERY PROTECTION</span><strong>Protecting Your '+escapeHtml(recovery.area)+'</strong><small>We’ve adjusted your workout around the active restriction so you can keep training effectively.</small></div><div class="shoulderArt"></div><button onclick="document.querySelector(\'.recoveryCard\')?.setAttribute(\'open\',\'\')">Manage →</button></div>':'';
+  el('trainingSpotlight').innerHTML='<div class="trainingWorkoutCard"><div class="trainingWorkoutTop"><span class="kicker">TODAY\'S WORKOUT</span><button onclick="generateTraining()">Change Workout →</button></div><div class="trainingWorkoutMain"><div class="spotlightIcon"><svg viewBox="0 0 24 24"><path d="M3 9v6M6 7v10M18 7v10m3-8v6M6 12h12"/></svg></div><div><h2>'+escapeHtml(work.name)+'</h2><p>◎ '+count+' exercises • '+Math.max(45,mins-10)+'–'+mins+' min • '+goal+'</p></div><button class="primary trainingStartBtn" onclick="document.querySelector(\'#trainingPlan .workout\')?.scrollIntoView({behavior:\'smooth\'})">▶ Start Workout</button></div><div class="trainingStatGrid"><div class="cal"><span>♨</span><small>EST. CALORIES</small><strong>'+estCal+'</strong></div><div class="time"><span>◷</span><small>EST. TIME</small><strong>~'+mins+' min</strong></div><div class="diff"><span>▥</span><small>DIFFICULTY</small><strong>'+difficulty+'</strong></div><div class="focus"><span>◎</span><small>PRIMARY FOCUS</small><strong>'+escapeHtml(focus)+'</strong></div></div></div>'+recoveryHtml;
 }
 function lastPerformance(name){
   const logs=lastExerciseLogs(name);if(!logs.length)return null;const last=logs[logs.length-1],sets=normalizeSetResults(last);return{date:last.date||'',sets};
@@ -1362,6 +1374,28 @@ function deleteWorkoutFavorite(di){
 function favoriteWorkoutOptions(){
   return '<option value="">Favorite workouts…</option>'+state.workoutFavorites.map(x=>'<option value="'+x.id+'">'+escapeHtml(x.name)+'</option>').join('');
 }
+function quickExerciseValue(di,ei,key){
+  const item=state.trainingPlan[di]?.items?.[ei],draft=getWorkoutDraft(di),sv=draft.sets?.[ei]?.[0]||{},prev=item&&lastPerformance(item.name)?.sets?.[0];
+  if(key==='sets')return item?.sets||3;
+  if(key==='load')return +(sv.weight||prev?.weight||0);
+  if(key==='reps')return +(sv.reps||Math.round(((item?.minReps||8)+(item?.maxReps||12))/2));
+  if(key==='rir')return +(sv.rir!==''&&sv.rir!=null?sv.rir:(item?.rir??2));
+  if(key==='rpe')return Math.max(1,10-quickExerciseValue(di,ei,'rir'));
+  return 0;
+}
+function quickAdjustExercise(di,ei,key,delta){
+  const item=state.trainingPlan[di]?.items?.[ei];if(!item)return;
+  if(key==='sets'){item.sets=clamp((item.sets||3)+delta,1,8);save();renderTraining();return}
+  const d=getWorkoutDraft(di);d.sets[ei]=d.sets[ei]||{};
+  const current=quickExerciseValue(di,ei,key),step=key==='load'?5:1,next=Math.max(key==='rir'?0:0,current+delta*step);
+  for(let si=0;si<item.sets;si++){d.sets[ei][si]=d.sets[ei][si]||{};if(key==='load')d.sets[ei][si].weight=next;if(key==='reps')d.sets[ei][si].reps=Math.max(1,next);if(key==='rir')d.sets[ei][si].rir=clamp(next,0,9)}
+  save();renderTraining();
+}
+function toggleExerciseDetails(di,ei){const card=document.getElementById('exCard_'+di+'_'+ei);if(card)card.classList.toggle('detailsOpen')}
+function exerciseMockControls(di,ei,x){
+  const vals=[['sets','Sets',quickExerciseValue(di,ei,'sets')],['load','Load (lb)',quickExerciseValue(di,ei,'load')||'—'],['reps','Reps',quickExerciseValue(di,ei,'reps')],['rir','RIR',quickExerciseValue(di,ei,'rir')],['rpe','RPE',quickExerciseValue(di,ei,'rpe')]];
+  return '<div class="exerciseMockControls">'+vals.map(v=>'<div><small>'+v[1]+'</small><span><button onclick="quickAdjustExercise('+di+','+ei+',\''+v[0]+'\',-1)" '+(v[0]==='rpe'?'disabled':'')+'>−</button><strong>'+v[2]+'</strong><button onclick="quickAdjustExercise('+di+','+ei+',\''+v[0]+'\',1)" '+(v[0]==='rpe'?'disabled':'')+'>+</button></span></div>').join('')+'</div>';
+}
 function renderTraining(){
   renderRecoveryPlanner();
   renderReadiness();
@@ -1380,7 +1414,7 @@ function renderTraining(){
       const setRows=Array.from({length:x.sets},(_,si)=>{const sv=savedSets[si]||{};return'<div class="setBlock"><div class="setRow coachSetRow"><strong>Set '+(si+1)+'</strong><label>Load<input id="w_'+di+'_'+ei+'_'+si+'" type="number" step=".5" inputmode="decimal" value="'+escapeHtml(sv.weight??'')+'" placeholder="'+(prev?.sets?.[si]?.weight??'')+'" oninput="saveWorkoutDraft('+di+')" '+(exerciseDisabled?'disabled':'')+'></label><label>Reps<input id="r_'+di+'_'+ei+'_'+si+'" type="number" inputmode="numeric" value="'+escapeHtml(sv.reps??'')+'" placeholder="'+(prev?.sets?.[si]?.reps??'')+'" oninput="liveSetCue('+di+','+ei+','+si+');saveWorkoutDraft('+di+')" '+(exerciseDisabled?'disabled':'')+'></label><label>RIR<input id="rir_'+di+'_'+ei+'_'+si+'" type="number" min="0" max="9" step=".5" inputmode="decimal" value="'+escapeHtml(sv.rir??'')+'" placeholder="'+(prev?.sets?.[si]?.rir??x.rir)+'" oninput="liveSetCue('+di+','+ei+','+si+');saveWorkoutDraft('+di+')" '+(exerciseDisabled?'disabled':'')+'></label><div class="derivedRpe">RPE ≈ <span id="derived_'+di+'_'+ei+'_'+si+'">'+targetRpe+'</span></div></div><div id="cue_'+di+'_'+ei+'_'+si+'" class="setCue">Previous: '+previousSetText(x.name,si)+'</div></div>'}).join('');
       const recommendation=issue.recommendation?'<div class="issueRecommendation">'+escapeHtml(issue.recommendation)+'</div>':'';
       const issueBox='<details class="exerciseIssue" '+((issue.pain||issue.note||issue.recommendation)?'open':'')+'><summary>Something feels off? Tell the coach.</summary><div class="exerciseIssueGrid"><label>Pain / discomfort 0–10<input id="exPain_'+di+'_'+ei+'" type="number" min="0" max="10" value="'+(issue.pain||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label>What did you already change?<select id="exMod_'+di+'_'+ei+'" onchange="saveWorkoutDraft('+di+')"><option value="as prescribed" '+(issue.mod==='as prescribed'?'selected':'')+'>Nothing yet</option><option value="reduced load" '+(issue.mod==='reduced load'?'selected':'')+'>Reduced load</option><option value="reduced ROM" '+(issue.mod==='reduced ROM'?'selected':'')+'>Reduced range</option><option value="tempo modified" '+(issue.mod==='tempo modified'?'selected':'')+'>Changed tempo</option><option value="technique modified" '+(issue.mod==='technique modified'?'selected':'')+'>Changed technique</option><option value="substituted" '+(issue.mod==='substituted'?'selected':'')+'>Substituted movement</option><option value="stopped" '+(issue.mod==='stopped'?'selected':'')+'>Stopped exercise</option></select></label><label class="issueNote">What happened?<textarea id="exNote_'+di+'_'+ei+'" onblur="saveWorkoutDraft('+di+')" placeholder="Example: right shoulder started pinching on set 2 and worsened when I went deeper.">'+escapeHtml(issue.note||'')+'</textarea></label><button class="primary analyzeIssue" onclick="analyzeExerciseIssue('+di+','+ei+')">Analyze & modify from here</button>'+recommendation+'</div></details>';
-      return'<div class="exerciseCard '+(exerciseDisabled?'disabledExercise':'')+' '+(recoveryProtected?'recoveryProtected':'')+'"><div class="recoveryExerciseNote">'+(recoveryProtected?'<strong>Protected for recovery</strong><span>This movement conflicts with the active '+escapeHtml(recovery.area)+' restriction and is disabled until the restriction changes.</span>':'')+'</div><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR (≈ '+targetRpe+' RPE)</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="fillPrevious('+di+','+ei+')" '+(exerciseDisabled?'disabled':'')+'>Last workout</button><button onclick="changeSetCount('+di+','+ei+',-1)" '+(exerciseDisabled?'disabled':'')+'>− set</button><button onclick="changeSetCount('+di+','+ei+',1)" '+(exerciseDisabled?'disabled':'')+'>+ set</button><button onclick="swapExercise('+di+','+ei+')" '+(exerciseDisabled?'disabled':'')+'>Swap</button></div></div><div class="restButtons"><span>Rest timer</span><button onclick="startRestTimer(60)" '+(exerciseDisabled?'disabled':'')+'>1:00</button><button onclick="startRestTimer(90)" '+(exerciseDisabled?'disabled':'')+'>1:30</button><button onclick="startRestTimer(120)" '+(exerciseDisabled?'disabled':'')+'>2:00</button><button onclick="startRestTimer(180)" '+(exerciseDisabled?'disabled':'')+'>3:00</button></div><div class="setRows">'+setRows+'</div>'+renderExerciseGuide(x)+issueBox+'</div>';
+      return'<div id="exCard_'+di+'_'+ei+'" class="exerciseCard '+(exerciseDisabled?'disabledExercise':'')+' '+(recoveryProtected?'recoveryProtected':'')+'"><div class="exerciseMockHead"><span class="exerciseNumber">'+(ei+1)+'</span><span class="exerciseThumb"><svg viewBox="0 0 24 24"><path d="M5 13h14M7 10v6m10-6v6M4 11v4m16-4v4"/></svg></span><div><strong>'+escapeHtml(x.name)+'</strong><small>'+escapeHtml((exerciseGuide(x).target||exerciseMuscle(x)||'Target muscles').replace(/,/g,' •'))+'</small></div><button class="exerciseDots" onclick="toggleExerciseDetails('+di+','+ei+')">•••</button></div>'+exerciseMockControls(di,ei,x)+'<div class="exerciseDetailLayer"><div class="recoveryExerciseNote">'+(recoveryProtected?'<strong>Protected for recovery</strong><span>This movement conflicts with the active '+escapeHtml(recovery.area)+' restriction and is disabled until the restriction changes.</span>':'')+'</div><div class="row exerciseTitleRow"><div class="exName"><strong>'+x.name+'</strong><br><small>'+x.sets+' working sets • '+x.minReps+'–'+x.maxReps+' reps • target '+x.rir+' RIR (≈ '+targetRpe+' RPE)</small><br><small>'+progression(x.name,x.minReps,x.maxReps,x.rir)+'</small></div><div class="exerciseActions"><button onclick="fillPrevious('+di+','+ei+')" '+(exerciseDisabled?'disabled':'')+'>Last workout</button><button onclick="changeSetCount('+di+','+ei+',-1)" '+(exerciseDisabled?'disabled':'')+'>− set</button><button onclick="changeSetCount('+di+','+ei+',1)" '+(exerciseDisabled?'disabled':'')+'>+ set</button><button onclick="swapExercise('+di+','+ei+')" '+(exerciseDisabled?'disabled':'')+'>Swap</button></div></div><div class="restButtons"><span>Rest timer</span><button onclick="startRestTimer(60)" '+(exerciseDisabled?'disabled':'')+'>1:00</button><button onclick="startRestTimer(90)" '+(exerciseDisabled?'disabled':'')+'>1:30</button><button onclick="startRestTimer(120)" '+(exerciseDisabled?'disabled':'')+'>2:00</button><button onclick="startRestTimer(180)" '+(exerciseDisabled?'disabled':'')+'>3:00</button></div><div class="setRows">'+setRows+'</div>'+renderExerciseGuide(x)+issueBox+'</div></div>';
     }).join('');
     const post='<details class="trainingCheck postCheck" '+((draft.post?.severity||draft.post?.notes)?'open':'')+'><summary><strong>Post-workout body check</strong><span>Anything to carry into the next session?</span></summary><div class="issueGrid"><label>Area<select id="postArea_'+di+'" onchange="saveWorkoutDraft('+di+')">'+areas.map(x=>'<option '+(draft.post?.area===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Feeling<select id="postSensation_'+di+'" onchange="saveWorkoutDraft('+di+')">'+sensations.map(x=>'<option '+(draft.post?.sensation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label><label>Severity 0–10<input id="postSeverity_'+di+'" type="number" min="0" max="10" value="'+(draft.post?.severity||0)+'" onchange="saveWorkoutDraft('+di+')"></label><label class="issueNote">Carry-forward note<textarea id="postNotes_'+di+'" onblur="saveWorkoutDraft('+di+')" placeholder="What should the coach remember or modify next time?">'+escapeHtml(draft.post?.notes||'')+'</textarea></label></div></details>';
     const finish='<div class="workoutFinish"><div><span class="kicker">POST-WORKOUT</span><h4>How hard was the whole session?</h4><p>Session RPE is separate from set RIR. Rate the overall workout after you finish.</p></div><label><span>Session RPE</span><input id="sessionRpe_'+di+'" type="number" min="1" max="10" step=".5" value="'+escapeHtml(draft.sessionRpe??'')+'" placeholder="1–10"></label></div><label class="sessionNote">General session notes<input id="sessionNotes_'+di+'" value="'+escapeHtml(draft.sessionNotes??'')+'" placeholder="Performance, pumps, technique, energy, anything unusual..."></label>';
@@ -1744,16 +1778,24 @@ function renderRecoveryHistory(){
   el('recoveryHistory').innerHTML=x?'<div class="notice success"><strong>'+x.title+'</strong><br>'+x.text+'</div>':'';
 }
 function activityCalories(date=today()){return state.activityLogs.filter(x=>x.date===date).reduce((s,x)=>s+(+x.usedKcal||0),0)}
+function dashboardMetricIcon(type){
+  const paths={
+    Steps:'<path d="M8 18c2-3 4-5 7-7l2-4 2 1-1 5-5 5c-2 2-4 3-6 2l-2-1 1-2 2 1Z"/><path d="M13 8l2 2m-5 1 2 2"/>',
+    Water:'<path d="M12 3c4 5 6 8 6 11a6 6 0 1 1-12 0c0-3 2-6 6-11Z"/>',
+    Calories:'<path d="M13 3c1 4-2 5-2 8 0 2 1 3 3 4 1-3 3-4 3-7 3 3 4 6 3 9-1 3-4 5-8 5s-7-2-8-5c-1-4 2-7 5-9 0 3 1 4 2 5 0-4 3-6 2-10Z"/>',
+    Sleep:'<path d="M17 15a7 7 0 0 1-8-9 7 7 0 1 0 8 9Z"/>'
+  };return '<svg viewBox="0 0 24 24">'+(paths[type]||'')+'</svg>';
+}
 function renderTodayMetricsSnapshot(){
   const x=currentLog()||{},metric=state.profile.units==='metric',food=dayFoodTotals(today()),burn=activityCalories(today()),stepGoal=state.profile.stepGoal||8000,waterGoal=state.profile.waterGoalOz||100;
   const calories=x.calories??(food.cal?Math.round(food.cal):null);
   const primary=[
-    ['Steps',x.steps?x.steps.toLocaleString():'—',(x.steps&&stepGoal)?Math.min(100,Math.round(x.steps/stepGoal*100)):0,'blue'],
-    ['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—',(x.water&&waterGoal)?Math.min(100,Math.round(x.water/waterGoal*100)):0,'cyan'],
-    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—',(calories!=null&&state.macro?.calories)?Math.min(100,Math.round(calories/state.macro.calories*100)):0,'coral'],
-    ['Sleep',x.sleep?x.sleep+' h':'—',(x.sleep&&state.profile.sleepGoal)?Math.min(100,Math.round(x.sleep/state.profile.sleepGoal*100)):0,'violet']
+    ['Steps',x.steps?x.steps.toLocaleString():'—',(x.steps&&stepGoal)?Math.min(100,Math.round(x.steps/stepGoal*100)):0,'blue',stepGoal.toLocaleString()+' goal'],
+    ['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—',(x.water&&waterGoal)?Math.min(100,Math.round(x.water/waterGoal*100)):0,'cyan',metric?(waterGoal/33.814).toFixed(1)+' L goal':Math.round(waterGoal)+' oz goal'],
+    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—',(calories!=null&&state.macro?.calories)?Math.min(100,Math.round(calories/state.macro.calories*100)):0,'coral',state.macro?.calories?'of '+state.macro.calories.toLocaleString():'daily intake'],
+    ['Sleep',x.sleep?x.sleep+' h':'—',(x.sleep&&state.profile.sleepGoal)?Math.min(100,Math.round(x.sleep/state.profile.sleepGoal*100)):0,'violet',(state.profile.sleepGoal||7.5)+'h goal']
   ];
-  const html=primary.map(v=>'<div class="snapshotMetric flagshipMetric '+v[3]+'"><span>'+v[0]+'</span><strong>'+v[1]+'</strong><small>'+(v[0]==='Steps'?stepGoal.toLocaleString()+' goal':v[0]==='Water'?(metric?(waterGoal/33.814).toFixed(1)+' L goal':Math.round(waterGoal)+' oz goal'):v[0]==='Calories'?(state.macro?.calories?'of '+state.macro.calories.toLocaleString():'daily intake'):(state.profile.sleepGoal||7.5)+' h goal')+'</small><b><i style="width:'+v[2]+'%"></i></b></div>').join('');
+  const html=primary.map(v=>'<div class="snapshotMetric flagshipMetric '+v[3]+'"><span class="flagshipMetricIcon">'+dashboardMetricIcon(v[0])+'</span><span class="metricLabel">'+v[0]+'</span><strong>'+v[1]+'</strong><small>'+v[4]+'</small><b><i style="width:'+v[2]+'%"></i></b></div>').join('');
   if(el('todayMetricsSnapshot'))el('todayMetricsSnapshot').innerHTML=html;
   const full=[
     ['Steps',x.steps?x.steps.toLocaleString():'—'],['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—'],['Sleep',x.sleep?x.sleep+' h':'—'],
@@ -1821,7 +1863,7 @@ function renderDashboard(){
   renderSchedule();renderDriftMonitor();renderProfilePhoto();renderConciergeNow();
   if(el('simpleWorkoutLabel')){const d=dayType(today());el('simpleWorkoutLabel').textContent=d.type==='training'?'Start workout':d.type==='rest'?'Recovery day':'Cardio / recovery'}
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
-  el('welcome').textContent=state.profile.name?'Welcome back, '+state.profile.name+'.':'Build your baseline';
+  el('welcome').innerHTML=state.profile.name?'Welcome back,<br><span class="welcomeNameGradient">'+escapeHtml(state.profile.name)+'.</span>':'Build your baseline';
   const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore(),ring=el('dailyScore').parentElement;el('dailyScore').textContent=ds||'—';ring.style.setProperty('--score',(ds||0)+'%');const st=ring.querySelector('.scoreStatus');if(st)st.textContent=ds>=90?'Elite':ds>=75?'Strong':ds>=55?'Building':ds?'Recover':'Live'};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();renderHomeInsight();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
 }
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
@@ -1882,4 +1924,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=51').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=52').then(r=>r.update()).catch(()=>{});
