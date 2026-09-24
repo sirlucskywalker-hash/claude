@@ -1,13 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 560" preserveAspectRatio="xMidYMid slice">
 <defs>
- <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#07152b"/><stop offset=".45" stop-color="#102b55"/><stop offset=".72" stop-color="#402b73"/><stop offset="1" stop-color="#09101f"/></linearGradient>
- <radialGradient id="sun" cx=".72" cy=".43" r=".32"><stop offset="0" stop-color="#ffb06d" stop-opacity=".75"/><stop offset=".28" stop-color="#b36cc8" stop-opacity=".28"/><stop offset="1" stop-color="#4464d9" stop-opacity="0"/></radialGradient>
- <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#1a3152"/><stop offset="1" stop-color="#07101d"/></linearGradient>
- <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0d1f39"/><stop offset="1" stop-color="#030811"/></linearGradient>
+ <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#020916"/><stop offset=".35" stop-color="#071a34"/><stop offset=".62" stop-color="#192658"/><stop offset=".82" stop-color="#4b2e74"/><stop offset="1" stop-color="#070c18"/></linearGradient>
+ <radialGradient id="sun" cx=".76" cy=".34" r=".27"><stop offset="0" stop-color="#ffd08a" stop-opacity=".95"/><stop offset=".08" stop-color="#ff9c72" stop-opacity=".72"/><stop offset=".25" stop-color="#b360bd" stop-opacity=".34"/><stop offset=".55" stop-color="#4a61ce" stop-opacity=".12"/><stop offset="1" stop-color="#273f9f" stop-opacity="0"/></radialGradient>
+ <linearGradient id="far" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#203d6b"/><stop offset="1" stop-color="#081424"/></linearGradient>
+ <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#152d50"/><stop offset="1" stop-color="#050c17"/></linearGradient>
+ <linearGradient id="near" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#0d2039"/><stop offset="1" stop-color="#02060c"/></linearGradient>
+ <filter id="blur"><feGaussianBlur stdDeviation="18"/></filter>
+ <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
 </defs>
-<rect width="1200" height="500" fill="url(#sky)"/><rect width="1200" height="500" fill="url(#sun)"/>
-<path d="M0 390L120 290 210 340 330 170 440 315 520 245 610 350 720 230 790 305 910 190 1000 300 1080 235 1200 330V500H0Z" fill="url(#m1)" opacity=".9"/>
-<path d="M0 440L130 345 245 420 360 300 470 414 590 325 680 420 790 320 900 405 1010 315 1120 390 1200 350V500H0Z" fill="url(#m2)"/>
-<path d="M330 170l-42 132 42-32 27 54 20-112zM910 190l-33 96 31-24 28 57 18-88z" fill="#8fb0e9" opacity=".13"/>
-<path d="M0 436Q200 403 355 427T675 423T990 430T1200 410V500H0Z" fill="#081221" opacity=".72"/>
+<rect width="1400" height="560" fill="url(#sky)"/>
+<rect width="1400" height="560" fill="url(#sun)"/>
+<ellipse cx="1060" cy="205" rx="220" ry="56" fill="#ff9f78" opacity=".12" filter="url(#blur)"/>
+<g opacity=".35" fill="#a8c9ff"><circle cx="130" cy="88" r="1.4"/><circle cx="270" cy="55" r="1"/><circle cx="420" cy="105" r="1.2"/><circle cx="635" cy="72" r="1"/><circle cx="1180" cy="86" r="1.2"/></g>
+<path d="M0 400 95 348 160 371 238 298 306 335 380 250 449 332 520 279 590 349 662 286 721 325 790 250 848 310 916 218 987 303 1046 238 1102 286 1165 228 1224 300 1305 241 1400 316V560H0Z" fill="url(#far)" opacity=".74"/>
+<path d="M0 442 82 381 147 418 232 327 313 401 402 292 478 391 548 318 625 410 720 316 799 402 887 294 952 378 1044 292 1122 382 1210 302 1284 371 1400 311V560H0Z" fill="url(#mid)" opacity=".92"/>
+<path d="M0 498 105 411 192 477 281 361 369 469 466 382 556 472 653 366 739 458 845 347 925 452 1036 350 1117 455 1235 358 1322 427 1400 397V560H0Z" fill="url(#near)"/>
+<path d="M380 250 352 318 381 296 402 339 423 274Z M916 218 880 300 914 274 942 327 959 247Z M1165 228 1131 300 1164 278 1187 319 1205 256Z" fill="#c7d9ff" opacity=".13"/>
+<path d="M0 505 Q180 465 330 487 T650 482 T970 489 T1400 455V560H0Z" fill="#030912" opacity=".74"/>
+<path d="M0 464 Q210 432 390 451 T770 447 T1160 451 T1400 425" fill="none" stroke="#536fab" stroke-opacity=".12" stroke-width="6" filter="url(#soft)"/>
 </svg>
