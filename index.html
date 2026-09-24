@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#030712">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=50">
+<link rel="stylesheet" href="styles.css?v=51">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -69,120 +69,65 @@
 </aside>
 <main>
 <section id="dashboard" class="tab active">
-  <div class="dashboardHero">
+  <div class="dashboardHero flagshipHero">
     <button class="welcomeProfileLink" onclick="showTab('onboarding')" aria-label="Open user profile">
       <span id="heroProfilePhoto" class="heroProfilePhoto"><span>P</span></span>
-      <span class="welcomeProfileCopy"><span class="eyebrow" id="timeGreeting">TODAY</span><strong id="welcome">Build your baseline</strong><small id="heroSub">Here’s what matters today. Everything else can wait.</small><em>View profile</em></span>
+      <span class="welcomeProfileCopy"><span class="eyebrow" id="timeGreeting">TODAY</span><strong id="welcome">Build your baseline</strong><small id="heroSub">Your plan gets smarter as you log consistently.</small><em>View profile</em></span>
     </button>
     <div class="heroScore"><span id="dailyScore">—</span><small>Daily score</small><em class="scoreStatus">Live</em></div>
   </div>
 
-  <div class="conciergeNow">
-    <div class="conciergeNowLead"><span class="kicker">RIGHT NOW</span><strong id="conciergeNowTitle">Your next best move</strong><small id="conciergeNowDetail">PhysiqueOS will keep this simple.</small></div>
-    <button id="conciergeNowButton" class="primary conciergeNowButton" onclick="showTab('dailylog')">Do this now</button>
-    <div class="conciergePulse"><div><span>Training</span><strong id="conciergeTraining">—</strong></div><div><span>Nutrition</span><strong id="conciergeNutrition">—</strong></div><div><span>Recovery</span><strong id="conciergeRecovery">—</strong></div></div>
+  <div class="premiumCard glanceCard">
+    <div class="sectionHead glanceHead"><div><span class="kicker">TODAY AT A GLANCE</span><h3>What matters today</h3></div><button class="textLink" onclick="showTab('dailylog')">View all →</button></div>
+    <div id="todayMetricsSnapshot" class="todayMetricsSnapshot flagshipSnapshot"></div>
   </div>
 
-  <div class="simpleActions" aria-label="Quick actions">
-    <button onclick="showTab('training')"><span class="simpleActionIcon">↗</span><span><strong id="simpleWorkoutLabel">Start workout</strong><small>Open today’s training</small></span></button>
-    <button onclick="showTab('dailylog')"><span class="simpleActionIcon">＋</span><span><strong>Log today</strong><small>Food, weight, steps & recovery</small></span></button>
-    <button onclick="showTab('meals')"><span class="simpleActionIcon">⌁</span><span><strong>Plan meals</strong><small>Meals, favorites & groceries</small></span></button>
-    <button onclick="showTab('coach')"><span class="simpleActionIcon">✦</span><span><strong>Ask Coach</strong><small>Get one clear next step</small></span></button>
+  <div class="quickActionsCard">
+    <div class="sectionHead quickActionsHead"><div><span class="kicker">QUICK ACTIONS</span><h3>One tap to move forward</h3></div></div>
+    <div class="simpleActions" aria-label="Quick actions">
+      <button onclick="showTab('training')"><span class="simpleActionIcon">↗</span><span><strong id="simpleWorkoutLabel">Start workout</strong><small>Open today’s training</small></span><b>›</b></button>
+      <button onclick="showTab('dailylog')"><span class="simpleActionIcon">＋</span><span><strong>Log today</strong><small>Steps, weight, water + more</small></span><b>›</b></button>
+      <button onclick="showTab('meals')"><span class="simpleActionIcon">⌁</span><span><strong>Plan meals</strong><small>Generate and customize meals</small></span><b>›</b></button>
+      <button onclick="showTab('coach')"><span class="simpleActionIcon">✦</span><span><strong>Ask Coach</strong><small>Get personalized guidance</small></span><b>›</b></button>
+    </div>
   </div>
 
-  <details class="todayDetails">
-    <summary><span><strong>More about today</strong><small>Schedule, progress, reminders and advanced details</small></span><em>Open</em></summary>
+  <div class="adaptiveInsightCard">
+    <div class="adaptiveInsightCopy"><span class="kicker">ADAPTIVE INSIGHT</span><strong id="homeInsightTitle">Your system is learning you.</strong><small id="homeInsightText">Keep logging consistently and PhysiqueOS will surface the most useful trend here.</small></div>
+    <div class="miniTrend" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+
+  <details class="todayDetails dashboardAdvanced">
+    <summary><span><strong>More about today</strong><small>Schedule, recovery, progress trends and advanced controls</small></span><em>Open</em></summary>
     <div class="todayDetailsBody">
-
-  <div class="todayGrid">
-    <div class="premiumCard quickLogCard">
-      <div class="sectionHead"><div><span class="kicker">TODAY'S DATA</span><h3>Today at a glance</h3></div><span class="readOnlyBadge">LIVE</span></div>
-      <div id="todayMetricsSnapshot" class="todayMetricsSnapshot"></div>
-      <div class="quickCardActions"><button onclick="toggleSnapshot(this)">View all data</button><button class="primary" onclick="showTab('dailylog')">Update check-in</button></div>
-    </div>
-
-    <div class="premiumCard focusCard">
-      <div class="sectionHead"><div><span class="kicker">YOUR PLAN</span><h3>Today’s focus</h3></div></div>
-      <div id="todayPanel"></div>
-    </div>
-  </div>
-
-  <div class="premiumCard scheduleCard">
-    <div class="sectionHead">
-      <div><span class="kicker">ADHERENCE ENGINE</span><h3>Plan my day</h3><p class="muted">Your timing, reminders and calendar stay tucked away until you need them.</p></div>
-      <div class="sectionActions"><div id="timezoneStatus" class="timezoneBadge"></div><button class="cardExpandButton" onclick="toggleDenseCard('scheduleCard',this)">Customize</button></div>
-    </div>
-    <div class="scheduleGrid">
-      <label>Wake time<input id="scheduleWake" type="time" value="07:00"></label>
-      <label>Daily check-in<input id="scheduleCheckin" type="time" value="07:15"></label>
-      <label>First meal<input id="scheduleMeal" type="time" value="08:00"></label>
-      <label>Workout time<input id="scheduleWorkout" type="time" value="17:30"></label>
-      <label>Bedtime<input id="scheduleBed" type="time" value="23:00"></label>
-      <label>Meal spacing<select id="scheduleMealGap"><option value="3">Every ~3 hours</option><option value="4" selected>Every ~4 hours</option><option value="5">Every ~5 hours</option></select></label>
-      <label>Runway style<select id="scheduleMode"><option value="lifestyle" selected>Fit my lifestyle first</option><option value="performance">Performance-biased</option></select></label>
-      <label>Calendar reminder<select id="scheduleReminder"><option value="0">At event time</option><option value="10">10 min before</option><option value="15" selected>15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select></label>
-    </div>
-    <div class="reminderPanel">
-      <div class="reminderPanelHead"><div><span class="kicker">SMART REMINDERS</span><strong>Accountability without notification spam</strong></div><span id="notificationStatusPill" class="notificationStatusPill">Not enabled</span></div>
-      <div class="reminderGrid">
-        <label><input id="notifyCheckin" type="checkbox" checked onchange="saveNotificationSettings()"> Check-in</label>
-        <label><input id="notifyMeals" type="checkbox" checked onchange="saveNotificationSettings()"> Nutrition</label>
-        <label><input id="notifyWorkout" type="checkbox" checked onchange="saveNotificationSettings()"> Workouts</label>
-        <label><input id="notifySteps" type="checkbox" checked onchange="saveNotificationSettings()"> Steps</label>
-        <label><input id="notifyHydration" type="checkbox" checked onchange="saveNotificationSettings()"> Hydration</label>
-        <label><input id="notifyDrift" type="checkbox" checked onchange="saveNotificationSettings()"> Slippage / stalls</label>
-        <label><input id="notifyRecovery" type="checkbox" checked onchange="saveNotificationSettings()"> Recovery / bedtime</label>
-        <label>Quiet hours start<input id="notifyQuietStart" type="time" value="22:30" onchange="saveNotificationSettings()"></label>
-        <label>Quiet hours end<input id="notifyQuietEnd" type="time" value="07:00" onchange="saveNotificationSettings()"></label>
-        <label>Escalation<select id="notifyEscalation" onchange="saveNotificationSettings()"><option value="gentle">Gentle</option><option value="balanced" selected>Balanced</option><option value="firm">Firm</option></select></label>
+      <div class="conciergeNow">
+        <div class="conciergeNowLead"><span class="kicker">RIGHT NOW</span><strong id="conciergeNowTitle">Your next best move</strong><small id="conciergeNowDetail">PhysiqueOS will keep this simple.</small></div>
+        <button id="conciergeNowButton" class="primary conciergeNowButton" onclick="showTab('dailylog')">Do this now</button>
+        <div class="conciergePulse"><div><span>Training</span><strong id="conciergeTraining">—</strong></div><div><span>Nutrition</span><strong id="conciergeNutrition">—</strong></div><div><span>Recovery</span><strong id="conciergeRecovery">—</strong></div></div>
       </div>
-      <small>Calendar reminders remain the reliable closed-app fallback in this local beta. True background push will be added with cloud accounts.</small>
-    </div>
-    <div class="buttons scheduleActions">
-      <button class="primary" onclick="saveSchedule()">Save my ideal times</button>
-      <button onclick="applyRecommendedRunway()">Use coach-recommended timing</button>
-      <button onclick="addTodayToGoogleCalendar()">Add today to Google Calendar</button>
-      <button onclick="downloadWeekCalendar()">Export 7 days (.ics)</button>
-    </div>
-    <div class="scheduleBody">
-      <div><span class="kicker">TODAY'S RUNWAY</span><div id="runwayCoachNote" class="runwayCoachNote"></div><div id="dailyRunway" class="dailyRunway"></div></div>
-      <div><span class="kicker">NEXT BEST ACTION</span><div id="adherenceNudge" class="adherenceNudge"></div><div id="runwayRecommendations" class="runwayRecommendations"></div></div>
-    </div>
-  </div>
 
-  <div class="premiumCard driftCard">
-    <div class="sectionHead">
-      <div><span class="kicker">DRIFT MONITOR</span><h3>Stay on course</h3><p class="muted">PhysiqueOS watches quietly and only brings this forward when it matters.</p></div>
-      <div class="sectionActions"><div id="driftStatus" class="driftStatus"></div><button class="cardExpandButton" onclick="toggleDenseCard('driftCard',this)">Details</button></div>
-    </div>
-    <div id="driftSignals" class="driftSignals"></div>
-    <div class="driftControls">
-      <label>Monitor sensitivity<select id="driftSensitivity" onchange="saveDriftControls()"><option value="relaxed">Relaxed</option><option value="balanced" selected>Balanced</option><option value="strict">Strict</option></select></label>
-      <label>Minimum adherence<select id="driftAdherence" onchange="saveDriftControls()"><option value="75">75%</option><option value="80">80%</option><option value="85" selected>85%</option><option value="90">90%</option></select></label>
-      <label>Logging gap<select id="driftGap" onchange="saveDriftControls()"><option value="1">1 day</option><option value="2" selected>2 days</option><option value="3">3 days</option></select></label>
-      <label>Progress stall<select id="driftStall" onchange="saveDriftControls()"><option value="14">14 days</option><option value="21" selected>21 days</option><option value="28">28 days</option></select></label>
-    </div>
-    <div id="driftIntervention" class="driftIntervention"></div>
-    <div class="buttons"><button class="primary" onclick="activateRescueMode()">Start 3-day rescue</button><button onclick="downloadRescueCalendar()">Calendar rescue plan</button><button onclick="dismissDrift()">I’m back on track</button></div>
-  </div>
+      <div class="todayGrid">
+        <div class="premiumCard focusCard"><div class="sectionHead"><div><span class="kicker">YOUR PLAN</span><h3>Today’s focus</h3></div></div><div id="todayPanel"></div></div>
+        <div class="premiumCard quickLogCard expanded"><div class="sectionHead"><div><span class="kicker">LIVE DATA</span><h3>Full daily snapshot</h3></div><span class="readOnlyBadge">LIVE</span></div><div id="todayMetricsSnapshotAdvanced" class="todayMetricsSnapshot"></div><div class="quickCardActions"><button class="primary" onclick="showTab('dailylog')">Update check-in</button></div></div>
+      </div>
 
-  <details class="dashboardInsights"><summary><span><span class="kicker">DEEPER VIEW</span><strong>Trends, intelligence & setup</strong><small>Open this when you want the detail.</small></span><em>View insights</em></summary><div class="dashboardInsightsBody">
-  <div class="metricStrip">
-    <div class="metricCard"><span class="metricIcon">◎</span><small>Calories</small><strong id="dashCalories">—</strong><em>daily target</em></div>
-    <div class="metricCard"><span class="metricIcon">↘</span><small>Weight</small><strong id="dashWeight">—</strong><em>latest check-in</em></div>
-    <div class="metricCard"><span class="metricIcon">✓</span><small>Adherence</small><strong id="dashAdherence">—</strong><em>recent average</em></div>
-    <div class="metricCard"><span class="metricIcon">⚡</span><small>Streak</small><strong id="dashStreak">—</strong><em>logged days</em></div>
-  </div>
+      <div class="premiumCard scheduleCard">
+        <div class="sectionHead"><div><span class="kicker">ADHERENCE ENGINE</span><h3>Plan my day</h3><p class="muted">Timing, reminders and calendar controls.</p></div><div class="sectionActions"><div id="timezoneStatus" class="timezoneBadge"></div><button class="cardExpandButton" onclick="toggleDenseCard('scheduleCard',this)">Customize</button></div></div>
+        <div class="scheduleGrid">
+          <label>Wake time<input id="scheduleWake" type="time" value="07:00"></label><label>Daily check-in<input id="scheduleCheckin" type="time" value="07:15"></label><label>First meal<input id="scheduleMeal" type="time" value="08:00"></label><label>Workout time<input id="scheduleWorkout" type="time" value="17:30"></label><label>Bedtime<input id="scheduleBed" type="time" value="23:00"></label><label>Meal spacing<select id="scheduleMealGap"><option value="3">Every ~3 hours</option><option value="4" selected>Every ~4 hours</option><option value="5">Every ~5 hours</option></select></label><label>Runway style<select id="scheduleMode"><option value="lifestyle" selected>Fit my lifestyle first</option><option value="performance">Performance-biased</option></select></label><label>Calendar reminder<select id="scheduleReminder"><option value="0">At event time</option><option value="10">10 min before</option><option value="15" selected>15 min before</option><option value="30">30 min before</option><option value="60">1 hour before</option></select></label>
+        </div>
+        <div class="reminderPanel"><div class="reminderPanelHead"><div><span class="kicker">SMART REMINDERS</span><strong>Accountability without notification spam</strong></div><span id="notificationStatusPill" class="notificationStatusPill">Not enabled</span></div><div class="reminderGrid"><label><input id="notifyCheckin" type="checkbox" checked onchange="saveNotificationSettings()"> Check-in</label><label><input id="notifyMeals" type="checkbox" checked onchange="saveNotificationSettings()"> Nutrition</label><label><input id="notifyWorkout" type="checkbox" checked onchange="saveNotificationSettings()"> Workouts</label><label><input id="notifySteps" type="checkbox" checked onchange="saveNotificationSettings()"> Steps</label><label><input id="notifyHydration" type="checkbox" checked onchange="saveNotificationSettings()"> Hydration</label><label><input id="notifyDrift" type="checkbox" checked onchange="saveNotificationSettings()"> Slippage / stalls</label><label><input id="notifyRecovery" type="checkbox" checked onchange="saveNotificationSettings()"> Recovery / bedtime</label><label>Quiet hours start<input id="notifyQuietStart" type="time" value="22:30" onchange="saveNotificationSettings()"></label><label>Quiet hours end<input id="notifyQuietEnd" type="time" value="07:00" onchange="saveNotificationSettings()"></label><label>Escalation<select id="notifyEscalation" onchange="saveNotificationSettings()"><option value="gentle">Gentle</option><option value="balanced" selected>Balanced</option><option value="firm">Firm</option></select></label></div><small>Calendar reminders remain the reliable closed-app fallback in this local beta.</small></div>
+        <div class="buttons scheduleActions"><button class="primary" onclick="saveSchedule()">Save my ideal times</button><button onclick="applyRecommendedRunway()">Use coach-recommended timing</button><button onclick="addTodayToGoogleCalendar()">Add today to Google Calendar</button><button onclick="downloadWeekCalendar()">Export 7 days (.ics)</button></div>
+        <div class="scheduleBody"><div><span class="kicker">TODAY'S RUNWAY</span><div id="runwayCoachNote" class="runwayCoachNote"></div><div id="dailyRunway" class="dailyRunway"></div></div><div><span class="kicker">NEXT BEST ACTION</span><div id="adherenceNudge" class="adherenceNudge"></div><div id="runwayRecommendations" class="runwayRecommendations"></div></div></div>
+      </div>
 
-  <div class="grid2">
-    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Weight</h3></div></div><canvas id="weightChart" width="600" height="220"></canvas></div>
-    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Waist</h3></div></div><canvas id="waistChart" width="600" height="220"></canvas></div>
-  </div>
+      <div class="premiumCard driftCard"><div class="sectionHead"><div><span class="kicker">DRIFT MONITOR</span><h3>Stay on course</h3><p class="muted">PhysiqueOS watches quietly and only brings this forward when it matters.</p></div><div class="sectionActions"><div id="driftStatus" class="driftStatus"></div><button class="cardExpandButton" onclick="toggleDenseCard('driftCard',this)">Details</button></div></div><div id="driftSignals" class="driftSignals"></div><div class="driftControls"><label>Monitor sensitivity<select id="driftSensitivity" onchange="saveDriftControls()"><option value="relaxed">Relaxed</option><option value="balanced" selected>Balanced</option><option value="strict">Strict</option></select></label><label>Minimum adherence<select id="driftAdherence" onchange="saveDriftControls()"><option value="75">75%</option><option value="80">80%</option><option value="85" selected>85%</option><option value="90">90%</option></select></label><label>Logging gap<select id="driftGap" onchange="saveDriftControls()"><option value="1">1 day</option><option value="2" selected>2 days</option><option value="3">3 days</option></select></label><label>Progress stall<select id="driftStall" onchange="saveDriftControls()"><option value="14">14 days</option><option value="21" selected>21 days</option><option value="28">28 days</option></select></label></div><div id="driftIntervention" class="driftIntervention"></div><div class="buttons"><button class="primary" onclick="activateRescueMode()">Start 3-day rescue</button><button onclick="downloadRescueCalendar()">Calendar rescue plan</button><button onclick="dismissDrift()">I’m back on track</button></div></div>
 
-  <div class="grid2">
-    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div>
-    <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div>
-  </div></div></details>
+      <details class="dashboardInsights"><summary><span><span class="kicker">DEEPER VIEW</span><strong>Trends, intelligence & setup</strong><small>Open this when you want the detail.</small></span><em>View insights</em></summary><div class="dashboardInsightsBody">
+        <div class="metricStrip"><div class="metricCard"><span class="metricIcon">◎</span><small>Calories</small><strong id="dashCalories">—</strong><em>daily target</em></div><div class="metricCard"><span class="metricIcon">↘</span><small>Weight</small><strong id="dashWeight">—</strong><em>latest check-in</em></div><div class="metricCard"><span class="metricIcon">✓</span><small>Adherence</small><strong id="dashAdherence">—</strong><em>recent average</em></div><div class="metricCard"><span class="metricIcon">⚡</span><small>Streak</small><strong id="dashStreak">—</strong><em>logged days</em></div></div>
+        <div class="grid2"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Weight</h3></div></div><canvas id="weightChart" width="600" height="220"></canvas></div><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">TREND</span><h3>Waist</h3></div></div><canvas id="waistChart" width="600" height="220"></canvas></div></div>
+        <div class="grid2"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PHYSIQUEOS INTELLIGENCE</span><h3>Adaptive review</h3></div></div><div id="homeCoach" class="coachInsight"></div><div id="adjustmentPanel"></div></div><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">SETUP</span><h3>Your path</h3></div></div><div id="gettingStarted"></div></div></div>
+      </div></details>
     </div>
   </details>
 </section>
@@ -349,9 +294,19 @@
 </div>
 </section>
 
-<section id="nutrition" class="tab"><div class="premiumCard"><div class="sectionHead"><div><span class="kicker">ADAPTIVE TARGETS</span><h2>Nutrition</h2></div></div><div id="nutritionOut"></div>
-<div id="macroAutomationPanel" class="macroAutomationPanel"></div>
-</div></section>
+<section id="nutrition" class="tab">
+  <div class="nutritionHero premiumHero">
+    <div><span class="kicker">NUTRITION</span><h2>Adaptive <em>Nutrition</em></h2><p>Evidence-based targets that adapt to your body, activity and progress.</p></div>
+    <div class="nutritionCalorieRing"><strong id="nutritionHeroCalories">—</strong><small>DAILY CALORIES</small><span id="nutritionTrendBadge">Adaptive</span></div>
+  </div>
+  <div id="nutritionOut"></div>
+  <div id="nutritionPremiumContent" class="nutritionPremiumContent">
+    <div class="premiumCard nutritionEnergyCard"><div class="sectionHead"><div><span class="kicker">DAILY ENERGY TARGETS</span><h3>Your starting point</h3></div></div><div class="nutritionEnergyGrid"><div><span class="nutritionOrb blue">⚡</span><small>BMR</small><strong id="nutritionBmr">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb violet">▥</span><small>TDEE</small><strong id="nutritionTdee">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb gold">♨</span><small>Daily calories</small><strong id="nutritionCalories">—</strong><em>kcal / day</em></div></div></div>
+    <div class="premiumCard macroTargetsCard"><div class="sectionHead"><div><span class="kicker">MACRO TARGETS</span><h3>Built around your goal</h3></div></div><div class="macroTargetGrid"><div class="macroTarget protein"><span class="nutritionOrb green">↔</span><div><small>PROTEIN</small><strong id="nutritionProtein">—</strong><em id="nutritionProteinMeta">—</em><b><i id="nutritionProteinBar"></i></b></div></div><div class="macroTarget carbs"><span class="nutritionOrb blue">◊</span><div><small>CARBS</small><strong id="nutritionCarbs">—</strong><em id="nutritionCarbsMeta">—</em><b><i id="nutritionCarbsBar"></i></b></div></div><div class="macroTarget fat"><span class="nutritionOrb violet">Ψ</span><div><small>FAT</small><strong id="nutritionFat">—</strong><em id="nutritionFatMeta">—</em><b><i id="nutritionFatBar"></i></b></div></div></div></div>
+    <div id="macroAutomationPanel" class="macroAutomationPanel"></div>
+    <div class="premiumCard groceryPreferenceCard"><div class="sectionHead"><div><span class="kicker">GROCERY & PREFERENCES</span><h3>Built for real life</h3></div><button class="textLink" onclick="showTab('meals')">Manage →</button></div><div class="groceryPreferenceGrid"><div><span class="nutritionOrb violet">🛒</span><div><small>Weekly grocery budget</small><strong id="nutritionBudget">—</strong><em id="nutritionMealPattern">Set in Meals or Profile</em></div></div><div><span class="nutritionOrb green">◇</span><div><small>Nutrition preferences</small><strong id="nutritionPreference">Balanced</strong><em id="nutritionPreferenceMeta">Flexible • personalized</em></div></div></div></div>
+  </div>
+</section>
 
 <section id="meals" class="tab">
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div>
@@ -374,13 +329,12 @@
 </section>
 
 <section id="training" class="tab">
-<div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PROGRESSIVE PROGRAMMING</span><h2>Training</h2></div></div>
-<div id="recoveryPlanner" class="recoveryPlanner"></div>
-<div id="readinessPanel"></div>
-<div class="buttons"><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><button onclick="showTab('dailylog')">Update readiness data</button></div>
-<div class="notice trainingTip"><strong>Effort tracking:</strong> log <strong>RIR per set</strong> because effort changes as fatigue accumulates. Session RPE is recorded once at the end to capture how hard the whole workout felt.</div>
-<div id="trainingPlan"></div></div>
-<div class="card"><h3>Workout history & progression</h3><div id="workoutHistory"></div></div>
+  <div id="readinessPanel"></div>
+  <div id="trainingSpotlight" class="trainingSpotlight"></div>
+  <div id="recoveryPlanner" class="recoveryPlanner"></div>
+  <div class="trainingControls"><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><button onclick="showTab('dailylog')">Update readiness</button></div>
+  <div class="trainingProgramShell"><div class="sectionHead"><div><span class="kicker">EXERCISES & LIVE COACHING</span><h2>Your training</h2></div></div><div id="trainingPlan"></div></div>
+  <details class="historyDrawer"><summary><span><strong>Workout history & progression</strong><small>Previous performance and body-modification notes</small></span><em>Open</em></summary><div id="workoutHistory"></div></details>
 </section>
 
 <section id="progress" class="tab">
@@ -495,5 +449,5 @@
 </div>
 
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=50"></script><script src="app.js?v=50"></script>
+<script src="data.js?v=51"></script><script src="app.js?v=51"></script>
 </body></html>
