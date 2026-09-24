@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#030712">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=51">
+<link rel="stylesheet" href="styles.css?v=52">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -15,7 +15,7 @@
 <header class="appHeader">
   <div class="brandBlock">
     <div class="brandMark"><span>P</span></div>
-    <div class="brandCopy"><div class="eyebrow">ADAPTIVE PERFORMANCE SYSTEM</div><h1>PhysiqueOS</h1><p>Adaptive coaching. Precision execution. Zero wasted motion.</p></div>
+    <div class="brandCopy"><h1>PhysiqueOS</h1><div class="eyebrow">ADAPTIVE PERFORMANCE SYSTEM</div><p>Adaptive coaching. Precision execution. Zero wasted motion.</p></div>
   </div>
   <div class="headerActions">
     <div class="systemStatus"><span></span><div><strong>System online</strong><small>Local-first beta</small></div></div>
@@ -23,13 +23,13 @@
   </div>
 </header>
 <nav class="appNav" aria-label="Primary navigation">
-<button data-tab="dashboard" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9Zm0-13h6V4h-6v3ZM4 20h6v-3H4v3Z"/></svg><span>Today</span></button>
-<button data-tab="training"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6m4-8v10m8-10v10m4-8v6M8 12h8"/></svg><span>Workouts</span></button>
+<button data-tab="dashboard" class="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm10 7h6V11h-6v9Zm0-13h6V4h-6v3ZM4 20h6v-3H4v3Z"/></svg><span>Home</span></button>
+<button data-tab="training"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6m4-8v10m8-10v10m4-8v6M8 12h8"/></svg><span>Training</span></button>
 <button data-tab="progress"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8M15 7h5v5"/></svg><span>Progress</span></button>
 <button data-tab="nutrition"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c4 3 6 6 6 10a6 6 0 1 1-12 0c0-4 2-7 6-10Zm-3 10c1.5 1 4.5 1 6 0"/></svg><span>Nutrition</span></button>
 <button data-tab="meals"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v8M4 3v5c0 2 4 2 4 0V3M6 11v10M15 3v18m0-18c3 0 5 2 5 5s-2 5-5 5"/></svg><span>Meals</span></button>
 <button data-tab="dailylog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6V4Zm3 4h6M9 12h6M9 16h4"/></svg><span>Check-in</span></button>
-<button data-tab="coach"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 12 .8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"/></svg><span>AI Coach</span></button>
+<button data-tab="coach"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 12 .8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"/></svg><span>Coach</span></button>
 <button data-tab="onboarding"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8c.7-3.4 3.1-5 7-5s6.3 1.6 7 5"/></svg><span>Profile</span></button>
 <button data-tab="data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5V5Zm4 0v14m6-14v14M5 9h14m-14 6h14"/></svg><span>Data</span></button>
 </nav>
@@ -78,17 +78,17 @@
   </div>
 
   <div class="premiumCard glanceCard">
-    <div class="sectionHead glanceHead"><div><span class="kicker">TODAY AT A GLANCE</span><h3>What matters today</h3></div><button class="textLink" onclick="showTab('dailylog')">View all →</button></div>
+    <div class="sectionHead glanceHead"><div><span class="kicker">TODAY AT A GLANCE</span><h3>What matters today</h3></div><button class="textLink" onclick="showTab('dailylog')">View All →</button></div>
     <div id="todayMetricsSnapshot" class="todayMetricsSnapshot flagshipSnapshot"></div>
   </div>
 
   <div class="quickActionsCard">
-    <div class="sectionHead quickActionsHead"><div><span class="kicker">QUICK ACTIONS</span><h3>One tap to move forward</h3></div></div>
+    <div class="sectionHead quickActionsHead"><div><span class="kicker">QUICK ACTIONS</span><h3>One tap to move forward</h3></div><button class="textLink" onclick="showTab('onboarding')">Customize →</button></div>
     <div class="simpleActions" aria-label="Quick actions">
-      <button onclick="showTab('training')"><span class="simpleActionIcon">↗</span><span><strong id="simpleWorkoutLabel">Start workout</strong><small>Open today’s training</small></span><b>›</b></button>
-      <button onclick="showTab('dailylog')"><span class="simpleActionIcon">＋</span><span><strong>Log today</strong><small>Steps, weight, water + more</small></span><b>›</b></button>
-      <button onclick="showTab('meals')"><span class="simpleActionIcon">⌁</span><span><strong>Plan meals</strong><small>Generate and customize meals</small></span><b>›</b></button>
-      <button onclick="showTab('coach')"><span class="simpleActionIcon">✦</span><span><strong>Ask Coach</strong><small>Get personalized guidance</small></span><b>›</b></button>
+      <button onclick="showTab('training')"><span class="simpleActionIcon"><svg viewBox="0 0 24 24"><path d="M3 9v6M6 7v10M18 7v10m3-8v6M6 12h12"/></svg></span><span><strong id="simpleWorkoutLabel">Start Workout</strong><small>Log your training session</small></span><b>›</b></button>
+      <button onclick="showTab('dailylog')"><span class="simpleActionIcon"><svg viewBox="0 0 24 24"><path d="M5 18V12m5 6V7m5 11V10m4 8V4"/></svg></span><span><strong>Log Today</strong><small>Steps, weight, water + more</small></span><b>›</b></button>
+      <button onclick="showTab('meals')"><span class="simpleActionIcon"><svg viewBox="0 0 24 24"><path d="M6 3v8M4 3v5c0 2 4 2 4 0V3M6 11v10M15 3v18m0-18c3 0 5 2 5 5s-2 5-5 5"/></svg></span><span><strong>Plan Meals</strong><small>Generate your 7-day plan</small></span><b>›</b></button>
+      <button onclick="showTab('coach')"><span class="simpleActionIcon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Zm6 12 .8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z"/></svg></span><span><strong>Ask Coach</strong><small>Get personalized advice</small></span><b>›</b></button>
     </div>
   </div>
 
@@ -301,8 +301,8 @@
   </div>
   <div id="nutritionOut"></div>
   <div id="nutritionPremiumContent" class="nutritionPremiumContent">
-    <div class="premiumCard nutritionEnergyCard"><div class="sectionHead"><div><span class="kicker">DAILY ENERGY TARGETS</span><h3>Your starting point</h3></div></div><div class="nutritionEnergyGrid"><div><span class="nutritionOrb blue">⚡</span><small>BMR</small><strong id="nutritionBmr">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb violet">▥</span><small>TDEE</small><strong id="nutritionTdee">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb gold">♨</span><small>Daily calories</small><strong id="nutritionCalories">—</strong><em>kcal / day</em></div></div></div>
-    <div class="premiumCard macroTargetsCard"><div class="sectionHead"><div><span class="kicker">MACRO TARGETS</span><h3>Built around your goal</h3></div></div><div class="macroTargetGrid"><div class="macroTarget protein"><span class="nutritionOrb green">↔</span><div><small>PROTEIN</small><strong id="nutritionProtein">—</strong><em id="nutritionProteinMeta">—</em><b><i id="nutritionProteinBar"></i></b></div></div><div class="macroTarget carbs"><span class="nutritionOrb blue">◊</span><div><small>CARBS</small><strong id="nutritionCarbs">—</strong><em id="nutritionCarbsMeta">—</em><b><i id="nutritionCarbsBar"></i></b></div></div><div class="macroTarget fat"><span class="nutritionOrb violet">Ψ</span><div><small>FAT</small><strong id="nutritionFat">—</strong><em id="nutritionFatMeta">—</em><b><i id="nutritionFatBar"></i></b></div></div></div></div>
+    <div class="premiumCard nutritionEnergyCard"><div class="sectionHead"><div><span class="kicker">DAILY ENERGY TARGETS</span></div><button class="textLink" onclick="showTab('onboarding')">Learn more →</button></div><div class="nutritionEnergyGrid"><div><span class="nutritionOrb blue">⚡</span><small>BMR</small><strong id="nutritionBmr">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb violet">▥</span><small>TDEE</small><strong id="nutritionTdee">—</strong><em>kcal / day</em></div><div><span class="nutritionOrb gold">♨</span><small>Daily calories</small><strong id="nutritionCalories">—</strong><em>kcal / day</em></div></div></div>
+    <div class="premiumCard macroTargetsCard"><div class="sectionHead"><div><span class="kicker">MACRO TARGETS</span></div><button class="textLink" onclick="showTab('onboarding')">Edit Targets →</button></div><div class="macroTargetGrid"><div class="macroTarget protein"><span class="nutritionOrb green">↔</span><div><small>PROTEIN</small><strong id="nutritionProtein">—</strong><em id="nutritionProteinMeta">—</em><b><i id="nutritionProteinBar"></i></b></div></div><div class="macroTarget carbs"><span class="nutritionOrb blue">◊</span><div><small>CARBS</small><strong id="nutritionCarbs">—</strong><em id="nutritionCarbsMeta">—</em><b><i id="nutritionCarbsBar"></i></b></div></div><div class="macroTarget fat"><span class="nutritionOrb violet">Ψ</span><div><small>FAT</small><strong id="nutritionFat">—</strong><em id="nutritionFatMeta">—</em><b><i id="nutritionFatBar"></i></b></div></div></div></div>
     <div id="macroAutomationPanel" class="macroAutomationPanel"></div>
     <div class="premiumCard groceryPreferenceCard"><div class="sectionHead"><div><span class="kicker">GROCERY & PREFERENCES</span><h3>Built for real life</h3></div><button class="textLink" onclick="showTab('meals')">Manage →</button></div><div class="groceryPreferenceGrid"><div><span class="nutritionOrb violet">🛒</span><div><small>Weekly grocery budget</small><strong id="nutritionBudget">—</strong><em id="nutritionMealPattern">Set in Meals or Profile</em></div></div><div><span class="nutritionOrb green">◇</span><div><small>Nutrition preferences</small><strong id="nutritionPreference">Balanced</strong><em id="nutritionPreferenceMeta">Flexible • personalized</em></div></div></div></div>
   </div>
@@ -449,5 +449,5 @@
 </div>
 
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=51"></script><script src="app.js?v=51"></script>
+<script src="data.js?v=52"></script><script src="app.js?v=52"></script>
 </body></html>
