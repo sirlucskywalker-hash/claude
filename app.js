@@ -544,15 +544,26 @@ function renderMacroAutomation(){
 function dateDaysFrom(date,n){const d=new Date(date+'T12:00:00');d.setDate(d.getDate()+n);return localDate(d)}
 function toggleMacroAutomation(on){state.macroAutomation.enabled=!!on;save();if(on)autoMacroReview(true);renderNutrition();renderMacroAutomation()}
 function renderNutrition(){
-  const blockers=safetyBlockers(state.profile);
+  const blockers=safetyBlockers(state.profile),out=el('nutritionOut'),content=el('nutritionPremiumContent');
   if(!blockers.length&&state.macro)autoMacroReview();
-  if(blockers.length){el('nutritionOut').innerHTML='<div class="notice dangerNotice"><strong>Automation paused.</strong><br>'+blockers.join('<br>')+'</div>';return}
-  if(!state.macro){el('nutritionOut').innerHTML='<div class="notice">Complete onboarding first.</div>';return}
-  const m=state.macro;
-  el('nutritionOut').innerHTML='<div class="metrics"><div class="card"><small>BMR estimate</small><strong>'+m.bmr+'</strong></div><div class="card"><small>TDEE estimate</small><strong>'+m.tdee+'</strong></div><div class="card"><small>Daily calories</small><strong>'+m.calories+'</strong></div></div><div class="card"><table><tr><th>Protein</th><th>Carbs</th><th>Fat</th></tr><tr><td>'+m.protein+'g</td><td>'+m.carbs+'g</td><td>'+m.fat+'g</td></tr></table></div><div class="notice">'+adaptive()+'</div>';
+  if(blockers.length){out.innerHTML='<div class="notice dangerNotice"><strong>Automation paused.</strong><br>'+blockers.join('<br>')+'</div>';if(content)content.classList.add('hidden');return}
+  if(!state.macro){out.innerHTML='<div class="notice">Complete onboarding first.</div>';if(content)content.classList.add('hidden');return}
+  out.innerHTML='';if(content)content.classList.remove('hidden');
+  const m=state.macro,total=m.protein*4+m.carbs*4+m.fat*9;
+  if(el('nutritionHeroCalories'))el('nutritionHeroCalories').textContent=m.calories;
+  if(el('nutritionBmr'))el('nutritionBmr').textContent=m.bmr;
+  if(el('nutritionTdee'))el('nutritionTdee').textContent=m.tdee;
+  if(el('nutritionCalories'))el('nutritionCalories').textContent=m.calories;
+  const vals=[['nutritionProtein','nutritionProteinMeta','nutritionProteinBar',m.protein,m.protein*4],['nutritionCarbs','nutritionCarbsMeta','nutritionCarbsBar',m.carbs,m.carbs*4],['nutritionFat','nutritionFatMeta','nutritionFatBar',m.fat,m.fat*9]];
+  vals.forEach(([id,meta,bar,g,k])=>{if(el(id))el(id).textContent=g+'g';if(el(meta))el(meta).textContent=Math.round(k/total*100)+'% • '+Math.round(k)+' kcal';if(el(bar))el(bar).style.width=Math.round(k/total*100)+'%'});
+  const t=rollingTrend();if(el('nutritionTrendBadge'))el('nutritionTrendBadge').textContent=t&&t.adherence!=null?t.adherence.toFixed(0)+'% adherence':'Adaptive';
+  if(el('nutritionBudget'))el('nutritionBudget').textContent=state.profile.budget?'$'+Math.round(state.profile.budget)+'/wk':'No limit set';
+  if(el('nutritionMealPattern'))el('nutritionMealPattern').textContent=(state.mealPrefs?.meals||state.profile.meals||4)+' meals'+((state.mealPrefs?.snacks||0)?' + '+state.mealPrefs.snacks+' snack'+(state.mealPrefs.snacks===1?'':'s'):'');
+  const diet=(state.profile.diet||'').trim(),priority=state.profile.groceryPriority||'balanced';
+  if(el('nutritionPreference'))el('nutritionPreference').textContent=diet||'Balanced';
+  if(el('nutritionPreferenceMeta'))el('nutritionPreferenceMeta').textContent=(priority==='budget'?'Budget-conscious':priority==='premium'?'Premium ingredients':'Flexible')+' • personalized';
   renderMacroAutomation();
 }
-
 function tokens(v){return(v||'').toLowerCase().split(/[,;\n]/).map(x=>x.trim()).filter(Boolean)}
 function dietAllowed(f){
   const d=(state.profile.diet||'').toLowerCase();
@@ -1249,8 +1260,20 @@ function readinessAdvice(){
   return{level:'low',score,title:'Low readiness',text:day.type==='training'?'Use a readiness-adjusted session: keep the main lifts, reduce load ~5–10% or remove 1 accessory set, and stay farther from failure. If pain or illness is present, do not force it.':'Choose full rest or easy active recovery. Today is not the day to chase calorie burn.'};
 }
 function renderReadiness(){
-  if(!el('readinessPanel'))return;const r=readinessAdvice();
-  el('readinessPanel').innerHTML='<div class="readinessCard '+r.level+'"><div><span class="kicker">COACH READINESS</span><h3>'+r.title+'</h3><p>'+r.text+'</p></div><div class="readinessScore">'+(r.score==null?'—':r.score)+'</div></div>';
+  if(!el('readinessPanel'))return;const r=readinessAdvice(),label=r.level==='high'?'High readiness':r.level==='medium'?'Moderate readiness':r.level==='low'?'Low readiness':r.title;
+  el('readinessPanel').innerHTML='<div class="readinessCard trainingReadinessHero '+r.level+'"><div><span class="kicker">TODAY\'S READINESS</span><h2>'+label+'</h2><p>'+r.text+'</p></div><div class="readinessScore"><strong>'+(r.score==null?'—':r.score)+'</strong><small>READINESS</small></div></div>';
+}
+function renderTrainingSpotlight(){
+  if(!el('trainingSpotlight'))return;
+  const day=dayType(today()),work=day.workout,r=readinessAdvice(),recovery=activeRecoveryPlan(),mins=state.profile.sessionLength||60;
+  if(day.type!=='training'||!work){
+    const rx=cardioPrescription();
+    el('trainingSpotlight').innerHTML='<div class="trainingSpotlightCard"><div class="spotlightIcon">↗</div><div><span class="kicker">TODAY\'S PLAN</span><h2>'+escapeHtml(day.title)+'</h2><p>'+escapeHtml(rx.text)+'</p></div><button class="primary" onclick="showTab(\'dailylog\')">Open today</button></div>';
+    return;
+  }
+  const count=work.items?.length||0,goal=state.profile.trainingGoal==='strength'?'Build strength':state.profile.trainingGoal==='performance'?'Performance':'Build muscle';
+  el('trainingSpotlight').innerHTML='<div class="trainingSpotlightCard"><div class="spotlightIcon">↗</div><div><span class="kicker">TODAY\'S WORKOUT</span><h2>'+escapeHtml(work.name)+'</h2><p>'+count+' exercises • ~'+mins+' min • '+goal+'</p></div><button class="primary" onclick="document.querySelector(\'#trainingPlan .workout\')?.scrollIntoView({behavior:\'smooth\'})">Start workout</button></div>'+
+    (recovery?'<div class="recoverySpotlight"><span>◈</span><div><small>RECOVERY PROTECTION</small><strong>Protecting '+escapeHtml(recovery.area)+'</strong><em>'+escapeHtml(recoveryTrainingMode(recovery).text)+'</em></div></div>':'');
 }
 function lastPerformance(name){
   const logs=lastExerciseLogs(name);if(!logs.length)return null;const last=logs[logs.length-1],sets=normalizeSetResults(last);return{date:last.date||'',sets};
@@ -1342,6 +1365,7 @@ function favoriteWorkoutOptions(){
 function renderTraining(){
   renderRecoveryPlanner();
   renderReadiness();
+  renderTrainingSpotlight();
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
   const areas=['','Shoulder','Elbow','Wrist/hand','Neck','Upper back','Low back','Hip','Groin','Knee','Ankle/foot','Other'];
@@ -1721,28 +1745,35 @@ function renderRecoveryHistory(){
 }
 function activityCalories(date=today()){return state.activityLogs.filter(x=>x.date===date).reduce((s,x)=>s+(+x.usedKcal||0),0)}
 function renderTodayMetricsSnapshot(){
-  if(!el('todayMetricsSnapshot'))return;
-  const x=currentLog()||{},metric=state.profile.units==='metric',food=dayFoodTotals(today()),burn=activityCalories(today());
+  const x=currentLog()||{},metric=state.profile.units==='metric',food=dayFoodTotals(today()),burn=activityCalories(today()),stepGoal=state.profile.stepGoal||8000,waterGoal=state.profile.waterGoalOz||100;
   const calories=x.calories??(food.cal?Math.round(food.cal):null);
-  const items=[
-    ['Steps',x.steps?x.steps.toLocaleString():'—'],
-    ['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—'],
-    ['Sleep',x.sleep?x.sleep+' h':'—'],
-    ['Weight',x.weight?(metric?(x.weight/2.20462).toFixed(1)+' kg':x.weight.toFixed(1)+' lb'):'—'],
-    ['Waist',x.waist?(metric?(x.waist*2.54).toFixed(1)+' cm':x.waist.toFixed(1)+' in'):'—'],
-    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—'],
-    ['Protein',food.p?Math.round(food.p)+' g':'—'],
-    ['Adherence',x.adherence!=null?Math.round(x.adherence)+'%':'—'],
-    ['Cardio burn',burn?burn+' kcal':'—'],
-    ['Resting HR',x.rhr?x.rhr+' bpm':'—'],
-    ['Hunger',x.hunger?x.hunger+'/10':'—'],
-    ['Energy',x.energy?x.energy+'/10':'—'],
-    ['Stress',x.stress?x.stress+'/10':'—'],
-    ['Recovery',x.recovery?x.recovery+'/10':'—'],
-    ['Digestion',x.digestion?x.digestion+'/10':'—'],
-    ['Soreness',x.soreness?x.soreness+'/10':'—']
+  const primary=[
+    ['Steps',x.steps?x.steps.toLocaleString():'—',(x.steps&&stepGoal)?Math.min(100,Math.round(x.steps/stepGoal*100)):0,'blue'],
+    ['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—',(x.water&&waterGoal)?Math.min(100,Math.round(x.water/waterGoal*100)):0,'cyan'],
+    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—',(calories!=null&&state.macro?.calories)?Math.min(100,Math.round(calories/state.macro.calories*100)):0,'coral'],
+    ['Sleep',x.sleep?x.sleep+' h':'—',(x.sleep&&state.profile.sleepGoal)?Math.min(100,Math.round(x.sleep/state.profile.sleepGoal*100)):0,'violet']
   ];
-  el('todayMetricsSnapshot').innerHTML=items.map(v=>'<div class="snapshotMetric"><span>'+v[0]+'</span><strong>'+v[1]+'</strong></div>').join('');
+  const html=primary.map(v=>'<div class="snapshotMetric flagshipMetric '+v[3]+'"><span>'+v[0]+'</span><strong>'+v[1]+'</strong><small>'+(v[0]==='Steps'?stepGoal.toLocaleString()+' goal':v[0]==='Water'?(metric?(waterGoal/33.814).toFixed(1)+' L goal':Math.round(waterGoal)+' oz goal'):v[0]==='Calories'?(state.macro?.calories?'of '+state.macro.calories.toLocaleString():'daily intake'):(state.profile.sleepGoal||7.5)+' h goal')+'</small><b><i style="width:'+v[2]+'%"></i></b></div>').join('');
+  if(el('todayMetricsSnapshot'))el('todayMetricsSnapshot').innerHTML=html;
+  const full=[
+    ['Steps',x.steps?x.steps.toLocaleString():'—'],['Water',x.water?(metric?(x.water/33.814).toFixed(1)+' L':Math.round(x.water)+' oz'):'—'],['Sleep',x.sleep?x.sleep+' h':'—'],
+    ['Weight',x.weight?(metric?(x.weight/2.20462).toFixed(1)+' kg':x.weight.toFixed(1)+' lb'):'—'],['Waist',x.waist?(metric?(x.waist*2.54).toFixed(1)+' cm':x.waist.toFixed(1)+' in'):'—'],
+    ['Calories',calories!=null?Math.round(calories).toLocaleString():'—'],['Protein',food.p?Math.round(food.p)+' g':'—'],['Adherence',x.adherence!=null?Math.round(x.adherence)+'%':'—'],
+    ['Cardio burn',burn?burn+' kcal':'—'],['Resting HR',x.rhr?x.rhr+' bpm':'—'],['Hunger',x.hunger?x.hunger+'/10':'—'],['Energy',x.energy?x.energy+'/10':'—'],
+    ['Stress',x.stress?x.stress+'/10':'—'],['Recovery',x.recovery?x.recovery+'/10':'—'],['Digestion',x.digestion?x.digestion+'/10':'—'],['Soreness',x.soreness?x.soreness+'/10':'—']
+  ];
+  if(el('todayMetricsSnapshotAdvanced'))el('todayMetricsSnapshotAdvanced').innerHTML=full.map(v=>'<div class="snapshotMetric"><span>'+v[0]+'</span><strong>'+v[1]+'</strong></div>').join('');
+}
+function renderHomeInsight(){
+  if(!el('homeInsightTitle'))return;
+  const t=trend(),score=dailyScore(),logs=state.logs.filter(x=>x.date>=dateDaysAgo(6));
+  let title='Your system is learning you.',text='Keep logging consistently and PhysiqueOS will surface the most useful trend here.';
+  if(t&&t.days>=7){
+    if(t.adh>=90){title='Consistency is driving the plan.';text='Recent adherence is '+t.adh.toFixed(0)+'%. PhysiqueOS is using that consistency to judge whether your targets actually need to change.'}
+    else if(t.adh<80){title='Execution is the biggest lever right now.';text='Recent adherence is '+(t.adh?t.adh.toFixed(0):'below target')+'%. The system will stabilize the plan before making aggressive changes.'}
+    else if(Math.abs(t.weekly)>.1){title='Your trend is moving.';text='Observed weight trend is about '+Math.abs(t.weekly).toFixed(2)+' lb/week '+(t.weekly>=0?'down':'up')+'. Multi-week consistency will determine the next adjustment.'}
+  }else if(score>=75){title='Today is on track.';text='Your current daily score is '+score+'/100. Keep the basics moving before chasing more complexity.'}
+  el('homeInsightTitle').textContent=title;el('homeInsightText').textContent=text;
 }
 
 function renderToday(){
@@ -1791,7 +1822,7 @@ function renderDashboard(){
   if(el('simpleWorkoutLabel')){const d=dayType(today());el('simpleWorkoutLabel').textContent=d.type==='training'?'Start workout':d.type==='rest'?'Recovery day':'Cardio / recovery'}
   const latest=[...state.logs].reverse().find(x=>x.weight),t=trend();
   el('welcome').textContent=state.profile.name?'Welcome back, '+state.profile.name+'.':'Build your baseline';
-  const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore(),ring=el('dailyScore').parentElement;el('dailyScore').textContent=ds||'—';ring.style.setProperty('--score',(ds||0)+'%');const st=ring.querySelector('.scoreStatus');if(st)st.textContent=ds>=90?'Elite':ds>=75?'Strong':ds>=55?'Building':ds?'Recover':'Live'};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
+  const metric=state.profile.units==='metric'; el('dashCalories').textContent=state.macro?state.macro.calories:'—';el('dashWeight').textContent=latest?(metric?(latest.weight/2.20462).toFixed(1)+' kg':latest.weight.toFixed(1)+' lb'):state.profile.weight?(metric?(state.profile.weight/2.20462).toFixed(1)+' kg':state.profile.weight.toFixed(1)+' lb'):'—';el('dashAdherence').textContent=t&&t.adh?t.adh.toFixed(0)+'%':'—';if(el('dashStreak'))el('dashStreak').textContent=logStreak()+'d';if(el('dailyScore')){const ds=dailyScore(),ring=el('dailyScore').parentElement;el('dailyScore').textContent=ds||'—';ring.style.setProperty('--score',(ds||0)+'%');const st=ring.querySelector('.scoreStatus');if(st)st.textContent=ds>=90?'Elite':ds>=75?'Strong':ds>=55?'Building':ds?'Recover':'Live'};if(el('timeGreeting')){const h=new Date().getHours();el('timeGreeting').textContent=(h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING')+'  /  '+(state.profile.goal==='fatloss'?'FAT LOSS':state.profile.goal==='gain'?'MUSCLE GAIN':state.profile.goal==='recomp'?'RECOMP':'MAINTENANCE')} el('homeCoach').textContent=adaptive();renderGettingStarted();renderToday();renderTodayMetricsSnapshot();renderAdjustment();renderHomeInsight();draw('weightChart','weight','Weight');draw('waistChart','waist','Waist');
 }
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
 function coachContext(){
@@ -1851,4 +1882,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=50').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=51').then(r=>r.update()).catch(()=>{});
