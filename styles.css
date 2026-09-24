@@ -1906,3 +1906,14 @@ main{max-width:860px!important;padding:0 24px 126px!important;margin:0 auto!impo
   .trainingProgramShell{padding:12px!important}.exerciseCard{padding:12px!important}.exerciseMockHead{grid-template-columns:32px 58px 1fr auto!important;gap:8px!important}.exerciseNumber{width:30px;height:30px;font-size:12px}.exerciseThumb{height:50px!important}.exerciseMockHead>div>strong{font-size:13px!important}.exerciseMockHead>div>small{font-size:7px!important}.exerciseMockControls{gap:4px!important}.exerciseMockControls>div>small{font-size:6px!important}.exerciseMockControls>div>span{grid-template-columns:23px 1fr 23px!important;min-height:45px!important}.exerciseMockControls button{font-size:14px!important}.exerciseMockControls strong{font-size:12px!important}
   .appNav{height:82px!important;left:8px!important;right:8px!important;bottom:max(8px,env(safe-area-inset-bottom))!important;padding:5px!important;border-radius:23px!important}.appNav button{min-height:70px!important;border-radius:15px!important}.appNav button svg{width:19px!important;height:19px!important}.appNav button span,.appNav button[data-tab="dashboard"] span:after,.appNav button[data-tab="training"] span:after,.appNav button[data-tab="coach"] span:after{font-size:6.5px!important}
 }
+
+/* V52 FINAL PARITY PATCH — activate the mockup parity layer */
+.heroScore:after{display:none!important;content:none!important}
+.scoreDelta{position:absolute!important;left:50%;top:calc(100% + 11px);transform:translateX(-50%);min-width:148px;padding:11px 18px;border-radius:999px;background:linear-gradient(180deg,rgba(7,42,83,.96),rgba(4,20,48,.98));border:1px solid rgba(54,128,255,.42);box-shadow:0 15px 38px rgba(0,0,0,.34);font-style:normal;text-align:center;z-index:3}
+.scoreDelta strong,.scoreDelta small{display:block}.scoreDelta strong{font-size:15px;color:#45ecd3}.scoreDelta small{font-size:9px;color:#a9b7ce;margin-top:2px}
+.brandCopy h1{order:1!important}.brandCopy .eyebrow{order:2!important}
+.exerciseThumb{overflow:hidden!important}.exerciseThumb>svg{width:100%!important;height:100%!important;display:block!important;stroke:none!important}
+@media(max-width:760px){
+  .heroScore{margin-bottom:28px!important}
+  .scoreDelta{min-width:128px;padding:8px 12px;top:calc(100% + 7px)}.scoreDelta strong{font-size:12px}.scoreDelta small{font-size:7px}
+}
