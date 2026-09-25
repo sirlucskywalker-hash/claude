@@ -267,14 +267,40 @@ state.notificationSent=state.notificationSent||{};
 const TACTICAL_PROFILES={
   civilian:{label:'Standard fitness',organizations:[['','Standard fitness']],tests:{custom:{label:'Custom performance assessment',events:[]}}},
   military:{label:'Military',organizations:[
-    ['army','Army'],['marines','Marine Corps'],['navy','Navy'],['airforce','Air Force / Space Force'],['coastguard','Coast Guard'],['othermil','Other / custom military']
+    ['army','Army — AFT'],['armycft','Army — Combat Field Test'],['armysfas','Army — Special Forces / SFAS prep'],['armyranger','Army — Ranger / high-performance selection prep'],
+    ['marines','Marine Corps — PFT + CFT'],['marsoc','Marine Corps — MARSOC A&S prep'],['recon','Marine Corps — Recon prep'],
+    ['navy','Navy — PRT'],['seal','Navy — SEAL PST prep'],['swcc','Navy — SWCC PST prep'],['navyeod','Navy — EOD PST prep'],['navydiver','Navy — Diver PST prep'],['airr','Navy — Aircrew Rescue Swimmer PST prep'],['hmatf','Navy — HM-ATF PST prep'],
+    ['airforce','Air Force — PRFA'],['afpj','Air Force — Pararescue / CRO IFT prep'],['afcct','Air Force — CCT / STO IFT prep'],['afsr','Air Force — Special Reconnaissance IFT prep'],['aftacp','Air Force — TACP / TACP-O operator prep'],['afeod','Air Force — EOD IFT prep'],['afsere','Air Force — SERE specialist prep'],
+    ['spaceforce','Space Force — HPA'],
+    ['coastguard','Coast Guard — service fitness / swim prep'],['cgdsf','Coast Guard — DSF / MSRT / MSST / TACLET prep'],['cgast','Coast Guard — Aviation Survival Technician / rescue-swimmer prep'],
+    ['othermil','Other / custom military']
   ],tests:{
-    army:{label:'Army field fitness prep',events:[['deadlift','Deadlift / lower-body strength','reps'],['pushup','Hand-release push-ups','reps'],['shuttle','Sprint / drag / carry shuttle','time'],['plank','Plank','time'],['run2','2-mile run','time'],['ruck','Loaded movement / ruck','time']]},
-    marines:{label:'Marine field fitness prep',events:[['pullups','Pull-ups / push-ups','reps'],['plank','Plank','time'],['run3','3-mile run','time'],['ammo','Repeated loaded lift','reps'],['maneuver','Maneuver under load','time']]},
-    navy:{label:'Navy fitness prep',events:[['pushup','Push-ups','reps'],['plank','Plank','time'],['run15','1.5-mile run / approved cardio','time'],['swim','Swim conditioning','time']]},
-    airforce:{label:'Air Force fitness prep',events:[['pushup','Push-up event','reps'],['core','Core endurance event','reps'],['run15','1.5-mile run / shuttle aerobic event','time'],['sprint','Short shuttle / speed reserve','time']]},
-    coastguard:{label:'Coast Guard fitness prep',events:[['pushup','Push-ups','reps'],['core','Core endurance','reps'],['run15','1.5-mile run','time'],['swim','Swim / water confidence conditioning','time']]},
-    othermil:{label:'Custom military test',events:[['run','Run event','time'],['calisthenics','Calisthenics event','reps'],['load','Loaded movement','time'],['carry','Carry / work-capacity event','time']]}
+    army:{label:'Army Fitness Test (AFT) prep',official:true,events:[['deadlift','3-repetition maximum deadlift','reps'],['pushup','Hand-release push-ups','reps'],['sdc','Sprint-drag-carry','time'],['plank','Plank','time'],['run2','2-mile run','time']]},
+    armycft:{label:'Army Combat Field Test (CFT) prep',official:true,events:[['cft1','1-mile run — opening','time'],['cftpush','30 dead-stop push-ups','reps'],['cftsprint','100 m sprint','time'],['sandbag','40-lb sandbag platform lifts','reps'],['watercan','Two-can 50 m carry','time'],['crawl','High crawl + rush movement','time'],['cft2','1-mile run — finish','time']]},
+    armysfas:{label:'Army Special Forces Assessment & Selection prep',selection:true,events:[['run2','2-mile run benchmark','time'],['run5','5-mile run benchmark','time'],['ruck6','6-mile ruck benchmark','time'],['ruck12','12-mile ruck benchmark','time'],['pullups','Pull-ups','reps'],['pushup','Hand-release push-ups','reps'],['grip','Grip / carry capacity','reps']]},
+    armyranger:{label:'Army Ranger / high-performance selection prep',selection:true,events:[['run2','2-mile run benchmark','time'],['run5','5-mile run benchmark','time'],['ruck12','12-mile loaded movement benchmark','time'],['pullups','Pull-ups','reps'],['pushup','Push-ups','reps'],['core','Trunk endurance','time'],['carry','Loaded carry capacity','time']]},
+    marines:{label:'Marine Corps PFT + CFT prep',official:true,events:[['pullups','Pull-ups / push-up option','reps'],['plank','Plank','time'],['run3','3-mile run','time'],['cft880','CFT 880-yard movement to contact','time'],['ammo','Ammunition-can lifts','reps'],['maneuver','Maneuver under fire','time']]},
+    marsoc:{label:'MARSOC Assessment & Selection prep',selection:true,events:[['pft','Marine PFT score / benchmark','reps'],['run3','3-mile run benchmark','time'],['swim300','300 m continuous swim','time'],['tread','Water tread','time'],['ruck8','8-mile 45-lb ruck','time'],['ruck10','10-mile 45-lb ruck','time']]},
+    recon:{label:'Marine Recon physical prep',selection:true,events:[['run3','3-mile run','time'],['pullups','Pull-ups','reps'],['plank','Plank','time'],['swim500','500 m swim benchmark','time'],['tread','Water tread / confidence','time'],['ruck','Loaded movement benchmark','time']]},
+    navy:{label:'Navy Physical Readiness Test prep',official:true,events:[['pushup','Push-ups','reps'],['plank','Forearm plank','time'],['run15','1.5-mile run','time'],['altcardio','Alternate cardio benchmark','time']]},
+    seal:{label:'Navy SEAL Physical Screening Test prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    swcc:{label:'Navy SWCC Physical Screening Test prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    navyeod:{label:'Navy EOD Physical Screening Test prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    navydiver:{label:'Navy Diver Physical Screening Test prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    airr:{label:'Navy Aircrew Rescue Swimmer PST prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    hmatf:{label:'Navy HM-ATF Physical Screening Test prep',selection:true,events:[['swim500','500-yard swim','time'],['pushup','Push-ups — 2 min','reps'],['situp','Sit-ups — 2 min','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time']]},
+    airforce:{label:'Air Force Physical Fitness Readiness Assessment prep',official:true,events:[['run2','2-mile run / HAMR aerobic option','time'],['pushup','Push-up / hand-release push-up option','reps'],['core','Core endurance option','reps'],['whtr','Waist-to-height ratio','score']]},
+    afpj:{label:'Air Force Pararescue / CRO IFT + pipeline prep',selection:true,events:[['pullups','Pull-ups','reps'],['situps','Sit-ups','reps'],['pushups','Push-ups','reps'],['run15','1.5-mile run','time'],['swim','Timed swim','time'],['underwater','Underwater / aquatic confidence readiness','time']]},
+    afcct:{label:'Air Force CCT / STO IFT + pipeline prep',selection:true,events:[['pullups','Pull-ups','reps'],['situps','Sit-ups','reps'],['pushups','Push-ups','reps'],['run15','1.5-mile run','time'],['swim','Timed swim','time'],['ruck','Loaded movement benchmark','time']]},
+    afsr:{label:'Air Force Special Reconnaissance IFT + pipeline prep',selection:true,events:[['pullups','Pull-ups','reps'],['situps','Sit-ups','reps'],['pushups','Push-ups','reps'],['run15','1.5-mile run','time'],['swim','Timed swim','time'],['ruck','Loaded movement benchmark','time']]},
+    aftacp:{label:'Air Force TACP / TACP-O operator prep',selection:true,events:[['pullups','Pull-ups','reps'],['pushups','Push-ups','reps'],['core','Core endurance','reps'],['run15','1.5-mile run','time'],['ruck','Loaded movement benchmark','time'],['carry','Loaded carry capacity','time']]},
+    afeod:{label:'Air Force EOD IFT + field prep',selection:true,events:[['pullups','Pull-ups','reps'],['pushups','Push-ups','reps'],['situps','Sit-ups','reps'],['run15','1.5-mile run','time'],['carry','Equipment carry capacity','time'],['work','Work-capacity circuit','time']]},
+    afsere:{label:'Air Force SERE specialist physical prep',selection:true,events:[['pullups','Pull-ups','reps'],['pushups','Push-ups','reps'],['core','Core endurance','reps'],['run15','1.5-mile run','time'],['ruck','Loaded movement benchmark','time'],['grip','Grip / carry capacity','reps']]},
+    spaceforce:{label:'Space Force Human Performance Assessment prep',official:true,events:[['run2','2-mile run / HAMR','time'],['pushup','Tempo or hand-release push-ups','reps'],['core','Sit-up / reverse crunch / plank option','reps'],['hpa','Overall HPA readiness','score']]},
+    coastguard:{label:'Coast Guard fitness + swim prep',official:true,events:[['pushup','Push-ups','reps'],['situp','Sit-ups','reps'],['run15','1.5-mile run','time'],['swim','Swim benchmark','time']]},
+    cgdsf:{label:'Coast Guard Deployable Specialized Forces prep',selection:true,events:[['run15','1.5-mile run benchmark','time'],['pushup','Push-ups','reps'],['pullups','Pull-ups','reps'],['swim','Swim / water confidence','time'],['carry','Loaded carry capacity','time'],['work','Repeated work-capacity circuit','time']]},
+    cgast:{label:'Coast Guard rescue-swimmer / AST prep',selection:true,events:[['swim500','500-yard swim benchmark','time'],['tread','Water tread','time'],['pushup','Push-ups','reps'],['pullups','Pull-ups','reps'],['run15','1.5-mile run','time'],['fin','Fin / sustained swim conditioning','time']]},
+    othermil:{label:'Custom military test / selection prep',events:[['run','Run event','time'],['calisthenics','Calisthenics event','reps'],['load','Loaded movement','time'],['swim','Swim / water event','time'],['carry','Carry / work-capacity event','time']]}
   }},
   fire:{label:'Fire / rescue',organizations:[['fire','Fire academy / department'],['wildland','Wildland fire'],['rescue','Technical rescue'],['otherfire','Other / custom fire']],tests:{
     fire:{label:'CPAT-style firefighter prep',events:[['stairs','Weighted stair climb','time'],['hose','Hose drag','time'],['carry','Equipment carry','time'],['ladder','Ladder raise / extension','time'],['entry','Forcible-entry work capacity','time'],['search','Search / crawl','time'],['drag','Rescue drag','time'],['ceiling','Ceiling breach / pull','time']]},
@@ -297,6 +323,17 @@ const TACTICAL_PROFILES={
   }}
 };
 function tacticalProfile(){return TACTICAL_PROFILES[state.profile.tacticalRole||'civilian']||TACTICAL_PROFILES.civilian}
+function tacticalIsSelectionTrack(){return !!tacticalTestDefinition().selection}
+function tacticalTrackKey(){return state.profile.tacticalTest||state.profile.tacticalOrganization||''}
+function tacticalSelectionQualities(){
+  const key=tacticalTrackKey();
+  const water=/seal|swcc|navyeod|navydiver|airr|hmatf|afpj|afcct|afsr|marsoc|recon|cgast|cgdsf/.test(key);
+  const ruck=/armysfas|armyranger|marsoc|recon|afcct|afsr|aftacp|afsere|cgdsf/.test(key);
+  const out=['Aerobic durability','Calisthenics reserve','Relative strength','Grip & carry endurance','Recovery under repeated training'];
+  if(ruck)out.push('Progressive loaded movement');
+  if(water)out.push('Swim efficiency / water confidence');
+  return out;
+}
 function tacticalTestDefinition(){
   const role=state.profile.tacticalRole||'civilian',org=state.profile.tacticalOrganization||'',test=state.profile.tacticalTest||org||'custom',profile=TACTICAL_PROFILES[role]||TACTICAL_PROFILES.civilian;
   return profile.tests[test]||profile.tests[org]||profile.tests.custom||{label:'Custom assessment',events:[]};
@@ -313,6 +350,7 @@ function tacticalPhase(){
 function tacticalEventValue(event,key){return state.tacticalResults?.[event]?.[key]||''}
 function saveTacticalResult(event,key,value){state.tacticalResults[event]=state.tacticalResults[event]||{};state.tacticalResults[event][key]=value;save()}
 function tacticalFieldQualities(){
+  if(tacticalIsSelectionTrack())return tacticalSelectionQualities();
   const role=state.profile.tacticalRole||'civilian',demand=state.profile.tacticalDemand||'balanced';
   const common=['Aerobic base','Repeat sprint ability','Relative strength','Grip & trunk endurance','Loaded carry capacity'];
   if(role==='fire')return['Stair capacity','Loaded carries','Grip endurance','Drag / pull strength','High-output work capacity','Crawl / awkward-position tolerance'];
@@ -323,17 +361,22 @@ function tacticalFieldQualities(){
 }
 function buildTacticalPlan(){
   if(!tacticalIsActive()){state.tacticalPlan=null;return null}
-  const def=tacticalTestDefinition(),phase=tacticalPhase(),role=state.profile.tacticalRole,demand=state.profile.tacticalDemand||'balanced',load=+state.profile.tacticalLoad||0;
-  const eventNames=def.events.map(x=>x[1]);
-  const runEvent=def.events.some(x=>/run|aerobic|hike|pack/i.test(x[1]));
-  const loadEvent=def.events.some(x=>/carry|drag|stair|pack|ruck|loaded|hose|stretcher/i.test(x[1]));
+  const def=tacticalTestDefinition(),phase=tacticalPhase(),role=state.profile.tacticalRole,demand=state.profile.tacticalDemand||'balanced',load=+state.profile.tacticalLoad||0,key=tacticalTrackKey(),selection=!!def.selection;
+  const events=def.events||[],eventNames=events.map(x=>x[1]);
+  const runEvent=events.some(x=>/run|aerobic|hike|pack|hamr/i.test(x[1]));
+  const swimEvent=events.some(x=>/swim|water|tread|aquatic|fin/i.test(x[1]));
+  const loadEvent=events.some(x=>/carry|drag|stair|pack|ruck|loaded|hose|stretcher|sandbag/i.test(x[1]))||/sfas|ranger|marsoc|recon|tacp|sere|dsf/.test(key);
+  const calEvent=events.some(x=>/push|pull|sit-up|plank|core|calisthenic/i.test(x[1]));
   const sessions=[];
-  sessions.push({type:'engine',title:'Aerobic engine',detail:phase.key==='base'?'30–45 min easy conversational aerobic work. Build duration before intensity.':phase.key==='peak'?'20–30 min easy aerobic recovery; keep legs fresh.':'30–40 min easy aerobic work plus 4–6 relaxed strides.',tag:'Aerobic'});
-  if(runEvent)sessions.push({type:'test',title:'Run / test-pace development',detail:phase.key==='peak'?'Short controlled intervals at target test rhythm with full recovery; reduce total volume.':phase.key==='specific'?'Intervals near test pace plus one shorter tempo exposure.':'Short intervals focused on mechanics and repeatable quality, not exhaustion.',tag:'Test'});
-  if(loadEvent||demand==='load')sessions.push({type:'load',title:'Loaded movement & carries',detail:(load?load+'-lb ':'')+'loaded carries / stair or ruck exposure at controlled effort. Progress one variable at a time: duration, distance or load.',tag:'Load'});
-  sessions.push({type:'power',title:role==='fire'?'Job circuit / work capacity':role==='law'?'Sprint, agility & pursuit capacity':role==='ems'?'Carry + floor-to-stand circuit':'Field work capacity',detail:phase.key==='peak'?'One short event-specific circuit at submaximal volume.':'3–5 quality rounds using role-specific carries, drags, stairs, calisthenics or short shuttle work with enough recovery to keep technique clean.',tag:'Field'});
-  sessions.push({type:'strength',title:'Strength maintenance',detail:'Keep 2–4 key compound patterns per week: squat/lunge, hinge, push, pull, carry. Favor quality and reserve over failure.',tag:'Strength'});
-  state.tacticalPlan={generated:today(),phase:phase.key,role,test:def.label,sessions,events:eventNames};save();return state.tacticalPlan;
+  sessions.push({type:'engine',title:'Aerobic engine',detail:phase.key==='base'?'35–55 min easy conversational aerobic work. Build durable volume before chasing intensity.':phase.key==='peak'?'20–35 min easy aerobic recovery; keep fatigue low.':'30–45 min easy aerobic work plus 4–6 relaxed strides.',tag:'Aerobic'});
+  if(runEvent)sessions.push({type:'test',title:'Run / test-pace development',detail:phase.key==='peak'?'Short controlled reps at target rhythm with full recovery and reduced volume.':phase.key==='specific'?'One interval session near test pace plus one controlled threshold / tempo exposure.':'Short intervals focused on mechanics, speed reserve and repeatable quality.',tag:'Run'});
+  if(calEvent||selection)sessions.push({type:'cal',title:'Calisthenics density',detail:phase.key==='peak'?'Maintain test rhythm with low-volume crisp sets; no failure.':'Submaximal push-up, pull-up and trunk-endurance density work. Accumulate clean reps while preserving 2–4 reps in reserve.',tag:'Calisthenics'});
+  if(loadEvent)sessions.push({type:'load',title:'Loaded movement & carries',detail:(load?load+'-lb ':'')+'ruck / carry / stair exposure at controlled effort. Progress only one variable at a time—load, distance, elevation or pace—to protect feet, shins and connective tissue.',tag:'Load'});
+  if(swimEvent)sessions.push({type:'water',title:'Swim efficiency & water capacity',detail:'Technique-first swim intervals, continuous aerobic swimming and confidence work in an appropriate supervised environment. Avoid unsupervised underwater breath-hold training.',tag:'Water'});
+  sessions.push({type:'power',title:role==='fire'?'Job circuit / work capacity':role==='law'?'Sprint, agility & pursuit capacity':role==='ems'?'Carry + floor-to-stand circuit':selection?'Selection work capacity':'Field work capacity',detail:phase.key==='peak'?'One short event-specific circuit at submaximal volume.':'3–5 quality rounds using carries, drags, stairs, short shuttles and ground-to-feet work with enough recovery to keep movement quality high.',tag:'Field'});
+  sessions.push({type:'strength',title:'Strength & durability',detail:'Maintain squat/lunge, hinge, push, pull and carry patterns. For selection prep, prioritize relative strength, posterior-chain durability, feet/calves and trunk endurance without bodybuilding-level soreness.',tag:'Strength'});
+  if(selection)sessions.push({type:'recovery',title:'Selection durability / recovery',detail:'At least one low-intensity recovery day plus deliberate foot, calf, shoulder and trunk maintenance. Sleep and fueling become performance variables as weekly volume rises.',tag:'Durability'});
+  state.tacticalPlan={generated:today(),phase:phase.key,role,test:def.label,selection,sessions,events:eventNames};save();return state.tacticalPlan;
 }
 function syncTacticalProfileUI(){
   if(!el('tacticalRole'))return;
@@ -350,12 +393,13 @@ function syncTacticalProfileUI(){
 function renderTacticalPerformance(){
   if(!el('tacticalPerformancePanel'))return;
   if(!tacticalIsActive()){el('tacticalPerformancePanel').innerHTML='<div class="tacticalEntryCard"><div><span class="kicker">TACTICAL PERFORMANCE</span><strong>Military & first-responder programming</strong><small>Profile → Tactical / occupational performance unlocks test prep, field conditioning and role-specific readiness without replacing your normal strength plan.</small></div><button onclick="showTab(\'onboarding\')">Set up →</button></div>';return}
-  const def=tacticalTestDefinition(),phase=tacticalPhase(),days=tacticalDaysToTest(),plan=state.tacticalPlan||buildTacticalPlan(),qualities=tacticalFieldQualities(),roleLabel=tacticalProfile().label;
+  const def=tacticalTestDefinition(),phase=tacticalPhase(),days=tacticalDaysToTest(),plan=state.tacticalPlan||buildTacticalPlan(),qualities=tacticalFieldQualities(),roleLabel=tacticalProfile().label,selection=!!def.selection;
   const eventRows=def.events.length?def.events.map(e=>'<div class="tacticalEvent"><div><strong>'+escapeHtml(e[1])+'</strong><small>'+(e[2]==='time'?'Time / distance result':'Reps / score')+'</small></div><label>Current<input value="'+escapeHtml(tacticalEventValue(e[0],'current'))+'" placeholder="'+(e[2]==='time'?'e.g. 13:20':'e.g. 42')+'" onchange="saveTacticalResult(\''+e[0]+'\',\'current\',this.value)"></label><label>Target<input value="'+escapeHtml(tacticalEventValue(e[0],'target'))+'" placeholder="Goal" onchange="saveTacticalResult(\''+e[0]+'\',\'target\',this.value)"></label></div>').join(''):'<div class="notice">Add your agency-specific events in Profile notes. Custom event-builder expansion is planned.</div>';
   const sessions=(plan?.sessions||[]).map((s,idx)=>'<div class="tacticalSession '+s.type+'"><span>'+String(idx+1).padStart(2,'0')+'</span><div><small>'+escapeHtml(s.tag)+'</small><strong>'+escapeHtml(s.title)+'</strong><p>'+escapeHtml(s.detail)+'</p></div></div>').join('');
-  el('tacticalPerformancePanel').innerHTML='<div class="tacticalHero"><div><span class="kicker">TACTICAL / FIELD PERFORMANCE</span><h2>'+escapeHtml(roleLabel)+'</h2><p>'+escapeHtml(def.label)+' • '+phase.label+(days!=null?' • '+Math.max(0,days)+' days to test':'')+'</p></div><div class="tacticalPhase"><small>CURRENT BLOCK</small><strong>'+phase.label+'</strong><span>'+escapeHtml(phase.detail)+'</span></div></div>'+
+  el('tacticalPerformancePanel').innerHTML='<div class="tacticalHero"><div><span class="kicker">'+(selection?'SELECTION / OPERATOR PREP':'TACTICAL / FIELD PERFORMANCE')+'</span><h2>'+escapeHtml(roleLabel)+'</h2><p>'+escapeHtml(def.label)+' • '+phase.label+(days!=null?' • '+Math.max(0,days)+' days to test':'')+'</p>'+(selection?'<span class="selectionBadge">ADVANCED PHYSICAL PREP</span>':'')+'</div><div class="tacticalPhase"><small>CURRENT BLOCK</small><strong>'+phase.label+'</strong><span>'+escapeHtml(phase.detail)+'</span></div></div>'+
     '<div class="tacticalGrid"><div class="tacticalCard"><div class="sectionHead"><div><span class="kicker">TEST DASHBOARD</span><h3>Know exactly what you’re preparing for</h3></div><button onclick="showTab(\'onboarding\')">Edit test</button></div><div class="tacticalEvents">'+eventRows+'</div><small class="tacticalDisclaimer">Standards and events can vary by branch, academy, age/sex category or agency. Verify the official requirements you are being tested against.</small></div>'+
     '<div class="tacticalCard"><div class="sectionHead"><div><span class="kicker">FIELD QUALITIES</span><h3>Built for the job, not just the gym</h3></div></div><div class="qualityChips">'+qualities.map(q=>'<span>'+escapeHtml(q)+'</span>').join('')+'</div><div class="fieldLoad"><span>Typical carried load</span><strong>'+(state.profile.tacticalLoad?state.profile.tacticalLoad+' lb':'Not set')+'</strong></div></div></div>'+
+    (selection?'<div class="selectionGuardrail"><strong>Selection prep is broader than a fitness test.</strong><span>This layer develops the physical qualities commonly demanded by high-performance military pipelines. It does not reproduce classified/controlled training, guarantee selection, or replace official cadre/recruiter guidance. Water-confidence work should be supervised.</span></div>':'')+
     '<div class="tacticalCard tacticalProgramming"><div class="sectionHead"><div><span class="kicker">WEEKLY TACTICAL LAYER</span><h3>Runs beside your strength plan</h3></div><button class="primary" onclick="buildTacticalPlan();renderTacticalPerformance()">Rebuild block</button></div><div class="tacticalSessions">'+sessions+'</div></div>';
 }
 const FAQ_LIBRARY={
@@ -2037,4 +2081,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=53').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=54').then(r=>r.update()).catch(()=>{});
