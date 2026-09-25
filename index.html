@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#030712">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
 <title>PhysiqueOS — Adaptive Performance</title>
 </head>
 <body><div class="ambientGrid" aria-hidden="true"></div>
@@ -264,6 +264,25 @@
 <label>Daily step goal<input id="stepGoal" type="number" value="8000" step="500"></label>
 <label>Daily water goal <span id="waterGoalUnit">oz</span><input id="waterGoal" type="number" value="100" step="5"></label>
 <label>Sleep goal<select id="sleepGoal"><option value="6">6 hours</option><option value="6.5">6.5 hours</option><option value="7">7 hours</option><option value="7.5" selected>7.5 hours</option><option value="8">8 hours</option><option value="8.5">8.5 hours</option><option value="9">9 hours</option><option value="9.5">9.5 hours</option><option value="10">10 hours</option></select></label>
+<fieldset class="wide tacticalProfileSetup">
+  <legend>Tactical / occupational performance <span class="muted">optional</span></legend>
+  <div class="tacticalProfileGrid">
+    <label>Performance track<select id="tacticalRole" onchange="syncTacticalProfileUI()">
+      <option value="civilian" selected>Standard fitness</option>
+      <option value="military">Military</option>
+      <option value="fire">Fire / rescue</option>
+      <option value="law">Law enforcement</option>
+      <option value="ems">EMS / medical response</option>
+    </select></label>
+    <label>Branch / agency type<select id="tacticalOrganization" onchange="syncTacticalProfileUI()"><option value="">Choose track first</option></select></label>
+    <label>Assessment / test<select id="tacticalTest" onchange="syncTacticalProfileUI()"><option value="custom">Custom / agency-specific test</option></select></label>
+    <label>Test / academy date <span class="muted">optional</span><input id="tacticalTestDate" type="date"></label>
+    <label>Typical carried load (lb)<input id="tacticalLoad" type="number" min="0" step="5" placeholder="e.g. 35"></label>
+    <label>Field demand<select id="tacticalDemand"><option value="balanced">Balanced tactical readiness</option><option value="endurance">Run / aerobic dominant</option><option value="load">Ruck / loaded movement dominant</option><option value="power">Sprint / power dominant</option><option value="workcapacity">High work-capacity dominant</option></select></label>
+    <label class="wide">Role / academy notes<textarea id="tacticalNotes" placeholder="Examples: academy starts in 10 weeks, 45-lb vest, stair-heavy department test, 2-mile run is weakest event..."></textarea></label>
+  </div>
+  <div class="tacticalProfileNote">PhysiqueOS uses this to add test prep, loaded movement, work capacity, grip, running and field-readiness work around your strength plan. Agency standards vary, so official pass/fail requirements should always be verified with your organization.</div>
+</fieldset>
 
 <label>Meals/day<select id="mealsPerDay"><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
 <label>Meal style<select id="mealStyle"><option value="structured">Structured</option><option value="hybrid" selected>Hybrid</option><option value="flexible">Flexible</option></select></label>
@@ -331,6 +350,7 @@
 <section id="training" class="tab">
   <div id="readinessPanel"></div>
   <div id="trainingSpotlight" class="trainingSpotlight"></div>
+  <div id="tacticalPerformancePanel" class="tacticalPerformancePanel"></div>
   <div id="recoveryPlanner" class="recoveryPlanner"></div>
   <div class="trainingControls"><button class="primary" onclick="generateTraining()">Generate / regenerate program</button><button onclick="showTab('dailylog')">Update readiness</button></div>
   <div class="trainingProgramShell"><div class="sectionHead"><div><span class="kicker">EXERCISES & LIVE COACHING</span><h2>Your training</h2></div></div><div id="trainingPlan"></div></div>
@@ -449,5 +469,5 @@
 </div>
 
 <footer>PhysiqueOS Beta • adaptive • local-first • no required monthly infrastructure</footer>
-<script src="data.js?v=52"></script><script src="app.js?v=52"></script>
+<script src="data.js?v=53"></script><script src="app.js?v=53"></script>
 </body></html>
