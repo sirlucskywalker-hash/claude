@@ -248,6 +248,8 @@ state.dayMealPrefs=state.dayMealPrefs||{};
 state.activeTimer=state.activeTimer||null;
 state.trainingFlags=Array.isArray(state.trainingFlags)?state.trainingFlags:[];
 state.recoveryPlan=state.recoveryPlan||null;
+state.tacticalResults=state.tacticalResults||{};
+state.tacticalPlan=state.tacticalPlan||null;
 state.trainingDrafts=state.trainingDrafts||{};
 state.favoriteFoods=Array.isArray(state.favoriteFoods)?state.favoriteFoods:[];
 state.foodDayTemplates=Array.isArray(state.foodDayTemplates)?state.foodDayTemplates:[];
@@ -262,6 +264,100 @@ state.notificationSettings=state.notificationSettings||{checkin:true,meals:true,
 state.notifications=Array.isArray(state.notifications)?state.notifications:[];
 state.notificationSent=state.notificationSent||{};
 
+const TACTICAL_PROFILES={
+  civilian:{label:'Standard fitness',organizations:[['','Standard fitness']],tests:{custom:{label:'Custom performance assessment',events:[]}}},
+  military:{label:'Military',organizations:[
+    ['army','Army'],['marines','Marine Corps'],['navy','Navy'],['airforce','Air Force / Space Force'],['coastguard','Coast Guard'],['othermil','Other / custom military']
+  ],tests:{
+    army:{label:'Army field fitness prep',events:[['deadlift','Deadlift / lower-body strength','reps'],['pushup','Hand-release push-ups','reps'],['shuttle','Sprint / drag / carry shuttle','time'],['plank','Plank','time'],['run2','2-mile run','time'],['ruck','Loaded movement / ruck','time']]},
+    marines:{label:'Marine field fitness prep',events:[['pullups','Pull-ups / push-ups','reps'],['plank','Plank','time'],['run3','3-mile run','time'],['ammo','Repeated loaded lift','reps'],['maneuver','Maneuver under load','time']]},
+    navy:{label:'Navy fitness prep',events:[['pushup','Push-ups','reps'],['plank','Plank','time'],['run15','1.5-mile run / approved cardio','time'],['swim','Swim conditioning','time']]},
+    airforce:{label:'Air Force fitness prep',events:[['pushup','Push-up event','reps'],['core','Core endurance event','reps'],['run15','1.5-mile run / shuttle aerobic event','time'],['sprint','Short shuttle / speed reserve','time']]},
+    coastguard:{label:'Coast Guard fitness prep',events:[['pushup','Push-ups','reps'],['core','Core endurance','reps'],['run15','1.5-mile run','time'],['swim','Swim / water confidence conditioning','time']]},
+    othermil:{label:'Custom military test',events:[['run','Run event','time'],['calisthenics','Calisthenics event','reps'],['load','Loaded movement','time'],['carry','Carry / work-capacity event','time']]}
+  }},
+  fire:{label:'Fire / rescue',organizations:[['fire','Fire academy / department'],['wildland','Wildland fire'],['rescue','Technical rescue'],['otherfire','Other / custom fire']],tests:{
+    fire:{label:'CPAT-style firefighter prep',events:[['stairs','Weighted stair climb','time'],['hose','Hose drag','time'],['carry','Equipment carry','time'],['ladder','Ladder raise / extension','time'],['entry','Forcible-entry work capacity','time'],['search','Search / crawl','time'],['drag','Rescue drag','time'],['ceiling','Ceiling breach / pull','time']]},
+    wildland:{label:'Wildland field readiness',events:[['pack','Loaded pack hike','time'],['hike','Sustained uphill hiking','time'],['carry','Tool / equipment carry','time'],['work','Extended work capacity','time']]},
+    rescue:{label:'Rescue operator readiness',events:[['stairs','Stair climb','time'],['carry','Equipment carry','time'],['drag','Rescue drag','time'],['grip','Grip / rope work','reps'],['work','Sustained work circuit','time']]},
+    otherfire:{label:'Custom fire assessment',events:[['stairs','Stair / climb event','time'],['carry','Carry event','time'],['drag','Drag event','time'],['aerobic','Aerobic event','time']]}
+  }},
+  law:{label:'Law enforcement',organizations:[['patrol','Patrol / academy'],['state','State / highway patrol'],['federal','Federal LE'],['corrections','Corrections'],['otherlaw','Other / custom LE']],tests:{
+    patrol:{label:'Police academy / PAT prep',events:[['run15','1.5-mile run','time'],['sprint300','300 m sprint','time'],['pushup','Push-ups','reps'],['situp','Sit-ups / core event','reps'],['agility','Agility / obstacle event','time'],['drag','Body / dummy drag','time']]},
+    state:{label:'State patrol readiness',events:[['run15','1.5-mile run','time'],['sprint','Sprint / pursuit speed','time'],['pushup','Push-ups','reps'],['core','Core endurance','reps'],['drag','Rescue / body drag','time']]},
+    federal:{label:'Federal LE readiness',events:[['run15','1.5-mile run','time'],['sprint300','300 m sprint','time'],['pushup','Push-ups','reps'],['core','Core endurance','reps'],['agility','Change of direction','time']]},
+    corrections:{label:'Corrections readiness',events:[['stairs','Stairs / repeated climbing','time'],['pushup','Push-ups','reps'],['carry','Equipment / casualty carry','time'],['control','Ground-to-feet work capacity','reps'],['aerobic','Aerobic endurance','time']]},
+    otherlaw:{label:'Custom law-enforcement test',events:[['run','Run event','time'],['sprint','Sprint event','time'],['calisthenics','Calisthenics event','reps'],['agility','Agility event','time'],['drag','Drag / carry event','time']]}
+  }},
+  ems:{label:'EMS / medical response',organizations:[['ems','EMS / paramedic'],['hospital','Hospital response team'],['flight','Flight / critical care transport'],['otherems','Other / custom EMS']],tests:{
+    ems:{label:'EMS field-readiness assessment',events:[['stairs','Loaded stair climb','time'],['stretcher','Stretcher / patient carry','time'],['kneel','Repeated kneel-to-stand','reps'],['carry','Equipment carry','time'],['cpr','CPR-position endurance','time'],['aerobic','Aerobic capacity','time']]},
+    hospital:{label:'Hospital response readiness',events:[['carry','Equipment carry','time'],['stairs','Stair climb','time'],['kneel','Floor-to-stand capacity','reps'],['aerobic','Aerobic endurance','time']]},
+    flight:{label:'Critical-care transport readiness',events:[['carry','Loaded carry','time'],['stairs','Stair / aircraft access','time'],['core','Trunk endurance','time'],['aerobic','Aerobic capacity','time']]},
+    otherems:{label:'Custom EMS assessment',events:[['carry','Carry event','time'],['stairs','Stair event','time'],['work','Work-capacity event','time'],['aerobic','Aerobic event','time']]}
+  }}
+};
+function tacticalProfile(){return TACTICAL_PROFILES[state.profile.tacticalRole||'civilian']||TACTICAL_PROFILES.civilian}
+function tacticalTestDefinition(){
+  const role=state.profile.tacticalRole||'civilian',org=state.profile.tacticalOrganization||'',test=state.profile.tacticalTest||org||'custom',profile=TACTICAL_PROFILES[role]||TACTICAL_PROFILES.civilian;
+  return profile.tests[test]||profile.tests[org]||profile.tests.custom||{label:'Custom assessment',events:[]};
+}
+function tacticalIsActive(){return !!state.profile.age&&(state.profile.tacticalRole||'civilian')!=='civilian'}
+function tacticalDaysToTest(){if(!state.profile.tacticalTestDate)return null;const d=Math.ceil((new Date(state.profile.tacticalTestDate+'T12:00:00')-new Date(today()+'T12:00:00'))/86400000);return d}
+function tacticalPhase(){
+  const d=tacticalDaysToTest();if(d==null)return{key:'build',label:'Build',detail:'Develop a broad field-ready base while keeping test events in the program.'};
+  if(d<=14)return{key:'peak',label:'Peak / taper',detail:'Prioritize test specificity, quality exposures and recovery. Avoid unnecessary fatigue.'};
+  if(d<=42)return{key:'specific',label:'Test-specific',detail:'Increase event specificity while maintaining strength and aerobic capacity.'};
+  if(d<=84)return{key:'build',label:'Build',detail:'Build event capacity, strength endurance, aerobic power and loaded movement tolerance.'};
+  return{key:'base',label:'Base',detail:'Build aerobic capacity, foundational strength, tissue tolerance and clean event technique.'};
+}
+function tacticalEventValue(event,key){return state.tacticalResults?.[event]?.[key]||''}
+function saveTacticalResult(event,key,value){state.tacticalResults[event]=state.tacticalResults[event]||{};state.tacticalResults[event][key]=value;save()}
+function tacticalFieldQualities(){
+  const role=state.profile.tacticalRole||'civilian',demand=state.profile.tacticalDemand||'balanced';
+  const common=['Aerobic base','Repeat sprint ability','Relative strength','Grip & trunk endurance','Loaded carry capacity'];
+  if(role==='fire')return['Stair capacity','Loaded carries','Grip endurance','Drag / pull strength','High-output work capacity','Crawl / awkward-position tolerance'];
+  if(role==='law')return['Acceleration & sprinting','Change of direction','Upper-body endurance','Aerobic recovery','Drag / carry strength','Ground-to-feet capacity'];
+  if(role==='ems')return['Stair endurance','Stretcher / equipment carries','Trunk endurance','Kneel-to-stand capacity','Aerobic durability','Shift-fatigue resilience'];
+  if(role==='military')return demand==='load'?['Ruck durability','Loaded carries','Lower-body strength','Foot / calf capacity','Aerobic base','Trunk endurance']:common.concat(['Calisthenics capacity','Ruck / field movement']);
+  return common;
+}
+function buildTacticalPlan(){
+  if(!tacticalIsActive()){state.tacticalPlan=null;return null}
+  const def=tacticalTestDefinition(),phase=tacticalPhase(),role=state.profile.tacticalRole,demand=state.profile.tacticalDemand||'balanced',load=+state.profile.tacticalLoad||0;
+  const eventNames=def.events.map(x=>x[1]);
+  const runEvent=def.events.some(x=>/run|aerobic|hike|pack/i.test(x[1]));
+  const loadEvent=def.events.some(x=>/carry|drag|stair|pack|ruck|loaded|hose|stretcher/i.test(x[1]));
+  const sessions=[];
+  sessions.push({type:'engine',title:'Aerobic engine',detail:phase.key==='base'?'30–45 min easy conversational aerobic work. Build duration before intensity.':phase.key==='peak'?'20–30 min easy aerobic recovery; keep legs fresh.':'30–40 min easy aerobic work plus 4–6 relaxed strides.',tag:'Aerobic'});
+  if(runEvent)sessions.push({type:'test',title:'Run / test-pace development',detail:phase.key==='peak'?'Short controlled intervals at target test rhythm with full recovery; reduce total volume.':phase.key==='specific'?'Intervals near test pace plus one shorter tempo exposure.':'Short intervals focused on mechanics and repeatable quality, not exhaustion.',tag:'Test'});
+  if(loadEvent||demand==='load')sessions.push({type:'load',title:'Loaded movement & carries',detail:(load?load+'-lb ':'')+'loaded carries / stair or ruck exposure at controlled effort. Progress one variable at a time: duration, distance or load.',tag:'Load'});
+  sessions.push({type:'power',title:role==='fire'?'Job circuit / work capacity':role==='law'?'Sprint, agility & pursuit capacity':role==='ems'?'Carry + floor-to-stand circuit':'Field work capacity',detail:phase.key==='peak'?'One short event-specific circuit at submaximal volume.':'3–5 quality rounds using role-specific carries, drags, stairs, calisthenics or short shuttle work with enough recovery to keep technique clean.',tag:'Field'});
+  sessions.push({type:'strength',title:'Strength maintenance',detail:'Keep 2–4 key compound patterns per week: squat/lunge, hinge, push, pull, carry. Favor quality and reserve over failure.',tag:'Strength'});
+  state.tacticalPlan={generated:today(),phase:phase.key,role,test:def.label,sessions,events:eventNames};save();return state.tacticalPlan;
+}
+function syncTacticalProfileUI(){
+  if(!el('tacticalRole'))return;
+  const role=el('tacticalRole').value||'civilian',profile=TACTICAL_PROFILES[role]||TACTICAL_PROFILES.civilian,org=el('tacticalOrganization'),test=el('tacticalTest');
+  const priorOrg=org.value,priorTest=test.value;
+  org.innerHTML=profile.organizations.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join('');
+  if(profile.organizations.some(x=>x[0]===priorOrg))org.value=priorOrg;
+  const orgKey=org.value||profile.organizations[0]?.[0]||'';
+  const defs=profile.tests||{},options=Object.entries(defs).filter(([key])=>key===orgKey||key==='custom');
+  const preferred=defs[orgKey]?[orgKey,defs[orgKey]]:Object.entries(defs)[0];
+  test.innerHTML=(preferred?[preferred]:options).map(([key,v])=>'<option value="'+key+'">'+v.label+'</option>').join('');
+  if([...test.options].some(x=>x.value===priorTest))test.value=priorTest;
+}
+function renderTacticalPerformance(){
+  if(!el('tacticalPerformancePanel'))return;
+  if(!tacticalIsActive()){el('tacticalPerformancePanel').innerHTML='<div class="tacticalEntryCard"><div><span class="kicker">TACTICAL PERFORMANCE</span><strong>Military & first-responder programming</strong><small>Profile → Tactical / occupational performance unlocks test prep, field conditioning and role-specific readiness without replacing your normal strength plan.</small></div><button onclick="showTab(\'onboarding\')">Set up →</button></div>';return}
+  const def=tacticalTestDefinition(),phase=tacticalPhase(),days=tacticalDaysToTest(),plan=state.tacticalPlan||buildTacticalPlan(),qualities=tacticalFieldQualities(),roleLabel=tacticalProfile().label;
+  const eventRows=def.events.length?def.events.map(e=>'<div class="tacticalEvent"><div><strong>'+escapeHtml(e[1])+'</strong><small>'+(e[2]==='time'?'Time / distance result':'Reps / score')+'</small></div><label>Current<input value="'+escapeHtml(tacticalEventValue(e[0],'current'))+'" placeholder="'+(e[2]==='time'?'e.g. 13:20':'e.g. 42')+'" onchange="saveTacticalResult(\''+e[0]+'\',\'current\',this.value)"></label><label>Target<input value="'+escapeHtml(tacticalEventValue(e[0],'target'))+'" placeholder="Goal" onchange="saveTacticalResult(\''+e[0]+'\',\'target\',this.value)"></label></div>').join(''):'<div class="notice">Add your agency-specific events in Profile notes. Custom event-builder expansion is planned.</div>';
+  const sessions=(plan?.sessions||[]).map((s,idx)=>'<div class="tacticalSession '+s.type+'"><span>'+String(idx+1).padStart(2,'0')+'</span><div><small>'+escapeHtml(s.tag)+'</small><strong>'+escapeHtml(s.title)+'</strong><p>'+escapeHtml(s.detail)+'</p></div></div>').join('');
+  el('tacticalPerformancePanel').innerHTML='<div class="tacticalHero"><div><span class="kicker">TACTICAL / FIELD PERFORMANCE</span><h2>'+escapeHtml(roleLabel)+'</h2><p>'+escapeHtml(def.label)+' • '+phase.label+(days!=null?' • '+Math.max(0,days)+' days to test':'')+'</p></div><div class="tacticalPhase"><small>CURRENT BLOCK</small><strong>'+phase.label+'</strong><span>'+escapeHtml(phase.detail)+'</span></div></div>'+
+    '<div class="tacticalGrid"><div class="tacticalCard"><div class="sectionHead"><div><span class="kicker">TEST DASHBOARD</span><h3>Know exactly what you’re preparing for</h3></div><button onclick="showTab(\'onboarding\')">Edit test</button></div><div class="tacticalEvents">'+eventRows+'</div><small class="tacticalDisclaimer">Standards and events can vary by branch, academy, age/sex category or agency. Verify the official requirements you are being tested against.</small></div>'+
+    '<div class="tacticalCard"><div class="sectionHead"><div><span class="kicker">FIELD QUALITIES</span><h3>Built for the job, not just the gym</h3></div></div><div class="qualityChips">'+qualities.map(q=>'<span>'+escapeHtml(q)+'</span>').join('')+'</div><div class="fieldLoad"><span>Typical carried load</span><strong>'+(state.profile.tacticalLoad?state.profile.tacticalLoad+' lb':'Not set')+'</strong></div></div></div>'+
+    '<div class="tacticalCard tacticalProgramming"><div class="sectionHead"><div><span class="kicker">WEEKLY TACTICAL LAYER</span><h3>Runs beside your strength plan</h3></div><button class="primary" onclick="buildTacticalPlan();renderTacticalPerformance()">Rebuild block</button></div><div class="tacticalSessions">'+sessions+'</div></div>';
+}
 const FAQ_LIBRARY={
 'Getting started':[
 'What should I focus on first?','How do I use PhysiqueOS every day?','How often should I weigh myself?','When should I take progress photos?','How often should I update measurements?','How accurate are my starting calorie targets?'
@@ -292,6 +388,9 @@ const FAQ_LIBRARY={
 ],
 'Travel & lifestyle':[
 'How do I stay on plan while traveling?','How do I handle alcohol or a night out?','What if I miss a workout?','What if I miss several days?','How do I handle holidays?','How do I handle a busy work week?'
+],
+'Military & first responder performance':[
+'How should I prepare for my fitness test?','How should I balance running and lifting for an academy?','How do I improve loaded carries without wrecking recovery?','How should I prepare for stairs, drags and carries?','How close to my test should I taper?','How should I train around long shifts?','How should I build ruck or vest tolerance?','What field qualities am I neglecting?'
 ],
 'Progress & check-ins':[
 'Analyze my progress.','What is the biggest thing holding me back?','Am I actually adherent?','What should change this week?','Which metric matters most right now?','Why are my photos improving but the scale is not?','When should I update my goal?'
@@ -387,10 +486,13 @@ function saveProfile(){
     stores:el('stores').value.trim(),groceryPriority:el('groceryPriority').value,cuisines:el('cuisines').value,diet:el('diet').value,
     allergies:el('allergies').value,exclude:el('exclude').value,preferredFoods:el('preferredFoods').value,injuries:el('injuries').value,
     pregnant:el('pregnant').checked,edRisk:el('edRisk').checked,redFlag:el('redFlag').checked,acuteInjury:el('acuteInjury').checked,
-    equipment:[...document.querySelectorAll('.eq:checked')].map(x=>x.value)
+    equipment:[...document.querySelectorAll('.eq:checked')].map(x=>x.value),
+    tacticalRole:el('tacticalRole')?.value||'civilian',tacticalOrganization:el('tacticalOrganization')?.value||'',tacticalTest:el('tacticalTest')?.value||'custom',
+    tacticalTestDate:el('tacticalTestDate')?.value||'',tacticalLoad:+(el('tacticalLoad')?.value||0),tacticalDemand:el('tacticalDemand')?.value||'balanced',tacticalNotes:el('tacticalNotes')?.value||''
   };
   if(!p.age||!p.weight||!p.heightCm)return alert('Enter age, height and weight.');
   state.profile=p;
+  state.tacticalPlan=null;if((p.tacticalRole||'civilian')!=='civilian')buildTacticalPlan();
   state.macroAutomation=state.macroAutomation||{enabled:true,lastReview:null,lastAdjustment:null,history:[]};
   state.macroAutomation.lastReview=null;
   const blockers=safetyBlockers(p);
@@ -401,8 +503,12 @@ function saveProfile(){
 }
 function loadProfile(){
   const p=state.profile;if(!p.age){toggleUnits();return}
-  const simple=['name','age','sex','units','bf','activity','goal','aggr','trainingGoal','days','experience','sessionLength','trainingEnvironment','preferredDays','cardioPreference','stepGoal','sleepGoal','mealStyle','mealVariety','cookingSkill','prepTolerance','mealsOut','budget','zip','stores','groceryPriority','cuisines','diet'];
+  const simple=['name','age','sex','units','bf','activity','goal','aggr','trainingGoal','days','experience','sessionLength','trainingEnvironment','preferredDays','cardioPreference','stepGoal','sleepGoal','mealStyle','mealVariety','cookingSkill','prepTolerance','mealsOut','budget','zip','stores','groceryPriority','cuisines','diet','tacticalRole','tacticalTestDate','tacticalLoad','tacticalDemand'];
   simple.forEach(k=>{if(el(k)&&p[k]!=null)el(k).value=p[k]});
+  syncTacticalProfileUI();
+  if(el('tacticalOrganization')&&p.tacticalOrganization){el('tacticalOrganization').value=p.tacticalOrganization;syncTacticalProfileUI()}
+  if(el('tacticalTest')&&p.tacticalTest)el('tacticalTest').value=p.tacticalTest;
+  if(el('tacticalNotes'))el('tacticalNotes').value=p.tacticalNotes||'';
   if(el('mealsPerDay'))el('mealsPerDay').value=p.meals||4;
   if(p.units==='metric'){el('heightCm').value=p.heightCm||'';el('weightInput').value=(p.weight/2.20462).toFixed(1);el('goalWeightInput').value=(p.goalWeight/2.20462).toFixed(1)}
   else{el('ft').value=p.ft||Math.floor((p.heightCm/2.54)/12);el('inch').value=p.inch||Math.round((p.heightCm/2.54)%12);el('weightInput').value=p.weight?p.weight.toFixed(1):'';el('goalWeightInput').value=p.goalWeight?p.goalWeight.toFixed(1):''}
@@ -1071,7 +1177,7 @@ function generateTraining(){
     return{name:chooseEx(m,di+i),muscle:m,sets:baseSets,minReps:range[0],maxReps:range[1],rir:exp==='advanced'?2:3};
   })
 }));
-  save();renderTraining();
+  if(tacticalIsActive())buildTacticalPlan();save();renderTraining();
 }
 function lastExerciseLogs(name){return state.workoutLogs.flatMap(w=>w.exercises||[]).filter(x=>x.name===name).slice(-2)}
 function exerciseMuscle(item){return item.muscle||EXERCISES.find(e=>e.name===item.name)?.m||''}
@@ -1405,6 +1511,7 @@ function renderTraining(){
   renderRecoveryPlanner();
   renderReadiness();
   renderTrainingSpotlight();
+  renderTacticalPerformance();
   if(trainingBlocked(state.profile)){el('trainingPlan').innerHTML='<div class="notice dangerNotice">Training automation is paused by the safety screening.</div>';return}
   if(!state.trainingPlan.length){el('trainingPlan').innerHTML='<div class="notice">Generate a program first.</div>';el('workoutHistory').innerHTML='';return}
   const areas=['','Shoulder','Elbow','Wrist/hand','Neck','Upper back','Low back','Hip','Groin','Knee','Ankle/foot','Other'];
@@ -1923,11 +2030,11 @@ async function resetAll(){
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();syncTacticalProfileUI();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
 document.body.dataset.view='dashboard';
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=52').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=53').then(r=>r.update()).catch(()=>{});
