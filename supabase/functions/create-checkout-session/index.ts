@@ -2,6 +2,17 @@ import Stripe from "npm:stripe";
 import { createClient } from "npm:@supabase/supabase-js";
 import { corsHeaders } from "../_shared/cors.ts";
 
+const PRICE_MAP: Record<string,string> = {
+  core_monthly: "price_1ULEM2QbcyKGduUYuINH0jFU",
+  core_annual: "price_1ULEMNQbcyKGduUYXezyDSib",
+  founding_monthly: "price_1ULEMPQbcyKGduUYCWAHIjpJ",
+  pro_monthly: "price_1ULEMRQbcyKGduUYetoaBdCp",
+  pro_annual: "price_1ULEMTQbcyKGduUYifT3HsuZ",
+  elite_monthly: "price_1ULEMVQbcyKGduUYrYLJL0gy",
+  elite_annual: "price_1ULEMXQbcyKGduUYS53pcpuR",
+  concierge_monthly: "price_1ULEMZQbcyKGduUYXuZhd1UM"
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok",{headers:corsHeaders});
   try {
@@ -16,9 +27,9 @@ Deno.serve(async (req) => {
     const {data:{user}} = await supabase.auth.getUser();
     if (!user) throw new Error("Unauthorized");
 
-    const {priceId, successUrl, cancelUrl} = await req.json();
-    const allowed = [Deno.env.get("STRIPE_PRICE_MONTHLY"),Deno.env.get("STRIPE_PRICE_ANNUAL"),Deno.env.get("STRIPE_PRICE_BETA")].filter(Boolean);
-    if (!allowed.includes(priceId)) throw new Error("Invalid price");
+    const {planCode, successUrl, cancelUrl} = await req.json();
+    const priceId = PRICE_MAP[planCode];
+    if (!priceId) throw new Error("Invalid plan");
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
@@ -26,7 +37,10 @@ Deno.serve(async (req) => {
     let {data:billing} = await admin.from("billing_customers").select("stripe_customer_id").eq("user_id",user.id).maybeSingle();
     let customerId = billing?.stripe_customer_id;
     if (!customerId) {
-      const customer = await stripe.customers.create({email:user.email,metadata:{supabase_user_id:user.id}});
+      const customer = await stripe.customers.create({
+        email:user.email,
+        metadata:{supabase_user_id:user.id}
+      });
       customerId = customer.id;
       await admin.from("billing_customers").insert({user_id:user.id,stripe_customer_id:customerId});
     }
@@ -38,7 +52,12 @@ Deno.serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       allow_promotion_codes:true,
-      subscription_data:{metadata:{supabase_user_id:user.id}}
+      subscription_data:{
+        metadata:{
+          supabase_user_id:user.id,
+          physiqueos_plan_code:planCode
+        }
+      }
     });
 
     return Response.json({url:session.url},{headers:corsHeaders});
