@@ -3,7 +3,8 @@ Prepared September 30, 2026. Base repository: sirlucskywalker-hash/claude, commi
 Target Supabase project: PhysiqueOS (oyrtpvtzaoftinqoossn).
 
 ## Current status
-Approved by the owner September 30, 2026. Migration 20260930230346 was applied successfully to production. All three billing handlers are ACTIVE at version 2. Matching client source is included in this release.
+Approved by the owner September 30, 2026. Migration 20260930230346 was applied successfully to production. All three billing handlers are ACTIVE at version 2. Matching client source was published in commit 347b04a; GitHub Pages deployment passed. The follow-up migration 20260930230928 removes anonymous execution of inherited privileged helper functions.
+All 15 behavioral scenarios passed again after release. Live billing probe reports incomplete setup; Stripe still has no webhook endpoint.
 Paid enrollment remains closed pending secure billing configuration and end-to-end verification.
 
 ## Prepared changes
