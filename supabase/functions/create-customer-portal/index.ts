@@ -1,28 +1,28 @@
-import Stripe from "npm:stripe";
-import { createClient } from "npm:@supabase/supabase-js";
-import { corsHeaders } from "../_shared/cors.ts";
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok",{headers:corsHeaders});
-  try {
-    const auth=req.headers.get("Authorization");
-    if(!auth) throw new Error("Missing authorization");
-    const supabase=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_ANON_KEY")!,{global:{headers:{Authorization:auth}}});
-    const {data:{user}}=await supabase.auth.getUser();
-    if(!user) throw new Error("Unauthorized");
-
+import Stripe from "npm:stripe@22.6.0";
+import {createClient} from "npm:@supabase/supabase-js@2.57.4";
+import {corsHeaders,json,configured} from "../_shared/cors.ts";
+import {returnUrl} from "../_shared/billing-logic.mjs";
+Deno.serve(async(req)=>{
+  if(req.method==="OPTIONS")return new Response(null,{headers:corsHeaders(req)});
+  if(req.method!=="POST")return json(req,{error:"Method not allowed"},405);
+  if(!configured())return json(req,{error:"Billing setup is not complete"},503);
+  try{
     const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const {data:billing}=await admin.from("billing_customers").select("stripe_customer_id").eq("user_id",user.id).single();
-    if(!billing) throw new Error("Billing customer not found");
-
+    const token=req.headers.get("Authorization")?.replace(/^Bearer /i,"");
+    if(!token)return json(req,{error:"Sign in first"},401);
+    const {data:{user},error:authError}=await admin.auth.getUser(token);
+    if(authError||!user)return json(req,{error:"Sign in first"},401);
+    const {data:billing,error}=await admin.from("billing_customers").select("stripe_customer_id").eq("user_id",user.id).maybeSingle();
+    if(error)throw error;
+    if(!billing)return json(req,{error:"No paid subscription yet"},404);
+    const body=await req.json();
     const stripe=new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
-    const body=await req.json().catch(()=>({}));
     const session=await stripe.billingPortal.sessions.create({
-      customer:billing.stripe_customer_id,
-      return_url:body.returnUrl || Deno.env.get("SITE_URL")!
+      customer:billing.stripe_customer_id,return_url:returnUrl(body.returnUrl,Deno.env.get("SITE_URL"))
     });
-    return Response.json({url:session.url},{headers:corsHeaders});
-  } catch(e) {
-    return Response.json({error:String(e?.message||e)},{status:400,headers:corsHeaders});
+    return json(req,{url:session.url});
+  }catch(error){
+    console.error("portal failed",error instanceof Error?error.name:"unknown");
+    return json(req,{error:"Billing portal unavailable"},500);
   }
 });

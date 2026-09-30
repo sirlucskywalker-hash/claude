@@ -1,172 +1,213 @@
 (()=>{
-const SUPABASE_URL="https://oyrtpvtzaoftinqoossn.supabase.co";
-const SUPABASE_KEY="sb_publishable_O4RTSpXiy-wpOkpjo8a5tg_pfjw4VBc";
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-window.physiqueCloud={client:sb,user:null,plan:"none",features:new Set(),syncTimer:null};
-
-function injectAuth(){
-  if(document.getElementById("cloudAuth")) return;
-  const wrap=document.createElement("div");
-  wrap.id="cloudAuth";
-  wrap.innerHTML=`
-  <div id="authGate" class="authGate hidden">
-    <div class="authCard">
-      <div class="brandMark authBrand"><span>P</span></div>
-      <span class="kicker">PHYSIQUEOS ACCOUNT</span>
-      <h2 id="authTitle">Sign in</h2>
-      <p id="authCopy">Your account keeps your plan, progress and coaching data synced securely across devices.</p>
-      <label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
-      <label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••"></label>
-      <label id="authNameRow" class="hidden">Name<input id="authName" autocomplete="name" placeholder="Your name"></label>
-      <label id="inviteRow" class="hidden">Invite code<input id="inviteCode" autocomplete="off" placeholder="Optional beta invite code"></label>
-      <div id="authMessage" class="authMessage"></div>
-      <button id="authPrimary" class="primary fullBtn" type="button">Sign in</button>
-      <button id="authToggle" class="ghostBtn fullBtn" type="button">Create account</button>
-      <button id="authReset" class="textLink authTextBtn" type="button">Forgot password?</button>
-      <small>By continuing, you agree to the current PhysiqueOS Terms and Privacy Policy.</small>
-    </div>
-  </div>
-  <div id="accountPill" class="accountPill hidden">
-    <span><strong id="accountName">Account</strong><small id="accountPlan">SYNCED</small></span>
-    <button id="accountMenuBtn" aria-label="Account menu">•••</button>
-    <div id="accountMenu" class="accountMenu hidden">
-      <button id="syncNowBtn">Sync now</button>
-      <button id="billingBtn">Manage billing</button>
-      <a href="admin.html" id="adminLink" class="hidden">Owner dashboard</a>
-      <button id="signOutBtn">Sign out</button>
-    </div>
-  </div>`;
-  document.body.appendChild(wrap);
+const sb=window.supabase.createClient("https://oyrtpvtzaoftinqoossn.supabase.co","sb_publishable_O4RTSpXiy-wpOkpjo8a5tg_pfjw4VBc");
+const cloud=window.physiqueCloud={client:sb,user:null,plan:"none",features:new Set(),limits:{},revision:0,syncTimer:null,ready:false,busy:false,dirty:false,pendingPersist:false};
+let recoveryMode=false;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function message(t,error=false){const e=document.getElementById("authMessage");e.textContent=t;e.classList.toggle("error",error)}
+function status(t){document.getElementById("accountPlan").textContent=cloud.plan.toUpperCase()+" • "+t}
+function cacheKey(){return "physiqueOS_account_"+cloud.user.id}
+function cache(){state.__cloudRevision=cloud.revision;state.__localDirty=cloud.dirty||cloud.pendingPersist;localStorage.setItem(cacheKey(),JSON.stringify(state));localStorage.setItem("physiqueOS",JSON.stringify(state));localStorage.setItem("physiqueOS_owner",cloud.user.id)}
+function clearMirror(){localStorage.removeItem("physiqueOS");localStorage.removeItem("physiqueOS_owner")}
+function freshState(){
+  const out={profile:{},macro:null,pendingAdjustment:null,mealPrefs:{meals:4,snacks:1,distribution:"balanced"},
+    macroAutomation:{enabled:true,lastReview:null,lastAdjustment:null,history:[]},
+    schedule:{wake:"07:00",checkin:"07:15",meal:"08:00",workout:"17:30",bed:"23:00",mealGap:4,mode:"lifestyle",reminder:15},
+    driftControls:{sensitivity:"balanced",adherence:85,gap:2,stall:21},
+    notificationSettings:{checkin:true,meals:true,workout:true,steps:true,hydration:true,drift:true,recovery:true,quietStart:"22:30",quietEnd:"07:00",escalation:"balanced"},
+    timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"Local time"};
+  for(const k of ["logs","mealPlan","trainingPlan","workoutLogs","coachMessages","foodLogs","activityLogs","recoveryLogs","trainingFlags","favoriteFoods","foodDayTemplates","foodWeekTemplates","workoutFavorites","notifications"])out[k]=[];
+  for(const k of ["dayMealPrefs","tacticalResults","trainingDrafts","notificationSent"])out[k]={};
+  return out;
 }
-function msg(t,err=false){const e=document.getElementById("authMessage"); if(e){e.textContent=t||"";e.classList.toggle("error",!!err)}}
-function authMode(signup){
-  const gate=document.getElementById("authGate");
-  gate.dataset.mode=signup?"signup":"signin";
-  document.getElementById("authTitle").textContent=signup?"Create your account":"Sign in";
-  document.getElementById("authCopy").textContent=signup?"Create your secure PhysiqueOS account. Beta users can enter an invite code after signup.":"Your account keeps your plan, progress and coaching data synced securely across devices.";
-  document.getElementById("authNameRow").classList.toggle("hidden",!signup);
-  document.getElementById("inviteRow").classList.toggle("hidden",!signup);
-  document.getElementById("authPrimary").textContent=signup?"Create account":"Sign in";
-  document.getElementById("authToggle").textContent=signup?"I already have an account":"Create account";
-  msg("");
+function inject(){
+  const wrap=document.createElement("div");
+  wrap.innerHTML=`<div id="authGate" class="authGate"><div class="authCard"><span class="kicker">PHYSIQUEOS ACCOUNT</span><h2 id="authTitle">Sign in</h2><p>One account for your plan, progress, and membership.</p>
+  <label>Email<input id="authEmail" type="email" autocomplete="email"></label>
+  <label>Password<input id="authPassword" type="password" autocomplete="current-password"></label>
+  <label id="authNameRow" class="hidden">Name<input id="authName" autocomplete="name"></label>
+  <label>Beta invite code<input id="inviteCode" autocomplete="off"></label><p id="authMessage" role="status" class="authMessage"></p>
+  <button id="authPrimary" class="primary fullBtn">Sign in</button><button id="authToggle" class="ghostBtn fullBtn">Create account</button><button id="authReset" class="textLink authTextBtn">Forgot password?</button></div></div>
+  <div id="accountPill" class="accountPill hidden"><span><strong id="accountName">Account</strong><small id="accountPlan">LOADING</small></span><button id="accountMenuBtn" aria-label="Account menu">•••</button>
+  <div id="accountMenu" class="accountMenu hidden"><button id="syncNowBtn">Sync now</button><button id="plansBtn">Membership & tiers</button><button id="supportBtn">Get support</button><button id="billingBtn">Manage billing</button><a id="adminLink" href="admin.html" class="hidden">Owner dashboard</a><button id="signOutBtn">Sign out</button></div></div>
+  <dialog id="membershipDialog" class="membershipDialog"><div class="sectionHead"><h2>Find your level</h2><button id="closePlans" aria-label="Close membership comparison">✕</button></div><p id="membershipMessage" role="status"></p><div id="membershipBody"></div><div class="buttons"><button id="claimInviteBtn">Claim beta invite</button><button id="refreshAccessBtn">Refresh access</button></div></dialog>
+  <dialog id="supportDialog" class="membershipDialog"><div class="sectionHead"><h2>Your support</h2><button id="closeSupport" aria-label="Close support">✕</button></div><form id="supportForm"><label>Subject<input name="subject" required maxlength="160"></label><label>How can we help?<textarea name="body" required maxlength="10000" rows="4"></textarea></label><button class="primary">Send request</button></form><p id="supportMessage" role="status"></p><div id="supportHistory"></div></dialog>`;
+  document.body.appendChild(wrap);document.getElementById("cloudBootNotice")?.remove();
 }
 async function loadAccess(){
-  const {data:plan}=await sb.rpc("current_plan_code");
-  physiqueCloud.plan=plan||"none";
-  const {data:rows}=await sb.from("plan_features").select("feature_code").eq("plan_code",physiqueCloud.plan).eq("enabled",true);
-  physiqueCloud.features=new Set((rows||[]).map(x=>x.feature_code));
-  applyFeatureAccess();
+  const {data:plan,error}=await sb.rpc("current_plan_code");
+  if(error)throw error;
+  cloud.plan=plan||"none";
+  const {data:rows,error:featuresError}=await sb.from("plan_features").select("feature_code,limits").eq("plan_code",cloud.plan).eq("enabled",true);
+  if(featuresError)throw featuresError;
+  cloud.features=new Set((rows||[]).map(x=>x.feature_code));
+  cloud.limits=Object.fromEntries((rows||[]).map(x=>[x.feature_code,x.limits]));
+  document.documentElement.dataset.plan=cloud.plan;
+  status("READY");
+  document.querySelectorAll("[data-feature]").forEach(node=>node.classList.toggle("featureLocked",!cloud.features.has(node.dataset.feature)));
+  if(cloud.plan==="none")await showPlans();
 }
-function applyFeatureAccess(){
-  const plan=physiqueCloud.plan;
-  const p=document.getElementById("accountPlan"); if(p)p.textContent=(plan==="none"?"NO ACCESS":plan.toUpperCase())+" • SYNCED";
-  document.documentElement.dataset.plan=plan;
-  document.querySelectorAll("[data-feature]").forEach(node=>{
-    const ok=physiqueCloud.features.has(node.dataset.feature);
-    node.classList.toggle("featureLocked",!ok);
+window.hasPhysiqueFeature=code=>cloud.ready&&cloud.features.has(code);
+window.physiqueReviewInterval=()=>cloud.limits.nutrition_targets?.review_interval_days||7;
+window.requirePhysiqueFeature=code=>{
+  if(window.hasPhysiqueFeature(code))return true;
+  showPlans();return false;
+};
+async function invoke(name,body){
+  const {data,error}=await sb.functions.invoke(name,{body});
+  if(error)throw error;if(data?.error)throw new Error(data.error);return data;
+}
+async function showPlans(){
+  const dialog=document.getElementById("membershipDialog");if(!dialog.open)dialog.showModal();
+  const {data:plans,error}=await sb.from("plan_catalog").select("*").order("sort_order");
+  if(error){document.getElementById("membershipMessage").textContent="Membership details are unavailable. Please retry.";return;}
+  document.getElementById("membershipMessage").textContent=cloud.plan==="none"?"Claim a beta invitation to begin. Paid enrollment opens after launch checks.":"Your membership: "+cloud.plan+". Founding pricing stays locked while continuously active.";
+  const rows=[
+    ["Training, nutrition & tracking","Included","Included","Included","Included"],
+    ["Adaptive macro recommendations","Monthly","Weekly","Weekly + deeper trends","Weekly + coach review"],
+    ["Meal swaps & grocery budget","Basic","Advanced","Advanced","Advanced"],
+    ["Progress analysis","Monthly","Weekly","Advanced","Advanced + review"],
+    ["Support","Standard","Priority","Priority","Direct touchpoint"],
+    ["Lucas oversight","—","—","—","Included"],
+    ["Automated form / vision analysis","—","Planned add-on","Planned","Planned"],
+    ["Wearable sync","Planned","Planned","Planned","Planned"]
+  ];
+  document.getElementById("membershipBody").innerHTML=`<div class="tierCards">${plans.map(p=>`<article class="tierCard ${p.code===cloud.plan?"selected":""}"><span class="kicker">${esc(p.name)}</span><h3>$${p.monthly_cents/100}<small>/month</small></h3>${p.annual_cents?`<p>$${p.annual_cents/100} billed yearly</p>`:""}<ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join("")}</ul><button data-buy="${esc(p.code)}_monthly" ${p.public?"":"disabled"}>${p.public?"Choose monthly":"Enrollment closed"}</button>${p.annual_cents&&p.public?`<button data-buy="${esc(p.code)}_annual">Choose annual</button>`:""}</article>`).join("")}</div><p>Founding 100 includes the current Pro bundle at $39 monthly while continuously active. Future services with material costs may be add-ons.</p><div class="tableScroll"><table><thead><tr><th>Capability</th><th>Core</th><th>Pro</th><th>Elite</th><th>Concierge</th></tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>").join("")}</tbody></table></div>`;
+  dialog.querySelectorAll("[data-buy]").forEach(b=>b.onclick=async()=>{
+    b.disabled=true;try{
+      const url=new URL(location.href);url.searchParams.set("billing","pending");
+      const result=await invoke("create-checkout-session",{planCode:b.dataset.buy,successUrl:url.href,cancelUrl:location.href});
+      location.assign(result.url);
+    }catch(e){document.getElementById("membershipMessage").textContent=e.message;b.disabled=false;}
   });
 }
-window.hasPhysiqueFeature=code=>physiqueCloud.features.has(code);
-
-async function loadMembership(){
-  const {data}=await sb.from("memberships").select("role,organization_id").eq("user_id",physiqueCloud.user.id).eq("status","active");
-  const elevated=(data||[]).some(x=>["owner","admin","coach"].includes(x.role));
-  document.getElementById("adminLink")?.classList.toggle("hidden",!elevated);
-}
-function snapshotHash(obj){try{return JSON.stringify(obj).length}catch{return 0}}
-async function pullCloudState(){
-  if(!physiqueCloud.user || typeof state==="undefined")return false;
-  const {data,error}=await sb.from("user_state_snapshots").select("state,updated_at").eq("user_id",physiqueCloud.user.id).maybeSingle();
-  if(error) {console.warn("cloud pull",error);return false}
-  if(!data?.state)return false;
-  const localRaw=localStorage.getItem("physiqueOS");
-  const local=localRaw?JSON.parse(localRaw):{};
-  const localStamp=local.__cloudUpdatedAt?new Date(local.__cloudUpdatedAt).getTime():0;
-  const cloudStamp=new Date(data.updated_at).getTime();
-  if(cloudStamp>localStamp && snapshotHash(data.state)>2){
-    state=Object.assign({},state,data.state,{__cloudUpdatedAt:data.updated_at});
-    localStorage.setItem("physiqueOS",JSON.stringify(state));
-    if(typeof renderAll==="function")renderAll();
-    return true;
-  }
-  return false;
-}
-async function pushCloudState(){
-  if(!physiqueCloud.user || typeof state==="undefined")return;
-  const payload=JSON.parse(JSON.stringify(state));
-  delete payload.__cloudUpdatedAt;
-  const now=new Date().toISOString();
-  const {error}=await sb.from("user_state_snapshots").upsert({
-    user_id:physiqueCloud.user.id,state:payload,client_version:"web-beta-2",device_id:getDeviceId(),updated_at:now
-  });
-  if(!error){state.__cloudUpdatedAt=now;localStorage.setItem("physiqueOS",JSON.stringify(state))}
-  else console.warn("cloud push",error);
-}
-function scheduleSync(){clearTimeout(physiqueCloud.syncTimer);physiqueCloud.syncTimer=setTimeout(pushCloudState,900)}
-window.scheduleCloudSync=scheduleSync;
-function getDeviceId(){let x=localStorage.getItem("physiqueOS_device");if(!x){x=crypto.randomUUID();localStorage.setItem("physiqueOS_device",x)}return x}
-
 async function claimInvite(raw){
-  if(!raw)return;
-  const {data,error}=await sb.functions.invoke("claim-invite",{body:{token:raw}});
-  if(error) throw error;
-  return data;
+  const {data,error}=await sb.rpc("claim_invite",{raw_token:raw});if(error)throw error;return data;
 }
+async function push(){
+  if(!cloud.ready||!cloud.user||cloud.plan==="none")return;
+  cloud.dirty=true;if(cloud.busy)return;
+  cloud.busy=true;
+  try{
+    do{
+      cloud.dirty=false;
+      const payload=JSON.parse(JSON.stringify(state));delete payload.__cloudUpdatedAt;delete payload.__cloudRevision;delete payload.__localDirty;cloud.pendingPersist=true;
+      cache();status("SYNCING");
+      const {data,error}=await sb.rpc("sync_app_state",{payload,expected_revision:cloud.revision});
+      if(error)throw error;
+      if(data.conflict){
+        // Keep this device's work for explicit recovery; never silently overwrite remote data.
+        localStorage.setItem(cacheKey()+"_conflict",JSON.stringify(payload));
+        cloud.pendingPersist=false;cloud.revision=data.revision;state=Object.assign(freshState(),data.state);
+        cache();renderAll();cloud.dirty=false;
+        status("CONFLICT BACKUP SAVED");
+        alert("Another device updated your account. Its saved version is now loaded; this device's edits are retained in your backup export.");
+        break;
+      }
+      cloud.pendingPersist=false;cloud.revision=data.revision;state.__cloudUpdatedAt=data.updated_at;cache();status("SYNCED");
+    }while(cloud.dirty);
+  }catch{cache();status("SAVED ON DEVICE • RETRY");}
+  finally{cloud.busy=false;}
+}
+window.scheduleCloudSync=()=>{if(!cloud.ready)return;cloud.dirty=true;cache();clearTimeout(cloud.syncTimer);cloud.syncTimer=setTimeout(push,900);};
 async function afterAuth(user){
-  physiqueCloud.user=user;
-  document.getElementById("authGate").classList.add("hidden");
+  if(cloud.user?.id===user.id&&cloud.ready)return;
+  cloud.ready=false;cloud.user=user;
+  const owner=localStorage.getItem("physiqueOS_owner");
+  const legacy=!owner?localStorage.getItem("physiqueOS"):null;
+  const cached=localStorage.getItem(cacheKey());
+  const {data:saved,error}=await sb.from("user_state_snapshots").select("state,updated_at,revision").eq("user_id",user.id).maybeSingle();
+  if(error)throw error;
+  cloud.revision=saved?.revision||0;
+  const local=cached?JSON.parse(cached):null;
+  const resume=local?.__localDirty&&local.__cloudRevision===(saved?.revision||0);
+  state=Object.assign(freshState(),resume?local:(saved?.state||local||{}));
+  cloud.dirty=!!resume;
+  if(!saved&&!cached&&legacy&&JSON.parse(legacy)?.profile?.age&&confirm("Import the existing fitness data on this device into this account? Only continue if this is your data.")){
+    state=Object.assign(freshState(),JSON.parse(legacy));
+  }else if(saved&&local?.__localDirty&&!resume){
+    localStorage.setItem(cacheKey()+"_recovery",cached);
+  }
+  cache();renderAll();
+  document.getElementById("accountName").textContent=user.user_metadata?.full_name||user.email||"Account";
   document.getElementById("accountPill").classList.remove("hidden");
-  const name=user.user_metadata?.full_name||user.email?.split("@")[0]||"Account";
-  document.getElementById("accountName").textContent=name;
-  await Promise.all([loadAccess(),loadMembership()]);
-  await pullCloudState();
-  await pushCloudState();
+  cloud.ready=true;
+  await loadAccess();
+  const {data:members,error:memberError}=await sb.from("memberships").select("role").eq("user_id",user.id).eq("status","active");
+  if(memberError)throw memberError;
+  document.getElementById("adminLink").classList.toggle("hidden",!(members||[]).some(m=>["owner","admin"].includes(m.role)));
+  if(!recoveryMode)document.getElementById("authGate").classList.add("hidden");
+  if(cloud.dirty)await push();
+}
+async function support(){
+  const d=document.getElementById("supportDialog");if(!d.open)d.showModal();
+  const {data:tickets,error}=await sb.from("support_tickets").select("*").order("created_at",{ascending:false});
+  if(error){document.getElementById("supportMessage").textContent="Support is not available yet.";return;}
+  const {data:replies}=await sb.from("support_replies").select("*").order("created_at");
+  document.getElementById("supportHistory").innerHTML=(tickets||[]).map(t=>`<article class="tierCard"><strong>${esc(t.subject)}</strong><small> • ${esc(t.status)} • ${esc(t.priority)}</small><p>${esc(t.body)}</p>${(replies||[]).filter(r=>r.ticket_id===t.id).map(r=>"<blockquote>"+esc(r.body)+"</blockquote>").join("")}</article>`).join("")||"<p>No requests yet.</p>";
 }
 async function init(){
-  injectAuth();
-  const gate=document.getElementById("authGate");
-  let signup=false;
-  document.getElementById("authToggle").onclick=()=>{signup=!signup;authMode(signup)};
+  inject();let signup=false;
+  const url=new URL(location.href),invite=url.searchParams.get("invite");
+  if(invite){sessionStorage.setItem("physiqueOS_invite",invite);url.searchParams.delete("invite");history.replaceState(null,"",url);}
+  document.getElementById("inviteCode").value=sessionStorage.getItem("physiqueOS_invite")||"";
+  document.getElementById("authToggle").onclick=()=>{signup=!signup;document.getElementById("authNameRow").classList.toggle("hidden",!signup);document.getElementById("authTitle").textContent=signup?"Create account":"Sign in";document.getElementById("authPrimary").textContent=signup?"Create account":"Sign in";document.getElementById("authToggle").textContent=signup?"I already have an account":"Create account";};
   document.getElementById("authPrimary").onclick=async()=>{
-    msg("Working…");
-    const email=document.getElementById("authEmail").value.trim();
-    const password=document.getElementById("authPassword").value;
+    const b=document.getElementById("authPrimary");b.disabled=true;message("Working…");
     try{
-      if(signup){
-        const full_name=document.getElementById("authName").value.trim();
-        const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name}}});
-        if(error)throw error;
-        const raw=document.getElementById("inviteCode").value.trim();
-        if(data.session && raw)await claimInvite(raw);
-        if(data.session)await afterAuth(data.user);
-        else msg("Check your email to confirm your account, then sign in.");
-      }else{
-        const {data,error}=await sb.auth.signInWithPassword({email,password});
-        if(error)throw error;
-        await afterAuth(data.user);
+      const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
+      if(recoveryMode){
+        const {error}=await sb.auth.updateUser({password});if(error)throw error;
+        recoveryMode=false;message("Password updated.");document.getElementById("authGate").classList.add("hidden");return;
       }
-    }catch(e){msg(e.message||String(e),true)}
+      const raw=document.getElementById("inviteCode").value.trim();if(raw)sessionStorage.setItem("physiqueOS_invite",raw);
+      const result=signup?await sb.auth.signUp({email,password,options:{data:{full_name:document.getElementById("authName").value.trim()},emailRedirectTo:location.origin+location.pathname}}):await sb.auth.signInWithPassword({email,password});
+      if(result.error)throw result.error;
+      if(!result.data.session){message("Check your email to confirm your account, then sign in.");return;}
+      if(raw){await claimInvite(raw);sessionStorage.removeItem("physiqueOS_invite");}
+      await afterAuth(result.data.user);
+    }catch(e){message(e.message||"Sign in failed",true);}finally{b.disabled=false;}
   };
   document.getElementById("authReset").onclick=async()=>{
-    const email=document.getElementById("authEmail").value.trim();
-    if(!email)return msg("Enter your email first.",true);
+    const email=document.getElementById("authEmail").value.trim();if(!email)return message("Enter your email first",true);
     const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    msg(error?error.message:"Password reset email sent.",!!error);
+    message(error?error.message:"Password reset email sent.",!!error);
   };
   document.getElementById("accountMenuBtn").onclick=()=>document.getElementById("accountMenu").classList.toggle("hidden");
-  document.getElementById("syncNowBtn").onclick=async()=>{await pushCloudState();alert("PhysiqueOS synced.")};
-  document.getElementById("billingBtn").onclick=async()=>{
-    try{
-      const {data,error}=await sb.functions.invoke("create-customer-portal",{body:{returnUrl:location.href}});
-      if(error)throw error;if(data?.url)location.href=data.url;else alert("Billing portal is not available for this account yet.");
-    }catch(e){alert(e.message||"Billing portal unavailable.")}
+  document.getElementById("plansBtn").onclick=showPlans;
+  document.getElementById("closePlans").onclick=()=>document.getElementById("membershipDialog").close();
+  document.getElementById("refreshAccessBtn").onclick=loadAccess;
+  document.getElementById("claimInviteBtn").onclick=async()=>{
+    const raw=prompt("Enter your beta invite code",sessionStorage.getItem("physiqueOS_invite")||"");if(!raw)return;
+    try{await claimInvite(raw.trim());await loadAccess();document.getElementById("membershipDialog").close();await push();}
+    catch(e){document.getElementById("membershipMessage").textContent=e.message;}
   };
-  document.getElementById("signOutBtn").onclick=async()=>{await sb.auth.signOut();location.reload()};
+  document.getElementById("syncNowBtn").onclick=push;
+  document.getElementById("supportBtn").onclick=support;
+  document.getElementById("closeSupport").onclick=()=>document.getElementById("supportDialog").close();
+  document.getElementById("supportForm").onsubmit=async(e)=>{
+    e.preventDefault();const form=e.target,b=form.querySelector("button");b.disabled=true;
+    try{
+      const {error}=await sb.rpc("open_support_ticket",{subject:form.subject.value,body:form.body.value});
+      if(error)throw error;form.reset();document.getElementById("supportMessage").textContent="Your request is saved.";await support();
+    }catch(e){document.getElementById("supportMessage").textContent=e.message;}finally{b.disabled=false;}
+  };
+  document.getElementById("billingBtn").onclick=async()=>{try{const r=await invoke("create-customer-portal",{returnUrl:location.href});location.assign(r.url);}catch(e){alert(e.message);}};
+  document.getElementById("signOutBtn").onclick=async()=>{
+    if(cloud.busy){alert("Please wait for sync to finish.");return;}
+    cache();cloud.ready=false;clearTimeout(cloud.syncTimer);await sb.auth.signOut();clearMirror();location.reload();
+  };
+  document.addEventListener("click",e=>{
+    const locked=e.target.closest("[data-feature]");if(locked&&!window.hasPhysiqueFeature(locked.dataset.feature)){e.preventDefault();e.stopImmediatePropagation();showPlans();}
+    if(cloud.plan==="none"&&e.target.closest("main,nav,section")){e.preventDefault();e.stopImmediatePropagation();showPlans();}
+  },true);
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==="PASSWORD_RECOVERY"){recoveryMode=true;document.getElementById("authTitle").textContent="Set new password";document.getElementById("authPrimary").textContent="Update password";document.getElementById("authGate").classList.remove("hidden");}
+    if(event==="SIGNED_OUT"){cloud.ready=false;cloud.user=null;cloud.features.clear();clearMirror();document.getElementById("authGate").classList.remove("hidden");}
+  });
   const {data:{session}}=await sb.auth.getSession();
-  if(session?.user) await afterAuth(session.user); else gate.classList.remove("hidden");
-  sb.auth.onAuthStateChange((_event,session)=>{if(!session)gate.classList.remove("hidden")});
-  window.addEventListener("online",pushCloudState);
-  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")pushCloudState()});
+  if(session?.user)try{await afterAuth(session.user);}catch(e){message("Account could not load: "+e.message,true);}
+  window.addEventListener("online",push);
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")push();});
 }
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();

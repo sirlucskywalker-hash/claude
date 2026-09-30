@@ -469,6 +469,7 @@ function renderMenuProfile(){
   renderProfilePhoto();
 }
 function showTab(id){
+  if(id==='coach'&&window.requirePhysiqueFeature&&!window.requirePhysiqueFeature('adaptive_coach'))return;
   document.body.dataset.view=id;
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
@@ -657,6 +658,9 @@ function applyMacroCalories(nextCalories,reason,source='automatic'){
   state.mealPlan=[];state.mealPlanSchema=3;
 }
 function autoMacroReview(force=false){
+  if(window.physiqueCloud&&!window.physiqueCloud.ready)return false;
+  const reviewInterval=window.physiqueReviewInterval?window.physiqueReviewInterval():7;
+  if(state.macroAutomation?.lastAdjustment&&dateDiffDays(state.macroAutomation.lastAdjustment,today())<reviewInterval)return false;
   if(!state.macroAutomation?.enabled||!state.macro||safetyBlockers(state.profile).length)return false;
   const last=state.macroAutomation.lastReview;
   if(!force&&last&&dateDiffDays(last,today())<7)return false;
@@ -1799,7 +1803,7 @@ function draw(id,key,label){
   const v=a.map(x=>x[key]),lo=Math.min(...v),hi=Math.max(...v),span=hi-lo||1;ctx.strokeStyle='#38bdf8';ctx.lineWidth=3;ctx.beginPath();v.forEach((y,i)=>{const px=20+i*(w-40)/(v.length-1),py=h-20-(y-lo)/span*(h-40);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke();ctx.fillStyle='#f4f7fb';ctx.fillText(label+': '+v[v.length-1],20,18);
 }
 
-function openPhotoDB(){return new Promise((res,rej)=>{const r=indexedDB.open('PhysiqueOSPhotos',2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('photos'))r.result.createObjectStore('photos',{keyPath:'id'});if(!r.result.objectStoreNames.contains('profile'))r.result.createObjectStore('profile',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function openPhotoDB(){return new Promise((res,rej)=>{const r=indexedDB.open(window.physiqueCloud?.user?'PhysiqueOSPhotos_'+window.physiqueCloud.user.id:'PhysiqueOSPhotos',2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('photos'))r.result.createObjectStore('photos',{keyPath:'id'});if(!r.result.objectStoreNames.contains('profile'))r.result.createObjectStore('profile',{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
 async function saveProfilePhoto(input){
   const file=input?.files?.[0];if(!file)return;
   if(!file.type.startsWith('image/'))return alert('Choose an image file.');

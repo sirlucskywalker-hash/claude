@@ -1,73 +1,34 @@
-import Stripe from "npm:stripe";
-import { createClient } from "npm:@supabase/supabase-js";
-
-const stripe=new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
-const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-
-async function syncSubscription(sub: Stripe.Subscription) {
-  const userId = sub.metadata?.supabase_user_id;
-  let resolvedUserId=userId;
-
-  if(!resolvedUserId && typeof sub.customer==="string") {
-    const {data} = await admin.from("billing_customers").select("user_id").eq("stripe_customer_id",sub.customer).maybeSingle();
-    resolvedUserId=data?.user_id;
-  }
-  if(!resolvedUserId) throw new Error("No user mapping for subscription");
-
-  const item=sub.items.data[0];
-  await admin.from("subscriptions").upsert({
-    user_id:resolvedUserId,
-    stripe_subscription_id:sub.id,
-    stripe_price_id:item?.price?.id ?? null,
-    status:sub.status,
-    current_period_start:new Date(sub.current_period_start*1000).toISOString(),
-    current_period_end:new Date(sub.current_period_end*1000).toISOString(),
-    cancel_at_period_end:sub.cancel_at_period_end,
-    trial_end:sub.trial_end ? new Date(sub.trial_end*1000).toISOString() : null,
-    updated_at:new Date().toISOString()
-  },{onConflict:"stripe_subscription_id"});
-
-  const active=["active","trialing"].includes(sub.status);
-  await admin.from("entitlements").upsert({
-    user_id:resolvedUserId,
-    code:"app_access",
-    source:"stripe",
-    active,
-    ends_at: active ? new Date(sub.current_period_end*1000).toISOString() : new Date().toISOString(),
-    metadata:{stripe_subscription_id:sub.id,price_id:item?.price?.id}
-  },{onConflict:"user_id,code,source"});
-}
-
-Deno.serve(async (req) => {
-  const sig=req.headers.get("stripe-signature");
-  if(!sig) return new Response("Missing signature",{status:400});
-
-  const body=await req.text();
+import Stripe from "npm:stripe@22.6.0";
+import {createClient} from "npm:@supabase/supabase-js@2.57.4";
+import {subscriptionId,normalizeSubscription} from "../_shared/billing-logic.mjs";
+Deno.serve(async(req)=>{
+  if(req.method!=="POST")return new Response("Method not allowed",{status:405});
+  const key=Deno.env.get("STRIPE_SECRET_KEY"),secret=Deno.env.get("STRIPE_WEBHOOK_SECRET");
+  if(!key||!secret)return new Response("Billing setup incomplete",{status:503});
+  const signature=req.headers.get("stripe-signature");
+  if(!signature)return new Response("Missing signature",{status:400});
+  const stripe=new Stripe(key);
   let event: Stripe.Event;
-  try {
-    event=await stripe.webhooks.constructEventAsync(body,sig,Deno.env.get("STRIPE_WEBHOOK_SECRET")!);
-  } catch(e) {
-    return new Response("Invalid signature",{status:400});
-  }
-
-  const {data:existing}=await admin.from("billing_events").select("stripe_event_id,processed_at").eq("stripe_event_id",event.id).maybeSingle();
-  if(existing?.processed_at) return new Response("already processed",{status:200});
-
-  await admin.from("billing_events").upsert({stripe_event_id:event.id,event_type:event.type,payload:event});
-
-  try {
-    if([
-      "customer.subscription.created",
-      "customer.subscription.updated",
-      "customer.subscription.deleted"
-    ].includes(event.type)) {
-      await syncSubscription(event.data.object as Stripe.Subscription);
+  try{event=await stripe.webhooks.constructEventAsync(await req.text(),signature,secret);}
+  catch{return new Response("Invalid signature",{status:400});}
+  const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  try{
+    const id=subscriptionId(event);
+    if(id){
+      const sub=normalizeSubscription(await stripe.subscriptions.retrieve(id));
+      const {error}=await admin.rpc("record_billing_subscription",{
+        event_id:event.id,event_type:event.type,event_created:event.created,event_payload:event,sub
+      });
+      if(error)throw error;
+    }else{
+      const {error}=await admin.from("billing_events").upsert({
+        stripe_event_id:event.id,event_type:event.type,payload:event,processed_at:new Date().toISOString()
+      },{onConflict:"stripe_event_id",ignoreDuplicates:true});
+      if(error)throw error;
     }
-
-    await admin.from("billing_events").update({processed_at:new Date().toISOString(),error:null}).eq("stripe_event_id",event.id);
     return new Response("ok",{status:200});
-  } catch(e) {
-    await admin.from("billing_events").update({error:String(e?.message||e)}).eq("stripe_event_id",event.id);
-    return new Response("processing failed",{status:500});
+  }catch(error){
+    console.error("billing event failed",event.id,error instanceof Error?error.name:"database");
+    return new Response("Processing failed",{status:500});
   }
 });
