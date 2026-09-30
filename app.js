@@ -448,7 +448,7 @@ function renderFaqQuestions(){
 function askFaqQuestion(){
   const q=el('faqQuestion')?.value;if(!q)return;el('coachInput').value=q;sendCoachMessage();
 }
-function save(){localStorage.setItem('physiqueOS',JSON.stringify(state))}
+function save(){localStorage.setItem('physiqueOS',JSON.stringify(state));if(window.scheduleCloudSync)window.scheduleCloudSync()}
 function toggleAppMenu(force){
   const menu=el('appMenu'),back=el('appMenuBackdrop');if(!menu||!back)return;
   const open=typeof force==='boolean'?force:menu.classList.contains('hidden');
