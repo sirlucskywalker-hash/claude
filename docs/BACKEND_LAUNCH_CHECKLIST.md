@@ -20,7 +20,7 @@ The backend code is implemented for the current web beta. Paid launch and lifecy
 
 ## Required before calling the backend launch-ready
 - [ ] Correct Supabase Auth Site URL and allowlist: `https://sirlucskywalker-hash.github.io/claude/` and `https://sirlucskywalker-hash.github.io/claude/index.html`. Dashboard authentication is required to inspect/save these settings.
-- [ ] Create and verify the selected Gmail owner account. Sign in through the app to claim its role and free workspace entitlement; no beta code is required.
+- [x] Selected Gmail owner account is verified; owner role and free workspace entitlement are assigned. Sign in through the app without a beta code.
 - [ ] Configure server-only Stripe key, webhook secret, actual `SITE_URL`, and `STRIPE_PORTAL_CONFIGURATION_ID`.
 - [ ] Run `scripts/configure-billing-portal.mjs` in a Stripe sandbox, verify current product/price IDs, then configure the intended live portal. Do not use the script to silently change pricing.
 - [ ] Register the Stripe webhook and run sandbox purchase, renewal, retry, cancellation, downgrade, upgrade/proration and payment-failure checks. Confirm no duplicate charge or access grant.
@@ -39,3 +39,6 @@ Paid enrollment stays closed until the billing checks pass. Existing Founding pr
 
 ## Latest security advisor follow-up
 No anonymously executable public SECURITY DEFINER functions were found. Seventeen authenticated SECURITY DEFINER RPCs are intentional, narrow operations with identity/role checks; review guidance: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable . Four server-only tables intentionally have RLS without browser policies. Leaked-password protection is currently disabled and must be evaluated/enabled where supported before release: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection . These checks are not an independent security audit.
+
+## Execution verification — October 1, 2026
+The three preceding application deployments completed successfully. All eleven database migrations and five active Edge Functions are deployed; the daily retention job is enabled. The complete local behavioral suite passes 44 scenarios. No unfinished execution was found in the prior deployment runs. Remaining unchecked items are configuration, real-service validation, and operational launch work, not a frozen deployment.
