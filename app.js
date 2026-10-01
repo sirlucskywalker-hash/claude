@@ -1469,17 +1469,18 @@ function liveSetCue(di,ei,si){
 function changeSetCount(di,ei,delta){
   const item=state.trainingPlan[di]?.items?.[ei];if(!item)return;item.sets=clamp((item.sets||3)+delta,1,8);save();renderTraining();
 }
-let timerInterval=null;
 function startRestTimer(seconds){
-  clearInterval(timerInterval);let left=seconds;state.activeTimer={seconds,left};renderFloatingTimer();
-  timerInterval=setInterval(()=>{left--;state.activeTimer={seconds,left};renderFloatingTimer();if(left<=0){clearInterval(timerInterval);state.activeTimer=null;renderFloatingTimer();if(navigator.vibrate)navigator.vibrate([150,80,150])}},1000);
+  state.activeTimer=PhysiqueCoachEngine.rest(seconds);save();renderFloatingTimer();
 }
-function stopRestTimer(){clearInterval(timerInterval);state.activeTimer=null;renderFloatingTimer()}
+function stopRestTimer(){state.activeTimer=null;save();renderFloatingTimer()}
+function pauseRestTimer(){state.activeTimer=PhysiqueCoachEngine.pause(state.activeTimer);save();renderFloatingTimer()}
+function extendRestTimer(){state.activeTimer=PhysiqueCoachEngine.extend(state.activeTimer,30);save();renderFloatingTimer()}
 function renderFloatingTimer(){
-  let box=el('floatingTimer');if(!box){box=document.createElement('div');box.id='floatingTimer';box.className='floatingTimer';document.body.appendChild(box)}
-  if(!state.activeTimer){box.classList.remove('show');box.innerHTML='';return}
-  const left=Math.max(0,state.activeTimer.left),m=Math.floor(left/60),s=String(left%60).padStart(2,'0');
-  box.innerHTML='<div><small>REST</small><strong>'+m+':'+s+'</strong></div><button onclick="stopRestTimer()">×</button>';box.classList.add('show');
+  let box=el('floatingTimer');if(!box){box=document.createElement('div');box.id='floatingTimer';box.className='floatingTimer';box.setAttribute('aria-label','Rest timer');document.body.appendChild(box)}
+  if(state.activeTimer?.version!==2){box.classList.remove('show');box.innerHTML='';return}
+  const t=state.activeTimer,left=PhysiqueCoachEngine.remaining(t),m=Math.floor(left/60),s=String(left%60).padStart(2,'0');
+  if(!left&&!t.paused&&!t.alerted){t.alerted=true;save();if(navigator.vibrate)navigator.vibrate([150,80,150])}
+  box.innerHTML='<div><small>'+(t.paused?'PAUSED':left?'REST':'READY WHEN YOU ARE')+'</small><strong>'+m+':'+s+'</strong></div><div class="timerControls"><button onclick="pauseRestTimer()" '+(!left?'disabled':'')+'>'+(t.paused?'Resume':'Pause')+'</button><button onclick="extendRestTimer()">+30s</button><button onclick="stopRestTimer()" aria-label="Dismiss rest timer">Done</button></div><span class="timerNote">Keep the app open for alerts. Rest longer if needed.</span>';box.classList.add('show');
 }
 function workoutVolume(exercises){return exercises.reduce((sum,e)=>sum+e.results.reduce((s,x)=>s+(x.weight||0)*(x.reps||0),0),0)}
 function logWorkout(di){
@@ -2056,7 +2057,7 @@ function coachReply(q){
 }
 function renderCoachChat(){
   if(!el('coachChat'))return;
-  if(!state.coachMessages.length){const r=readinessAdvice();state.coachMessages=[{role:'coach',text:'I’m your PhysiqueOS coach. I’m watching your nutrition, training, recovery, steps, hydration and trends together. '+(r.score!=null?'Today’s readiness is '+r.score+'/100. '+r.text:'Log today’s recovery metrics and I’ll start adjusting the day around you.')}];}
+  if(!state.coachMessages.length){const r=readinessAdvice();state.coachMessages=[{role:'coach',text:'I’m your PhysiqueOS digital coach. I use your logged nutrition, training, recovery, steps, hydration and trends together. '+(r.score!=null?'Today’s readiness is '+r.score+'/100. '+r.text:'Log today’s recovery metrics and I’ll start adjusting the day around you.')}];}
   el('coachChat').innerHTML=state.coachMessages.slice(-40).map(m=>'<div class="chatMsg '+m.role+'"><div class="chatMeta">'+(m.role==='coach'?'PHYSIQUEOS':'YOU')+'</div>'+escapeHtml(m.text)+'</div>').join('');
   el('coachChat').scrollTop=el('coachChat').scrollHeight;save();
 }
@@ -2078,11 +2079,11 @@ async function resetAll(){
   try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
-function renderAll(){loadProfile();syncTacticalProfileUI();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore()}
+function renderAll(){loadProfile();syncTacticalProfileUI();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore();document.dispatchEvent(new Event('physique:render'))}
 document.body.dataset.view='dashboard';
 renderAll();
 if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCoachMessage()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=54').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=57').then(r=>r.update()).catch(()=>{});
