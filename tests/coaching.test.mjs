@@ -75,3 +75,9 @@ test('standard logging redirects to the active guided session and daily commitme
  t.w.document.getElementById('companionCommitment').value='Prepare lunch';t.w.markCompanionCommitment();assert.equal(t.state().dailyCommitment.done,true);assert.equal(t.state().dailyCommitment.text,'Prepare lunch');
  }finally{await close(t);}
 });
+test('rest controls remain available inside the modal while the background page is inert',async()=>{
+ const t=mount();try{begin(t);set(t);assert.ok(t.w.document.getElementById('guidedWorkout').contains(t.w.document.getElementById('guidedPauseRest')));
+ t.run(t.w.document.getElementById('guidedPauseRest').getAttribute('onclick'));assert.equal(t.state().activeTimer.paused,true);
+ t.run(t.w.document.querySelector('#guidedRestStatus button:nth-child(2)').getAttribute('onclick')); assert.ok(t.state().activeTimer.remaining>=149);
+ }finally{await close(t);}
+});

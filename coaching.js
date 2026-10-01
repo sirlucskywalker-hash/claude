@@ -80,7 +80,7 @@
     }
     const slot=E.next(s),sum=E.summary(s);
     const elapsed=Math.floor((Date.now()-s.startedAt)/60000),remaining=Math.max(0,s.duration-elapsed);
-    let content='<div class="guidedProgress"><span>'+sum.sets+' / '+sum.plannedSets+' sets completed</span><span>'+remaining+' min in your time budget</span></div><progress max="'+sum.plannedSets+'" value="'+sum.sets+'" aria-label="Completed working sets"></progress>';
+    let content='<div class="guidedProgress"><span>'+sum.sets+' / '+sum.plannedSets+' sets completed</span><span>'+remaining+' min in your time budget</span></div><progress max="'+sum.plannedSets+'" value="'+sum.sets+'" aria-label="Completed working sets"></progress><div id="guidedRestStatus" class="guidedRestStatus"></div>';
     if(slot){
       const item=slot.item,input=currentInput(slot),last=(s.results[slot.ei]||[]).filter(Boolean).at(-1),guide=exerciseGuide(item),protectedNow=blocked(item);
       content+='<span class="kicker">MOVEMENT '+(slot.ei+1)+' · SET '+(slot.si+1)+' OF '+item.sets+'</span><h3>'+H(item.name)+'</h3><p>'+item.minReps+'–'+item.maxReps+' reps · target '+item.rir+' RIR · load in '+H(s.unit)+'</p>'+
@@ -94,8 +94,8 @@
         '<label>Rest after this set<select id="guidedRest"><option value="60">1 minute</option><option value="90">90 seconds</option><option value="120" selected>2 minutes</option><option value="180">3 minutes</option><option value="240">4 minutes</option></select></label>'+
         '<div class="guidedActions"><button class="primary" onclick="completeGuidedSet()" '+(protectedNow?'disabled':'')+'>Complete set & rest</button><button onclick="skipGuidedMovement()">Skip movement</button><button onclick="undoGuidedSet()" '+(!s.actions.length?'disabled':'')+'>Undo last set</button></div>';
     }else content+='<h3>Your planned work is complete</h3><p>Review and save the session below.</p><button onclick="undoGuidedSet()">Undo last set</button>';
-    content+='<div id="guidedRestStatus" class="guidedRestStatus" role="status"></div><details '+(!slot?'open':'')+'><summary>Session review & finish</summary><div class="guidedInputs">'+field('Session RPE · optional','guidedRpe',s.sessionRpe,1,10,'.5')+field('Discomfort · 0–10','guidedPain',s.pain,0,10)+'</div><label>What should carry forward?<textarea id="guidedNotes" maxlength="2000">'+H(s.notes)+'</textarea></label><button class="primary" onclick="finishGuidedSession()">Save '+(slot?'partial ':'')+'session</button></details><p id="guidedMessage" role="status"></p>';
-    modal.innerHTML=head+'<div class="guidedBody">'+content+'</div>';updateGuidedRest();
+    content+='<details '+(!slot?'open':'')+'><summary>Session review & finish</summary><div class="guidedInputs">'+field('Session RPE · optional','guidedRpe',s.sessionRpe,1,10,'.5')+field('Discomfort · 0–10','guidedPain',s.pain,0,10)+'</div><label>What should carry forward?<textarea id="guidedNotes" maxlength="2000">'+H(s.notes)+'</textarea></label><button class="primary" onclick="finishGuidedSession()">Save '+(slot?'partial ':'')+'session</button></details><p id="guidedMessage" role="status"></p>';
+    modal.innerHTML=head+'<div class="guidedBody">'+content+'</div>';modal.scrollTop=0;updateGuidedRest();
   }
   window.completeGuidedSet=function(){
     const s=active(),slot=s&&E.next(s);if(!slot||!permitted()||visibleSessionId!==s.id)return;
@@ -137,7 +137,10 @@
   function updateGuidedRest(){
     const out=el('guidedRestStatus');if(!out)return;
     const t=state.activeTimer,left=E.remaining(t);
-    out.textContent=t?(t.paused?'Rest paused · ':left?'Rest · ':'Rest target reached · ')+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' · extend it if you need more time.':'';
+    if(!t){out.innerHTML='';return;}
+    if(!el('guidedRestTime'))out.innerHTML='<span id="guidedRestTime"></span><div class="guidedActions"><button id="guidedPauseRest" onclick="pauseRestTimer()">Pause rest</button><button onclick="extendRestTimer()">Extend rest +30s</button><button onclick="stopRestTimer()">Dismiss rest</button></div>';
+    el('guidedRestTime').textContent=(t.paused?'Rest paused · ':left?'Rest · ':'Rest target reached · ')+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' · extend it if needed.';
+    el('guidedPauseRest').textContent=t.paused?'Resume rest':'Pause rest';el('guidedPauseRest').disabled=!left;
   }
   function renderDailyCompanion(){
     let card=el('dailyCompanion');if(!card){card=document.createElement('div');card.id='dailyCompanion';card.className='dailyCompanion';el('dashboard')?.insertBefore(card,el('dashboard')?.children[1]||null);}

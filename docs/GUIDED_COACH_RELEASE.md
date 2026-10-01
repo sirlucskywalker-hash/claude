@@ -17,7 +17,7 @@ October 1, 2026 UTC (September 30 in America/New_York).
 
 ## Verification
 
-The original 15 behavioral scenarios plus 11 new coaching scenarios pass (26 scenarios, with a separate enclosing database test also passing). New integration tests load the actual index, data, app and coaching scripts in a browser-like DOM. Tests cover persisted sessions, restrictions, rest reconstruction, undo, input validation, stable completion, state replacement and standard/guided log coordination.
+The original 15 behavioral scenarios plus 12 new coaching scenarios pass (27 scenarios, with a separate enclosing database test also passing). New integration tests load the actual index, data, app and coaching scripts in a browser-like DOM. Tests cover persisted sessions, restrictions, rest reconstruction, undo, input validation, stable completion, state replacement and standard/guided log coordination.
 
 `tests/coaching-preview.html` is a clearly labeled visual component fixture using sample data and no account/cloud writes. It is not an end-to-end authenticated account, a substitute for production workout testing or an entitlement bypass.
 
