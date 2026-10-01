@@ -25,8 +25,9 @@ function inject(){
   <label>Email<input id="authEmail" type="email" autocomplete="email"></label>
   <label>Password<input id="authPassword" type="password" autocomplete="current-password"></label>
   <label id="authNameRow" class="hidden">Name<input id="authName" autocomplete="name"></label>
-  <label>Beta invite code<input id="inviteCode" autocomplete="off"></label><p id="authMessage" role="status" class="authMessage"></p>
-  <button id="authPrimary" class="primary fullBtn">Sign in</button><button id="authToggle" class="ghostBtn fullBtn">Create account</button><button id="authReset" class="textLink authTextBtn">Forgot password?</button><button id="authResend" class="textLink authTextBtn">Resend confirmation email</button></div></div>
+  <label>Beta invite code (optional)<input id="inviteCode" autocomplete="off"></label><p id="authMessage" role="status" class="authMessage"></p>
+  <button id="authPrimary" class="primary fullBtn">Sign in</button><button id="authToggle" class="ghostBtn fullBtn">Create account</button><button id="authReset" class="textLink authTextBtn">Forgot password?</button><button id="authResend" class="textLink authTextBtn">Resend confirmation email</button>
+  <details id="confirmationHelp"><summary>Confirmation link didn’t open?</summary><p>If you already opened the email link, return here and try signing in. If your email still needs confirmation, enter your email above, copy the original confirmation link from the email, and paste it below. Keep this link private.</p><label>Original email confirmation link<input id="authConfirmationLink" type="password" autocomplete="off" spellcheck="false"></label><button id="authConfirmLink" class="ghostBtn fullBtn">Confirm email in the app</button><p>Owner accounts receive access automatically after verification. No beta code is needed.</p></details></div></div>
   <div id="accountPill" class="accountPill hidden"><span><strong id="accountName">Account</strong><small id="accountPlan">LOADING</small></span><button id="accountMenuBtn" aria-label="Account menu">•••</button>
   <div id="accountMenu" class="accountMenu hidden"><button id="syncNowBtn">Sync now</button><button id="plansBtn">Membership & tiers</button><button id="supportBtn">Get support</button><button id="billingBtn">Manage billing / change plan</button><button id="accountNotificationsBtn">Account notifications</button><a id="adminLink" href="admin.html" class="hidden">Owner dashboard</a><button id="signOutBtn">Sign out</button></div></div>
   <dialog id="membershipDialog" class="membershipDialog"><div class="sectionHead"><h2>Find your level</h2><button id="closePlans" aria-label="Close membership comparison">✕</button></div><p id="membershipMessage" role="status"></p><div id="membershipBody"></div><div class="buttons"><button id="claimInviteBtn">Claim beta invite</button><button id="refreshAccessBtn">Refresh access</button></div></dialog>
@@ -168,10 +169,25 @@ async function init(){
       const raw=document.getElementById("inviteCode").value.trim();if(raw)sessionStorage.setItem("physiqueOS_invite",raw);
       const result=signup?await sb.auth.signUp({email,password,options:{data:{full_name:document.getElementById("authName").value.trim()},emailRedirectTo:location.origin+location.pathname}}):await sb.auth.signInWithPassword({email,password});
       if(result.error)throw result.error;
-      if(!result.data.session){message("Check your email to confirm your account, then sign in.");return;}
+      if(!result.data.session){message("Check your email to confirm your account, then return here and sign in. If the link doesn't open, use the confirmation help below.");return;}
       if(raw){await claimInvite(raw);sessionStorage.removeItem("physiqueOS_invite");}
       await afterAuth(result.data.user);
-    }catch(e){message(e.message||"Sign in failed",true);}finally{b.disabled=false;}
+    }catch(e){cloud.ready=false;message(e.message||"Sign in failed",true);}finally{b.disabled=false;}
+  };
+  document.getElementById("authConfirmLink").onclick=async()=>{
+    const b=document.getElementById("authConfirmLink"),input=document.getElementById("authConfirmationLink");b.disabled=true;
+    try{
+      const email=document.getElementById("authEmail").value.trim().toLowerCase();if(!email)throw new Error("Enter the email you are confirming above.");
+      let link;try{link=new URL(input.value.trim());}catch{throw new Error("Paste the original confirmation link from your email.");}
+      if(link.origin!=="https://oyrtpvtzaoftinqoossn.supabase.co"||link.pathname!=="/auth/v1/verify"||link.username||link.password)throw new Error("Use the original PhysiqueOS confirmation link from your email.");
+      const type=link.searchParams.get("type"),token=link.searchParams.get("token_hash")||link.searchParams.get("token");
+      if(!["signup","email"].includes(type)||!token||!/^[A-Za-z0-9_-]{32,256}$/.test(token))throw new Error("This isn't a signup confirmation link. Use the original confirmation email.");
+      input.value="";
+      const {data,error}=await sb.auth.verifyOtp({token_hash:token,type});
+      if(error||!data?.session||!data.user)throw new Error("This link may be expired or already used. Try signing in if you already opened it, or request a fresh confirmation email.");
+      if(data.user.email?.toLowerCase()!==email){await sb.auth.signOut();throw new Error("That link belongs to a different email. Use the confirmation email for the address above.");}
+      document.getElementById("authPassword").value="";await afterAuth(data.user);message("Email confirmed. Your account is ready.");
+    }catch(e){cloud.ready=false;message(e.message||"Confirmation unavailable. Please try again.",true);}finally{input.value="";b.disabled=false;}
   };
   document.getElementById("authResend").onclick=async()=>{
     const email=document.getElementById("authEmail").value.trim();if(!email)return message("Enter your email first",true);
@@ -217,7 +233,7 @@ async function init(){
     if(event==="SIGNED_OUT"){cloud.ready=false;cloud.user=null;cloud.features.clear();clearMirror();document.getElementById("authGate").classList.remove("hidden");}
   });
   const {data:{session}}=await sb.auth.getSession();
-  if(session?.user)try{await afterAuth(session.user);}catch(e){message("Account could not load: "+e.message,true);}
+  if(session?.user)try{await afterAuth(session.user);}catch(e){cloud.ready=false;message("Account could not load: "+e.message,true);}
   window.addEventListener("online",push);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")push();});
 }

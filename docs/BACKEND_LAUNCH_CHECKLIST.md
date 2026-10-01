@@ -3,7 +3,7 @@
 The backend code is implemented for the current web beta. Paid launch and lifecycle email delivery remain blocked by the configuration and end-to-end checks below. This is not a claim that the full premium wellness product is complete.
 
 ## Deployed database and server capabilities
-- Supabase Auth with email confirmation enabled; private user data and account isolation.
+- Supabase Auth with email confirmation enabled and an in-app confirmation-link fallback that validates the project origin and bound email; private user data and account isolation.
 - Exact-tier entitlements, closed enrollment flags, Founding capacity reservations, invitation claims, owner/admin reporting and support replies.
 - Revision-controlled cloud state; normalized profile, check-in, measurement and workout reporting.
 - Private progress-photo bucket, owner-folder Storage policies, metadata ownership constraint; explicit upload and photo download/delete interface.
