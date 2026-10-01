@@ -21,6 +21,7 @@ await db.exec(await readFile(new URL('docs/proposed-tier-operations.sql',root),'
 await db.exec(await readFile(new URL('supabase/migrations/20261001042402_account_privacy_operations.sql',root),'utf8'));
 await db.exec(await readFile(new URL('supabase/migrations/20261001042414_verified_owner_bootstrap.sql',root),'utf8'));
 await db.exec(await readFile(new URL('supabase/migrations/20261001042424_lifecycle_notifications.sql',root),'utf8'));
+await db.exec((await readFile(new URL('supabase/migrations/20261001043759_operations_and_retention_schedule.sql',root),'utf8')).split('-- Runtime scheduling')[0]);
 await q("insert into auth.users(id,email,email_confirmed_at) values($1,'client@example.com',now()),($2,'other@example.com',now()),($3,'owner@example.com',now())",[uid,other,owner]);
 await q("insert into profiles(user_id,email) select id,email from auth.users");
 const [org]=await q("insert into organizations(name,slug) values('PhysiqueOS','physiqueos') returning id");
@@ -148,6 +149,12 @@ await t.test('optional re-engagement honors preferences and never queues marketi
  await asUser(null,()=>q('select queue_retention_nudges()'),'service_role');
  assert.equal((await q("select count(*)::int n from physique_private.email_outbox where kind='return_to_plan'"))[0].n,0);
  assert.equal((await q("select count(*)::int n from account_notifications where user_id=$1 and category='coaching'",[uid]))[0].n,0);
+});
+await t.test('operations health is organization-scoped and denied to clients',async()=>{
+ await assert.rejects(()=>asUser(uid,()=>q('select operations_health($1)',[org.id])),/Owner or admin/);
+ const [{health}]=await asUser(owner,()=>q('select operations_health($1) health',[org.id]));assert.ok(health.active_members>=2);assert.equal(typeof health.queued_emails,'number');
+ const [foreignOrg]=await q("insert into organizations(name,slug) values('Other','other') returning id");
+ await assert.rejects(()=>asUser(owner,()=>q('select operations_health($1)',[foreignOrg.id])),/Owner or admin/);
 });
 await db.close();
 });

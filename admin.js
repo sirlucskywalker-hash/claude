@@ -40,6 +40,8 @@ async function init(){
   const {data,error:memberError}=await sb.from("admin_client_overview_v2").select("*");
   if(memberError)throw memberError;members=data||[];
   document.getElementById("adminStats").innerHTML=[["Members",members.length],["Paid",members.filter(m=>m.access_source==="stripe"&&m.has_app_access).length],["Beta",members.filter(m=>m.access_source==="beta"&&m.has_app_access).length],["Needs check-in",members.filter(m=>!m.last_checkin_date||Date.now()-Date.parse(m.last_checkin_date)>7*86400000).length]].map(([label,value])=>`<article class="tierCard"><span>${label}</span><h2>${value}</h2></article>`).join("");
+  const {data:health,error:healthError}=await sb.rpc("operations_health",{org});if(healthError)throw healthError;
+  document.getElementById("operationsHealth").innerHTML=Object.entries(health).map(([key,value])=>`<article class="tierCard"><span>${esc(key.replaceAll("_"," "))}</span><h2>${esc(value)}</h2></article>`).join("");
   renderMembers();await queue();await deletionQueue();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
   document.getElementById("memberSearch").oninput=renderMembers;
   document.getElementById("inviteForm").onsubmit=async(e)=>{
