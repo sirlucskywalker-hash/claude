@@ -377,9 +377,9 @@
 <label class="wide">Notes<textarea id="logNotes"></textarea></label></div>
 <button class="primary" onclick="saveLog()">Save check-in</button></div>
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">WEEKLY REVIEW</span><h3>Seven-day intelligence</h3></div><button onclick="renderWeeklyReview()">Refresh</button></div><div id="weeklyReview" data-feature="advanced_analytics"></div></div>
-<div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Photos stay on this device in the beta.</p><div class="notice"><strong>Full-version vision analysis:</strong> planned photo-based meal estimation, physique change analysis, standardized comparison overlays and confidence-aware recommendations. Beta stores photos only and does not pretend to infer body fat from an image.</div>
+<div class="card"><h3>Progress photos</h3><p>Standardize lighting, distance and pose. Save on this device, or choose private account storage below.</p><div class="notice"><strong>Full-version vision analysis:</strong> planned photo-based meal estimation, physique change analysis, standardized comparison overlays and confidence-aware recommendations. Photos are stored without automated vision analysis.</div>
 <div class="form"><label>Date<input id="photoDate" type="date"></label><label>Front<input id="photoFront" type="file" accept="image/*"></label><label>Side<input id="photoSide" type="file" accept="image/*"></label><label>Back<input id="photoBack" type="file" accept="image/*"></label></div>
-<div class="buttons"><button class="primary" onclick="savePhotos()">Save photo set</button><button class="danger" onclick="deleteAllPhotos()">Delete all photos</button></div><div id="photoGallery" class="photoGrid"></div></div>
+<div class="buttons"><button class="primary" onclick="savePhotos()">Save photo set</button><button class="danger" onclick="deleteAllPhotos()">Delete all photos</button></div><div id="photoGallery" class="photoGrid"></div><h3>Private account photos</h3><p>Uploading here stores the selected photos securely with your account. Existing device photos are not uploaded automatically. JPEG, PNG, or WebP, up to 10 MB each.</p><div class="buttons"><button id="uploadCloudPhotosBtn">Save selected photos to account</button><button id="refreshCloudPhotosBtn">Refresh account gallery</button></div><p id="cloudPhotoMessage" role="status"></p><div id="cloudPhotoGallery" class="photoRow"></div><div class="buttons"><button id="cloudPhotosPrev" disabled>Previous photos</button><button id="cloudPhotosNext" disabled>Next photos</button></div></div>
 <div class="card"><h3>History</h3><div id="history"></div></div>
 </section>
 
@@ -422,7 +422,7 @@
   <div class="integrationCard future"><strong>Oura</strong><span>Sleep/readiness/activity context when connected.</span><em>Full version</em></div>
   <div class="integrationCard future"><strong>Garmin / Fitbit</strong><span>Activity, sleep and supported wearable metrics when connected.</span><em>Full version</em></div>
 </div></div>
-<div class="card"><h2>Data & backup</h2><p>This beta stores coaching data on this browser/device. Export a backup before changing devices or clearing browser storage. Progress photos are stored separately in IndexedDB and are not included in JSON backup yet. “Erase local data” now clears both coaching data and stored progress photos.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button></div></section>
+<div class="card"><h2>Data & backup</h2><p>Account coaching data syncs to private storage when you have membership access. Export a device backup before clearing browser storage. Photo files are separate from JSON exports. Erasing local data does not delete your account or cloud records.</p><button class="primary" onclick="exportData()">Export backup</button><label class="fileBtn">Import backup<input id="importFile" type="file" accept=".json" onchange="importData(this)"></label><button class="danger" onclick="resetAll()">Erase local data</button><hr><h3>Account data</h3><p>Download your account records and saved device recovery copies. This export is separate from the importable device backup. Deletion requests go to the owner for processing; submitting one does not cancel billing or immediately erase data.</p><button id="exportAccountBtn" data-account-service>Export account records</button><button id="deleteAccountRequestBtn" data-account-service class="danger">Request account deletion</button><p id="accountToolsMessage" role="status"></p></div></section>
 </main>
 <div id="swapPickerBackdrop" class="swapPickerBackdrop hidden" onclick="closeSwapPicker()"></div>
 <div id="swapPicker" class="swapPicker hidden" role="dialog" aria-modal="true" aria-labelledby="swapPickerTitle">
@@ -432,7 +432,7 @@
   </div>
   <div id="swapPickerCurrent" class="swapPickerCurrent"></div>
   <div class="swapPickerTools">
-    <input id="swapSearch" type="search" placeholder="Search compatible foods…" oninput="renderSwapPickerOptions()">
+    <iput id="swapSearch" type="search" placeholder="Search compatible foods…" oninput="renderSwapPickerOptions()">
     <div class="swapFilters">
       <button data-swap-filter="recommended" class="active" onclick="setSwapFilter('recommended',this)">Recommended</button>
       <button data-swap-filter="all" onclick="setSwapFilter('all',this)">All compatible</button>
@@ -470,5 +470,5 @@
 </div>
 
 <footer>PhysiqueOS Beta • adaptive • cloud-synced • secure account access</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script><script src="data.js?v=54"></script><script src="coach-engine.js?v=1"></script><script src="app.js?v=58"></script><script src="coaching.js?v=2"></script><script src="cloud.js?v=3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script><script src="data.js?v=54"></script><script src="coach-engine.js?v=1"></script><script src="app.js?v=59"></script><script src="coaching.js?v=2"></script><script src="cloud.js?v=4"></script><script src="account-tools.js?v=1"></script>
 </body></html>

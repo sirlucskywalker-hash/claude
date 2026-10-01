@@ -13,6 +13,14 @@ function renderMembers(){
     const pre=document.createElement("pre");pre.textContent=JSON.stringify(data?.state||{},null,2);d.append(heading,pre);
   });
 }
+async function deletionQueue(){
+  const {data,error}=await sb.from("account_deletion_requests").select("*").in("status",["pending","in_progress"]).order("requested_at");
+  if(error)throw error;
+  document.getElementById("deletionQueue").innerHTML=(data||[]).map(r=>{
+    const member=members.find(m=>m.user_id===r.user_id);
+    return `<article class="tierCard"><strong>${esc(member?.email||r.user_id)}</strong><p>${esc(r.status)} • requested ${esc(r.requested_at)}</p><small>Request ${esc(r.id)}</small></article>`;
+  }).join("")||"<p>No open deletion requests.</p>";
+}
 async function queue(){
   const {data,error}=await sb.from("support_tickets").select("*").order("created_at");
   if(error)throw error;
@@ -32,7 +40,7 @@ async function init(){
   const {data,error:memberError}=await sb.from("admin_client_overview_v2").select("*");
   if(memberError)throw memberError;members=data||[];
   document.getElementById("adminStats").innerHTML=[["Members",members.length],["Paid",members.filter(m=>m.access_source==="stripe"&&m.has_app_access).length],["Beta",members.filter(m=>m.access_source==="beta"&&m.has_app_access).length],["Needs check-in",members.filter(m=>!m.last_checkin_date||Date.now()-Date.parse(m.last_checkin_date)>7*86400000).length]].map(([label,value])=>`<article class="tierCard"><span>${label}</span><h2>${value}</h2></article>`).join("");
-  renderMembers();await queue();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
+  renderMembers();await queue();await deletionQueue();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
   document.getElementById("memberSearch").oninput=renderMembers;
   document.getElementById("inviteForm").onsubmit=async(e)=>{
     e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;

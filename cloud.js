@@ -26,9 +26,9 @@ function inject(){
   <label>Password<input id="authPassword" type="password" autocomplete="current-password"></label>
   <label id="authNameRow" class="hidden">Name<input id="authName" autocomplete="name"></label>
   <label>Beta invite code<input id="inviteCode" autocomplete="off"></label><p id="authMessage" role="status" class="authMessage"></p>
-  <button id="authPrimary" class="primary fullBtn">Sign in</button><button id="authToggle" class="ghostBtn fullBtn">Create account</button><button id="authReset" class="textLink authTextBtn">Forgot password?</button></div></div>
+  <button id="authPrimary" class="primary fullBtn">Sign in</button><button id="authToggle" class="ghostBtn fullBtn">Create account</button><button id="authReset" class="textLink authTextBtn">Forgot password?</button><button id="authResend" class="textLink authTextBtn">Resend confirmation email</button></div></div>
   <div id="accountPill" class="accountPill hidden"><span><strong id="accountName">Account</strong><small id="accountPlan">LOADING</small></span><button id="accountMenuBtn" aria-label="Account menu">•••</button>
-  <div id="accountMenu" class="accountMenu hidden"><button id="syncNowBtn">Sync now</button><button id="plansBtn">Membership & tiers</button><button id="supportBtn">Get support</button><button id="billingBtn">Manage billing</button><a id="adminLink" href="admin.html" class="hidden">Owner dashboard</a><button id="signOutBtn">Sign out</button></div></div>
+  <div id="accountMenu" class="accountMenu hidden"><button id="syncNowBtn">Sync now</button><button id="plansBtn">Membership & tiers</button><button id="supportBtn">Get support</button><button id="billingBtn">Manage billing / change plan</button><button id="accountNotificationsBtn">Account notifications</button><a id="adminLink" href="admin.html" class="hidden">Owner dashboard</a><button id="signOutBtn">Sign out</button></div></div>
   <dialog id="membershipDialog" class="membershipDialog"><div class="sectionHead"><h2>Find your level</h2><button id="closePlans" aria-label="Close membership comparison">✕</button></div><p id="membershipMessage" role="status"></p><div id="membershipBody"></div><div class="buttons"><button id="claimInviteBtn">Claim beta invite</button><button id="refreshAccessBtn">Refresh access</button></div></dialog>
   <dialog id="supportDialog" class="membershipDialog"><div class="sectionHead"><h2>Your support</h2><button id="closeSupport" aria-label="Close support">✕</button></div><form id="supportForm"><label>Subject<input name="subject" required maxlength="160"></label><label>How can we help?<textarea name="body" required maxlength="10000" rows="4"></textarea></label><button class="primary">Send request</button></form><p id="supportMessage" role="status"></p><div id="supportHistory"></div></dialog>`;
   document.body.appendChild(wrap);document.getElementById("cloudBootNotice")?.remove();
@@ -71,7 +71,7 @@ async function showPlans(){
     ["Automated form / vision analysis","—","Planned add-on","Planned","Planned"],
     ["Wearable sync","Planned","Planned","Planned","Planned"]
   ];
-  document.getElementById("membershipBody").innerHTML=`<div class="tierCards">${plans.map(p=>`<article class="tierCard ${p.code===cloud.plan?"selected":""}"><span class="kicker">${esc(p.name)}</span><h3>$${p.monthly_cents/100}<small>/month</small></h3>${p.annual_cents?`<p>$${p.annual_cents/100} billed yearly</p>`:""}<ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join("")}</ul><button data-buy="${esc(p.code)}_monthly" ${p.public?"":"disabled"}>${p.public?"Choose monthly":"Enrollment closed"}</button>${p.annual_cents&&p.public?`<button data-buy="${esc(p.code)}_annual">Choose annual</button>`:""}</article>`).join("")}</div><p>Founding 100 includes the current Pro bundle at $39 monthly while continuously active. Future services with material costs may be add-ons.</p><div class="tableScroll"><table><thead><tr><th>Capability</th><th>Core</th><th>Pro</th><th>Elite</th><th>Concierge</th></tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>").join("")}</tbody></table></div>`;
+  document.getElementById("membershipBody").innerHTML=`<div class="tierCards">${plans.map(p=>`<article class="tierCard ${p.code===cloud.plan?"selected":""}"><span class="kicker">${esc(p.name)}</span><h3>$${p.monthly_cents/100}<small>/month</small></h3>${p.annual_cents?`<p>$${p.annual_cents/100} billed yearly</p>`:""}<ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join("")}</ul><button data-buy="${esc(p.code)}_monthly" ${p.public?"":"disabled"}>${p.public?"Choose monthly":"Enrollment closed"}</button>${p.annual_cents&&p.public?`<button data-buy="${esc(p.code)}_annual">Choose annual</button>`:""}</article>`).join("")}</div><p>Paid members can upgrade, downgrade, or cancel in Manage billing. Upgrades use prorated billing; downgrades and cancellations take effect at the end of the paid period. Stripe shows the charge and date before confirmation. Leaving Founding ends its locked rate.</p><p>Founding 100 includes the current Pro bundle at $39 monthly while continuously active. Future services with material costs may be add-ons.</p><div class="tableScroll"><table><thead><tr><th>Capability</th><th>Core</th><th>Pro</th><th>Elite</th><th>Concierge</th></tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>").join("")}</tbody></table></div>`;
   dialog.querySelectorAll("[data-buy]").forEach(b=>b.onclick=async()=>{
     b.disabled=true;try{
       const url=new URL(location.href);url.searchParams.set("billing","pending");
@@ -131,11 +131,14 @@ async function afterAuth(user){
   document.getElementById("accountName").textContent=user.user_metadata?.full_name||user.email||"Account";
   document.getElementById("accountPill").classList.remove("hidden");
   cloud.ready=true;
+  const {error:ownerError}=await sb.rpc("claim_owner_access");
+  if(ownerError)throw ownerError;
   await loadAccess();
   const {data:members,error:memberError}=await sb.from("memberships").select("role").eq("user_id",user.id).eq("status","active");
   if(memberError)throw memberError;
   document.getElementById("adminLink").classList.toggle("hidden",!(members||[]).some(m=>["owner","admin"].includes(m.role)));
   if(!recoveryMode)document.getElementById("authGate").classList.add("hidden");
+  document.dispatchEvent(new Event("physique:account-ready"));
   if(cloud.dirty)await push();
 }
 async function support(){
@@ -148,6 +151,9 @@ async function support(){
 async function init(){
   inject();let signup=false;
   const url=new URL(location.href),invite=url.searchParams.get("invite");
+  const authError=new URLSearchParams(location.hash.slice(1)).get("error_description");
+  if(authError){message(authError+". Request a fresh confirmation below.",true);history.replaceState(null,"",url.pathname+url.search);}
+
   if(invite){sessionStorage.setItem("physiqueOS_invite",invite);url.searchParams.delete("invite");history.replaceState(null,"",url);}
   document.getElementById("inviteCode").value=sessionStorage.getItem("physiqueOS_invite")||"";
   document.getElementById("authToggle").onclick=()=>{signup=!signup;document.getElementById("authNameRow").classList.toggle("hidden",!signup);document.getElementById("authTitle").textContent=signup?"Create account":"Sign in";document.getElementById("authPrimary").textContent=signup?"Create account":"Sign in";document.getElementById("authToggle").textContent=signup?"I already have an account":"Create account";};
@@ -166,6 +172,12 @@ async function init(){
       if(raw){await claimInvite(raw);sessionStorage.removeItem("physiqueOS_invite");}
       await afterAuth(result.data.user);
     }catch(e){message(e.message||"Sign in failed",true);}finally{b.disabled=false;}
+  };
+  document.getElementById("authResend").onclick=async()=>{
+    const email=document.getElementById("authEmail").value.trim();if(!email)return message("Enter your email first",true);
+    const button=document.getElementById("authResend");button.disabled=true;
+    try{const {error}=await sb.auth.resend({type:"signup",email,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;message("If this account needs confirmation, a new link has been requested. After verifying, return here and sign in.");}
+    catch(e){message(e.message,true);}finally{button.disabled=false;}
   };
   document.getElementById("authReset").onclick=async()=>{
     const email=document.getElementById("authEmail").value.trim();if(!email)return message("Enter your email first",true);
@@ -198,7 +210,7 @@ async function init(){
   };
   document.addEventListener("click",e=>{
     const locked=e.target.closest("[data-feature]");if(locked&&!window.hasPhysiqueFeature(locked.dataset.feature)){e.preventDefault();e.stopImmediatePropagation();showPlans();}
-    if(cloud.plan==="none"&&e.target.closest("main,nav,section")){e.preventDefault();e.stopImmediatePropagation();showPlans();}
+    if(cloud.plan==="none"&&!e.target.closest("[data-account-service]")&&e.target.closest("main,nav,section")){e.preventDefault();e.stopImmediatePropagation();showPlans();}
   },true);
   sb.auth.onAuthStateChange((event,session)=>{
     if(event==="PASSWORD_RECOVERY"){recoveryMode=true;document.getElementById("authTitle").textContent="Set new password";document.getElementById("authPrimary").textContent="Update password";document.getElementById("authGate").classList.remove("hidden");}

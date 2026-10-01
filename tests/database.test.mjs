@@ -18,6 +18,9 @@ await db.exec((await readFile(new URL('supabase/migrations/0001_core.sql',root),
 await db.exec(`create or replace function public.can_manage_user(target uuid) returns boolean language sql stable security definer set search_path=public as $$select exists(select 1 from memberships mine join memberships theirs using(organization_id) where mine.user_id=auth.uid() and mine.role in ('owner','admin','coach') and mine.status='active' and theirs.user_id=target and theirs.status='active')$$;`);
 await db.exec(await readFile(new URL('tests/database-existing.sql',root),'utf8'));
 await db.exec(await readFile(new URL('docs/proposed-tier-operations.sql',root),'utf8'));
+await db.exec(await readFile(new URL('supabase/migrations/20261001042402_account_privacy_operations.sql',root),'utf8'));
+await db.exec(await readFile(new URL('supabase/migrations/20261001042414_verified_owner_bootstrap.sql',root),'utf8'));
+await db.exec(await readFile(new URL('supabase/migrations/20261001042424_lifecycle_notifications.sql',root),'utf8'));
 await q("insert into auth.users(id,email,email_confirmed_at) values($1,'client@example.com',now()),($2,'other@example.com',now()),($3,'owner@example.com',now())",[uid,other,owner]);
 await q("insert into profiles(user_id,email) select id,email from auth.users");
 const [org]=await q("insert into organizations(name,slug) values('PhysiqueOS','physiqueos') returning id");
@@ -78,6 +81,73 @@ await t.test('closed launch tiers block checkout; founding reservations enforce 
  await q("update plan_catalog set public=true where code='founding'");
  await q("insert into checkout_reservations(user_id,plan_code,state) select $1,'founding','redeemed' from generate_series(1,100)",[uid]);
  await assert.rejects(()=>asUser(null,()=>q("select reserve_checkout($1,'founding')",[other]),'service_role'),/full/);
+});
+await t.test('owner bootstrap requires an operator allowlist and confirmed email, and is one-time',async()=>{
+ assert.equal((await asUser(other,()=>q('select claim_owner_access() as claimed')))[0].claimed,false);
+ await q("insert into physique_private.owner_bootstrap(email) values('other@example.com')");
+ await q('update auth.users set email_confirmed_at=null where id=$1',[other]);
+ assert.equal((await asUser(other,()=>q('select claim_owner_access() as claimed')))[0].claimed,false);
+ await q('update auth.users set email_confirmed_at=now() where id=$1',[other]);
+ assert.equal((await asUser(other,()=>q('select claim_owner_access() as claimed')))[0].claimed,true);
+ assert.equal((await asUser(other,()=>q('select claim_owner_access() as claimed')))[0].claimed,true);
+ assert.equal((await asUser(other,()=>q('select current_plan_code() as plan')))[0].plan,'concierge');
+ assert.equal((await q("select count(*)::int n from audit_log where action='owner.bootstrap_claimed'"))[0].n,1);
+ await assert.rejects(()=>asUser(uid,()=>q("insert into physique_private.owner_bootstrap(email) values('client@example.com')")),/permission denied/);
+});
+await t.test('exports remain own-account even for staff and exclude internal coaching notes',async()=>{
+ const [{result}]=await asUser(other,()=>q("select export_account_page('profiles',0) result"));
+ assert.equal(result.rows.length,1);assert.equal(result.rows[0].user_id,other);
+ await q("insert into coach_notes(organization_id,client_user_id,author_user_id,visibility,body) values($1,$2,$3,'staff','Private'),($1,$2,$3,'client','Shared')",[org.id,uid,owner]);
+ const [{result:notes}]=await asUser(uid,()=>q("select export_account_page('coach_notes',0) result"));
+ assert.deepEqual(notes.rows.map(x=>x.body),['Shared']);
+ await assert.rejects(()=>asUser(uid,()=>q("select export_account_page('auth.users',0)")),/Unknown export section/);
+ await assert.rejects(()=>asUser(uid,()=>q("select export_account_page('profiles',-1)")),/Invalid export offset/);
+ await assert.rejects(()=>asUser(null,()=>q("select export_account_page('profiles',0)"),'anon'),/permission denied/);
+ await q("insert into daily_checkins(user_id,organization_id,checkin_date) select $1,$2,'2020-01-01'::date+n from generate_series(0,104)n",[uid,org.id]);
+ const [{result:page1}]=await asUser(uid,()=>q("select export_account_page('daily_checkins',0) result"));
+ const [{result:page2}]=await asUser(uid,()=>q("select export_account_page('daily_checkins',100) result"));
+ assert.equal(page1.rows.length,100);assert.equal(page1.next_offset,100);assert.equal(page2.rows.length,6);assert.equal(page2.next_offset,null);
+});
+await t.test('deletion requests are idempotent, audited, and cannot be submitted for another account',async()=>{
+ const [{id}]=await asUser(uid,()=>q('select request_account_deletion() id'));
+ assert.equal((await asUser(uid,()=>q('select request_account_deletion() id')))[0].id,id);
+ assert.equal((await asUser(owner,()=>q('select request_account_deletion() id')))[0].id===id,false);
+ assert.equal((await q("select count(*)::int n from audit_log where action='account.deletion_requested' and actor_user_id=$1",[uid]))[0].n,1);
+ await assert.rejects(()=>asUser(uid,()=>q("update account_deletion_requests set status='completed'")),/permission denied/);
+});
+await t.test('confirmed welcome messages are unique and notification access stays private',async()=>{
+ assert.equal((await q("select count(*)::int n from account_notifications where user_id=$1 and event_key='welcome'",[uid]))[0].n,1);
+ await q('update auth.users set email_confirmed_at=now() where id=$1',[uid]);
+ assert.equal((await q("select count(*)::int n from account_notifications where user_id=$1 and event_key='welcome'",[uid]))[0].n,1);
+ const rows=await asUser(owner,()=>q('select * from account_notifications'));
+ assert.ok(rows.every(r=>r.user_id===owner));
+ const [note]=await q('select id from account_notifications where user_id=$1 limit 1',[uid]);
+ await asUser(other,()=>q('select read_account_notification($1)',[note.id]));
+ assert.equal((await q('select read_at from account_notifications where id=$1',[note.id]))[0].read_at,null);
+ await assert.rejects(()=>asUser(uid,()=>q("update account_notifications set body='fake'")),/permission denied/);
+});
+await t.test('email jobs lease once, keep retry payload stable, reject stale completion, and suppress complaints',async()=>{
+ const claim=()=>asUser(null,()=>q('select claim_lifecycle_emails() result'),'service_role');
+ await assert.rejects(()=>asUser(uid,()=>q('select claim_lifecycle_emails()')),/permission denied/);
+ const [{result:jobs}]=await claim();assert.ok(jobs.length>0&&jobs.length<=5);
+ const job=jobs.find(x=>x.kind==='welcome')||jobs[0];
+ const [{result:more}]=await claim();assert.ok(more.every(x=>!jobs.some(j=>j.id===x.id)));
+ await asUser(null,()=>q("select finish_lifecycle_email($1,$2,'sent','email_wrong',null)",[job.id,'20000000-0000-4000-8000-000000000001']),'service_role');
+ assert.equal((await q('select status from physique_private.email_outbox where id=$1',[job.id]))[0].status,'sending');
+ await asUser(null,()=>q("select finish_lifecycle_email($1,$2,'sent','email_valid',null)",[job.id,job.lease_token]),'service_role');
+ await asUser(null,()=>q("select record_lifecycle_delivery('delivery_1','email_valid','email.complained',$1)",[[job.email]]),'service_role');
+ await asUser(null,()=>q("select record_lifecycle_delivery('delivery_1','email_valid','email.complained',$1)",[[job.email]]),'service_role');
+ assert.equal((await q("select count(*)::int n from physique_private.email_delivery_events where event_key='delivery_1'"))[0].n,1);
+ assert.equal((await q('select reason from physique_private.email_suppressions where email=$1',[job.email]))[0].reason,'email.complained');
+});
+await t.test('optional re-engagement honors preferences and never queues marketing mail',async()=>{
+ await asUser(uid,()=>q('select set_communication_preferences(false,false)'));
+ assert.equal((await q('select coaching_nudges from communication_preferences where user_id=$1',[uid]))[0].coaching_nudges,false);
+ assert.equal((await q("select granted from consent_events where user_id=$1 and document_version='communication-preferences-v1'",[uid]))[0].granted,false);
+ await q("update profiles set created_at=now()-interval '10 days'");
+ await asUser(null,()=>q('select queue_retention_nudges()'),'service_role');
+ assert.equal((await q("select count(*)::int n from physique_private.email_outbox where kind='return_to_plan'"))[0].n,0);
+ assert.equal((await q("select count(*)::int n from account_notifications where user_id=$1 and category='coaching'",[uid]))[0].n,0);
 });
 await db.close();
 });

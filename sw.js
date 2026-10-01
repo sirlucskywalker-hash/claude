@@ -1,5 +1,5 @@
-const CACHE='physiqueos-v58';
-const ASSETS=['./','./index.html','./styles.css?v=54','./data.js?v=54','./app.js?v=58','./coach-engine.js?v=1','./coaching.js?v=2','./coaching.css?v=1','./cloud.js?v=3','./cloud.css?v=3','./manifest.webmanifest','./assets/aurora-mountains.svg','./assets/shoulder-protection.svg'];
+const CACHE='physiqueos-v59';
+const ASSETS=['./','./index.html','./styles.css?v=54','./data.js?v=54','./app.js?v=59','./coach-engine.js?v=1','./coaching.js?v=2','./coaching.css?v=1','./cloud.js?v=4','./cloud.css?v=3','./account-tools.js?v=1','./manifest.webmanifest','./assets/aurora-mountains.svg','./assets/shoulder-protection.svg'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('physiqueos-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()])));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin)return;if(e.request.mode==='navigate'){e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match('./index.html')));return}e.respondWith(fetch(e.request,{cache:'no-store'}).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request)))});

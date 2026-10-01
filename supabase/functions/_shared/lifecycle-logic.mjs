@@ -1,0 +1,9 @@
+export function lifecycleEmail(job,siteUrl){
+ const url=new URL(siteUrl);if(url.protocol!=='https:')throw new Error('Secure site URL required');
+ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const name=job.name?.trim()||'there',title=job.payload.title,body=job.payload.body;
+ const text=`Hi ${name},\n\n${title}\n\n${body}\n\nOpen PhysiqueOS: ${url.href}\n\nFor help, use Get support in the app.\nThis is an account service message.`;
+ const html=`<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title></head><body style="margin:0;background:#eef2f7;font-family:Arial,sans-serif;color:#16243b"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px"><table role="presentation" width="100%" style="max-width:600px;background:#ffffff;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px"><p style="font-size:13px;letter-spacing:2px;color:#35506f">PHYSIQUEOS</p><h1 style="font-size:28px;line-height:1.3">${esc(title)}</h1><p>Hi ${esc(name)},</p><p style="font-size:16px;line-height:1.7">${esc(body)}</p><p style="padding:16px 0"><a href="${esc(url.href)}" style="display:inline-block;background:#16243b;color:#fff;padding:14px 22px;border-radius:8px;text-decoration:none">Open PhysiqueOS</a></p><p style="font-size:14px;line-height:1.6">For help, use Get support in the app.</p><hr style="border:0;border-top:1px solid #dbe2eb"><p style="font-size:12px;color:#4b5c70">This is an account service message.</p></td></tr></table></td></tr></table></body></html>`;
+ return {subject:title,html,text};
+}
+export function retryStatus(status){return status===429||status>=500?'pending':'failed';}

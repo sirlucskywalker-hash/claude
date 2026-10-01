@@ -2075,8 +2075,13 @@ function exportData(){const b=new Blob([JSON.stringify(state,null,2)],{type:'app
 function importData(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{state=JSON.parse(r.result);state.profile=state.profile||{};state.logs=state.logs||[];state.mealPlan=state.mealPlan||[];state.trainingPlan=state.trainingPlan||[];state.workoutLogs=state.workoutLogs||[];state.coachMessages=state.coachMessages||[];state.foodLogs=state.foodLogs||[];state.activityLogs=state.activityLogs||[];state.recoveryLogs=state.recoveryLogs||[];state.mealPrefs=state.mealPrefs||{meals:Number(state.profile?.meals)||4,snacks:1,distribution:'balanced'};state.dayMealPrefs=state.dayMealPrefs||{};state.trainingFlags=state.trainingFlags||[];state.trainingDrafts=state.trainingDrafts||{};state.favoriteFoods=state.favoriteFoods||[];state.foodDayTemplates=state.foodDayTemplates||[];state.foodWeekTemplates=state.foodWeekTemplates||[];state.workoutFavorites=state.workoutFavorites||[];state.schedule=state.schedule||{wake:'07:00',checkin:'07:15',meal:'08:00',workout:'17:30',bed:'23:00',mealGap:4,mode:'lifestyle',reminder:15};state.timezone=deviceTimezone();state.driftControls=state.driftControls||{sensitivity:'balanced',adherence:85,gap:2,stall:21};state.rescueMode=state.rescueMode||null;state.driftDismissedUntil=state.driftDismissedUntil||null;state.notificationSettings=state.notificationSettings||{checkin:true,meals:true,workout:true,steps:true,hydration:true,drift:true,recovery:true,quietStart:'22:30',quietEnd:'07:00',escalation:'balanced'};state.notifications=state.notifications||[];state.notificationSent=state.notificationSent||{};save();renderAll();alert('Backup imported.')}catch(e){alert('Invalid backup.')}};r.readAsText(f)}
 async function resetAll(){
   if(!confirm('Erase ALL local PhysiqueOS data on this device, including progress photos? This cannot be undone.'))return;
+  const owner=window.physiqueCloud?.user?.id;
+  if(window.physiqueCloud?.busy)return alert('Please wait for sync to finish.');
+  if(window.physiqueCloud){window.physiqueCloud.ready=false;clearTimeout(window.physiqueCloud.syncTimer);}
   localStorage.removeItem('physiqueOS');
-  try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase('PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
+  localStorage.removeItem('physiqueOS_owner');
+  if(owner)for(const suffix of ['', '_conflict', '_recovery'])localStorage.removeItem('physiqueOS_account_'+owner+suffix);
+  try{await new Promise(resolve=>{const req=indexedDB.deleteDatabase(owner?'PhysiqueOSPhotos_'+owner:'PhysiqueOSPhotos');req.onsuccess=req.onerror=req.onblocked=()=>resolve()})}catch(e){}
   location.reload();
 }
 function renderAll(){loadProfile();syncTacticalProfileUI();loadSchedule();loadDriftControls();loadNotificationSettings();renderDashboard();renderNutrition();renderMeals();renderTraining();renderReadiness();renderHistory();renderFoodDiary();renderRecentFoods();renderSavedNutrition();loadDailyMetrics();renderActivityHistory();renderDayRecommendation();renderRecoveryHistory();previewActivityBurn();renderCoachChat();renderFaqQuestions();renderAdjustment();renderWeeklyReview();renderPhotoGallery();renderNotificationCenter();renderMenuProfile();syncRangeOutputs();if(el('logDayScore'))el('logDayScore').textContent=dailyScore();document.dispatchEvent(new Event('physique:render'))}
@@ -2086,4 +2091,4 @@ if(el('coachInput'))el('coachInput').addEventListener('keydown',e=>{if(e.key==='
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeAppMenu();if(el('notificationCenter'))el('notificationCenter').classList.add('hidden')}});
 setInterval(()=>{if(el('timezoneStatus'))renderSchedule();processSmartReminders()},60000);
 setTimeout(processSmartReminders,2500);
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=58').then(r=>r.update()).catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js?v=59').then(r=>r.update()).catch(()=>{});

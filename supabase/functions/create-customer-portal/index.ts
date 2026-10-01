@@ -2,10 +2,11 @@ import Stripe from "npm:stripe@22.6.0";
 import {createClient} from "npm:@supabase/supabase-js@2.57.4";
 import {corsHeaders,json,configured} from "../_shared/cors.ts";
 import {returnUrl} from "../_shared/billing-logic.mjs";
+import {validatePortalPolicy} from "../_shared/portal-policy.mjs";
 Deno.serve(async(req)=>{
   if(req.method==="OPTIONS")return new Response(null,{headers:corsHeaders(req)});
   if(req.method!=="POST")return json(req,{error:"Method not allowed"},405);
-  if(!configured())return json(req,{error:"Billing setup is not complete"},503);
+  if(!configured()||!Deno.env.get("STRIPE_PORTAL_CONFIGURATION_ID"))return json(req,{error:"Billing setup is not complete"},503);
   try{
     const admin=createClient(Deno.env.get("SUPABASE_URL")!,Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const token=req.headers.get("Authorization")?.replace(/^Bearer /i,"");
@@ -17,8 +18,10 @@ Deno.serve(async(req)=>{
     if(!billing)return json(req,{error:"No paid subscription yet"},404);
     const body=await req.json();
     const stripe=new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!);
+    const configurationId=Deno.env.get("STRIPE_PORTAL_CONFIGURATION_ID")!;
+    validatePortalPolicy(await stripe.billingPortal.configurations.retrieve(configurationId));
     const session=await stripe.billingPortal.sessions.create({
-      customer:billing.stripe_customer_id,return_url:returnUrl(body.returnUrl,Deno.env.get("SITE_URL"))
+      customer:billing.stripe_customer_id,configuration:configurationId,return_url:returnUrl(body.returnUrl,Deno.env.get("SITE_URL"))
     });
     return json(req,{url:session.url});
   }catch(error){
