@@ -1,9 +1,13 @@
 {
-  "name": "PhysiqueOS MVP",
+  "id": "./",
+  "name": "PhysiqueOS",
   "short_name": "PhysiqueOS",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
-  "description": "Adaptive fitness coaching operating system"
+  "description": "Adaptive fitness coaching operating system",
+  "categories": ["fitness", "health", "lifestyle"]
 }
