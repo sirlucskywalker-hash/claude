@@ -1,7 +1,24 @@
 (()=>{
 const sb=window.supabase.createClient("https://oyrtpvtzaoftinqoossn.supabase.co","sb_publishable_O4RTSpXiy-wpOkpjo8a5tg_pfjw4VBc");
 const cloud=window.physiqueCloud={client:sb,user:null,plan:"none",features:new Set(),limits:{},revision:0,syncTimer:null,ready:false,busy:false,dirty:false,pendingPersist:false};
-let recoveryMode=false;
+let recoveryMode=false,recoveryUser=null;
+function recoveryUI(active){
+  recoveryMode=active;
+  for(const id of ["authEmail","inviteCode","authToggle","authReset","authResend","confirmationHelp"]){
+    const node=document.getElementById(id);(node.closest("label")||node).classList.toggle("hidden",active);
+  }
+  document.getElementById("authNameRow").classList.add("hidden");
+  document.getElementById("authTitle").textContent=active?"Set new password":"Sign in";
+  document.getElementById("authPrimary").textContent=active?"Update password":"Sign in";
+  document.getElementById("authPassword").autocomplete=active?"new-password":"current-password";
+  document.getElementById("authPassword").value="";
+  if(active){
+    cloud.ready=false;clearTimeout(cloud.syncTimer);
+    for(const id of ["membershipDialog","supportDialog"])document.getElementById(id)?.close();
+    document.getElementById("authGate").classList.remove("hidden");
+    message("Choose a new password to finish recovering your account.");
+  }
+}
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function message(t,error=false){const e=document.getElementById("authMessage");e.textContent=t;e.classList.toggle("error",error)}
 function status(t){document.getElementById("accountPlan").textContent=cloud.plan.toUpperCase()+" • "+t}
@@ -85,7 +102,7 @@ async function claimInvite(raw){
   const {data,error}=await sb.rpc("claim_invite",{raw_token:raw});if(error)throw error;return data;
 }
 async function push(){
-  if(!cloud.ready||!cloud.user||cloud.plan==="none")return;
+  if(recoveryMode||!cloud.ready||!cloud.user||cloud.plan==="none")return;
   cloud.dirty=true;if(cloud.busy)return;
   cloud.busy=true;
   try{
@@ -111,6 +128,7 @@ async function push(){
 }
 window.scheduleCloudSync=()=>{if(!cloud.ready)return;cloud.dirty=true;cache();clearTimeout(cloud.syncTimer);cloud.syncTimer=setTimeout(push,900);};
 async function afterAuth(user){
+  if(recoveryMode)return;
   if(cloud.user?.id===user.id&&cloud.ready)return;
   cloud.ready=false;cloud.user=user;
   const owner=localStorage.getItem("physiqueOS_owner");
@@ -163,8 +181,10 @@ async function init(){
     try{
       const email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value;
       if(recoveryMode){
+        if(!recoveryUser)throw new Error("Recovery session unavailable. Request a fresh password reset.");
         const {error}=await sb.auth.updateUser({password});if(error)throw error;
-        recoveryMode=false;message("Password updated.");document.getElementById("authGate").classList.add("hidden");return;
+        const recovered=recoveryUser;recoveryUser=null;recoveryUI(false);signup=false;
+        await afterAuth(recovered);message("Password updated.");return;
       }
       const raw=document.getElementById("inviteCode").value.trim();if(raw)sessionStorage.setItem("physiqueOS_invite",raw);
       const result=signup?await sb.auth.signUp({email,password,options:{data:{full_name:document.getElementById("authName").value.trim()},emailRedirectTo:location.origin+location.pathname}}):await sb.auth.signInWithPassword({email,password});
@@ -229,8 +249,8 @@ async function init(){
     if(cloud.plan==="none"&&!e.target.closest("[data-account-service]")&&e.target.closest("main,nav,section")){e.preventDefault();e.stopImmediatePropagation();showPlans();}
   },true);
   sb.auth.onAuthStateChange((event,session)=>{
-    if(event==="PASSWORD_RECOVERY"){recoveryMode=true;document.getElementById("authTitle").textContent="Set new password";document.getElementById("authPrimary").textContent="Update password";document.getElementById("authGate").classList.remove("hidden");}
-    if(event==="SIGNED_OUT"){cloud.ready=false;cloud.user=null;cloud.features.clear();clearMirror();document.getElementById("authGate").classList.remove("hidden");}
+    if(event==="PASSWORD_RECOVERY"){recoveryUser=session?.user||null;recoveryUI(true);}
+    if(event==="SIGNED_OUT"){recoveryUser=null;recoveryUI(false);cloud.ready=false;cloud.user=null;cloud.features.clear();clearMirror();document.getElementById("authGate").classList.remove("hidden");}
   });
   const {data:{session}}=await sb.auth.getSession();
   if(session?.user)try{await afterAuth(session.user);}catch(e){cloud.ready=false;message("Account could not load: "+e.message,true);}

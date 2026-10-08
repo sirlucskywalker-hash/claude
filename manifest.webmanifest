@@ -1,13 +1,32 @@
 {
-  "id": "./",
   "name": "PhysiqueOS",
   "short_name": "PhysiqueOS",
   "start_url": "./",
-  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "description": "Adaptive fitness coaching operating system",
-  "categories": ["fitness", "health", "lifestyle"]
+  "id": "./",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "portrait-primary",
+  "categories": [
+    "fitness",
+    "health",
+    "lifestyle"
+  ]
 }
+
