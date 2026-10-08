@@ -55,6 +55,46 @@ async function queue(){
     if(error){document.getElementById("adminStatus").textContent=error.message;b.disabled=false;return;}await queue();
   });
 }
+const ownerSections=['accounts','profiles','memberships','client_profiles','daily_checkins','measurements','progress_photos','meal_plans','training_programs','workout_sessions','coach_notes','user_state_snapshots','user_app_state','billing_customers','subscriptions','entitlements','billing_events','checkout_reservations','invites','invite_claims','attribution_events','product_events','support_tickets','support_replies','account_notifications','communication_preferences','consent_events','account_deletion_requests','audit_log','beta_import_receipts','email_outbox','email_delivery_events','email_suppressions','organizations','plans','features','plan_features','plan_catalog','coach_client_assignments'];
+let ownerPage,ownerVersion=0;
+async function loadOwnerPage(offset=0){
+ const version=++ownerVersion,section=document.getElementById("ownerSection").value;
+ const status=document.getElementById("ownerDataStatus"),data=document.getElementById("ownerData"),photos=document.getElementById("ownerPhotos");
+ ownerPage=null;data.textContent="";photos.replaceChildren();status.textContent="Loading records…";
+ ['ownerPrevious','ownerNext','ownerExport'].forEach(id=>document.getElementById(id).disabled=true);
+ const {data:page,error}=await sb.rpc("owner_data_page",{section,page_offset:offset});
+ if(version!==ownerVersion)return;
+ if(error){status.textContent=error.message;return;}
+ ownerPage=page;data.textContent=JSON.stringify(page.rows,null,2);
+ status.textContent=`${section.replaceAll('_',' ')} • records ${page.rows.length?offset+1:0}–${offset+page.rows.length}. Reads are audited. Export pages while records are unchanged for a consistent collection.`;
+ document.getElementById("ownerPrevious").disabled=offset===0;
+ document.getElementById("ownerNext").disabled=page.next_offset==null;
+ document.getElementById("ownerExport").disabled=false;
+ if(section==='progress_photos')for(const photo of page.rows){
+  const button=document.createElement('button');button.textContent=`View private photo: ${photo.user_id} • ${photo.pose||'photo'}`;photos.append(button);
+  button.onclick=async()=>{
+   button.disabled=true;
+   const {data:signed,error:photoError}=await sb.storage.from('progress-photos').createSignedUrl(photo.storage_path,300);
+   if(version!==ownerVersion)return;
+   if(photoError){status.textContent=photoError.message;button.disabled=false;return;}
+   const link=document.createElement('a');link.href=signed.signedUrl;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open photo (link expires in 5 minutes)';button.replaceWith(link);
+  };
+ }
+}
+async function initOwnerExplorer(){
+ const {data:allowed,error}=await sb.rpc('is_physiqueos_owner');if(error)throw error;if(!allowed)return;
+ const select=document.getElementById('ownerSection');
+ for(const section of ownerSections){const option=document.createElement('option');option.value=section;option.textContent=section.replaceAll('_',' ');select.append(option);}
+ select.onchange=()=>loadOwnerPage();
+ document.getElementById('ownerPrevious').onclick=()=>loadOwnerPage(Math.max(0,ownerPage.offset-100));
+ document.getElementById('ownerNext').onclick=()=>loadOwnerPage(ownerPage.next_offset);
+ document.getElementById('ownerExport').onclick=()=>{
+  if(!ownerPage)return;
+  const blob=new Blob([JSON.stringify({exported_at:new Date().toISOString(),...ownerPage},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=`physiqueos-${ownerPage.section}-${ownerPage.offset}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ };
+ document.getElementById('ownerExplorer').classList.remove('hidden');await loadOwnerPage();
+}
 async function init(){
  try{
   const {data:{user}}=await sb.auth.getUser();if(!user)throw new Error("Sign in through the app first.");accountUser=user;
@@ -69,7 +109,7 @@ async function init(){
   document.getElementById("adminStats").innerHTML=[["Members",members.length],["Paid",members.filter(m=>m.access_source==="stripe"&&m.has_app_access).length],["Beta",members.filter(m=>m.access_source==="beta"&&m.has_app_access).length],["Needs check-in",members.filter(m=>!m.last_checkin_date||Date.now()-Date.parse(m.last_checkin_date)>7*86400000).length]].map(([label,value])=>`<article class="tierCard"><span>${label}</span><h2>${value}</h2></article>`).join("");
   const {data:health,error:healthError}=await sb.rpc("operations_health",{org});if(healthError)throw healthError;
   document.getElementById("operationsHealth").innerHTML=Object.entries(health).map(([key,value])=>`<article class="tierCard"><span>${esc(key.replaceAll("_"," "))}</span><h2>${esc(value)}</h2></article>`).join("");
-  renderMembers();await queue();await deletionQueue();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
+  renderMembers();await queue();await deletionQueue();await initOwnerExplorer();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
   document.getElementById("memberSearch").oninput=renderMembers;
   document.getElementById("inviteForm").onsubmit=async(e)=>{
     e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;
