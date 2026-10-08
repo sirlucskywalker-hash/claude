@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/billing.test.mjs && node tests/database.test.mjs && node tests/account.test.mjs && node tests/coaching.test.mjs && node tests/lifecycle.test.mjs && node tests/account-tools.test.mjs"
+    "test": "node tests/billing.test.mjs && node tests/database.test.mjs && node tests/account.test.mjs && node tests/coaching.test.mjs && node tests/lifecycle.test.mjs && node tests/account-tools.test.mjs && node tests/admin.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14",
