@@ -156,5 +156,43 @@ await t.test('operations health is organization-scoped and denied to clients',as
  const [foreignOrg]=await q("insert into organizations(name,slug) values('Other','other') returning id");
  await assert.rejects(()=>asUser(owner,()=>q('select operations_health($1)',[foreignOrg.id])),/Owner or admin/);
 });
+await db.exec(await readFile(new URL('supabase/migrations/20261008011755_staff_assignment_and_tenant_isolation.sql',root),'utf8'));
+const coach='10000000-0000-4000-8000-000000000004',unassigned='10000000-0000-4000-8000-000000000005';
+await q("insert into auth.users(id,email,email_confirmed_at) values($1,'coach@example.com',now()),($2,'unassigned@example.com',now())",[coach,unassigned]);
+await q("insert into profiles(user_id,email) select id,email from auth.users where id in ($1,$2)",[coach,unassigned]);
+await q("insert into memberships(organization_id,user_id,role) values($1,$2,'coach'),($1,$3,'client')",[org.id,coach,unassigned]);
+const [isolated]=await q("insert into organizations(name,slug) values('Isolated','isolated') returning id");
+await t.test('clients cannot enumerate other members or forge wellness organization IDs',async()=>{
+ assert.ok((await asUser(uid,()=>q('select user_id from memberships'))).every(m=>m.user_id===uid));
+ await assert.rejects(()=>asUser(uid,()=>q('update client_profiles set organization_id=$1 where user_id=$2',[isolated.id,uid])),/row-level security/);
+ await assert.rejects(()=>asUser(uid,()=>q("insert into daily_checkins(user_id,organization_id,checkin_date) values($1,$2,'2026-10-07')",[uid,isolated.id])),/row-level security/);
+ await asUser(uid,()=>q("insert into daily_checkins(user_id,organization_id,checkin_date) values($1,$2,'2026-10-07')",[uid,org.id]));
+});
+await t.test('coaches see only assigned clients and cannot assign themselves',async()=>{
+ assert.equal((await asUser(coach,()=>q('select * from client_profiles'))).length,0);
+ await assert.rejects(()=>asUser(coach,()=>q('select set_coach_assignment($1,$2,$3,true)',[org.id,coach,uid])),/Owner or admin/);
+ await assert.rejects(()=>asUser(owner,()=>q('select set_coach_assignment($1,$2,$3,true)',[isolated.id,coach,uid])),/Owner or admin/);
+ await asUser(owner,()=>q('select set_coach_assignment($1,$2,$3,true)',[org.id,coach,uid]));
+ assert.ok((await asUser(coach,()=>q('select * from daily_checkins'))).every(r=>r.user_id===uid));
+ assert.equal((await asUser(coach,()=>q('select can_manage_user($1) ok',[unassigned])))[0].ok,false);
+ assert.equal((await asUser(coach,()=>q('select can_manage_user($1) ok',[uid])))[0].ok,true);
+ assert.equal((await asUser(coach,()=>q('select * from billing_customers'))).length,0);
+ assert.equal((await asUser(coach,()=>q('select * from account_deletion_requests'))).length,0);
+});
+await t.test('coach notes require assignment and own authorship; revocation removes access',async()=>{
+ await assert.rejects(()=>asUser(coach,()=>q("insert into coach_notes(organization_id,client_user_id,author_user_id,body) values($1,$2,$3,'forged')",[org.id,unassigned,coach])),/row-level security/);
+ await assert.rejects(()=>asUser(coach,()=>q("insert into coach_notes(organization_id,client_user_id,author_user_id,body) values($1,$2,$3,'forged author')",[org.id,uid,owner])),/row-level security/);
+ await asUser(coach,()=>q("insert into coach_notes(organization_id,client_user_id,author_user_id,body,visibility) values($1,$2,$3,'private','staff')",[org.id,uid,coach]));
+ assert.ok((await asUser(uid,()=>q('select * from coach_notes'))).every(n=>n.visibility==='client'));
+ await asUser(owner,()=>q('select set_coach_assignment($1,$2,$3,false)',[org.id,coach,uid]));
+ assert.equal((await asUser(coach,()=>q('select * from daily_checkins'))).length,0);
+ assert.equal((await asUser(coach,()=>q('select * from user_state_snapshots'))).length,0);
+ assert.equal((await asUser(coach,()=>q('select * from coach_notes'))).length,0);
+ assert.equal((await asUser(owner,()=>q('select * from daily_checkins'))).length>0,true);
+});
+await t.test('anonymous and authenticated clients cannot forge server telemetry',async()=>{
+ await assert.rejects(()=>asUser(null,()=>q("insert into attribution_events(event_name) values('fake')"),'anon'),/permission denied/);
+ await assert.rejects(()=>asUser(uid,()=>q("insert into product_events(user_id,event_name) values($1,'fake')",[uid])),/permission denied/);
+});
 await db.close();
 });
