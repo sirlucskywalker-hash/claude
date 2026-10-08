@@ -1,0 +1,46 @@
+name: Validate PhysiqueOS launch branch
+
+on:
+  push:
+    branches:
+      - main
+      - launch/zero-overhead-readiness
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install validation dependencies
+        run: npm ci
+      - name: Run test suite
+        run: npm test
+      - name: Syntax check browser JavaScript
+        run: |
+          node --check app.js
+          node --check cloud.js
+          node --check admin.js
+          node --check account-tools.js
+          node --check coach-engine.js
+          node --check coaching.js
+      - name: Verify no obvious server secrets are committed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RIE --exclude-dir=.git --exclude-dir=node_modules --exclude='*.md'             '(sk_live_[A-Za-z0-9]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE_ROLE_KEY=[^[:space:]]+|STRIPE_SECRET_KEY=[^[:space:]]+|STRIPE_WEBHOOK_SECRET=[^[:space:]]+)' .; then
+            echo "Potential production secret found in repository."
+            exit 1
+          fi
