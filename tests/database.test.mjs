@@ -194,5 +194,41 @@ await t.test('anonymous and authenticated clients cannot forge server telemetry'
  await assert.rejects(()=>asUser(null,()=>q("insert into attribution_events(event_name) values('fake')"),'anon'),/permission denied/);
  await assert.rejects(()=>asUser(uid,()=>q("insert into product_events(user_id,event_name) values($1,'fake')",[uid])),/permission denied/);
 });
+await db.exec(`create schema storage; create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text); alter table storage.objects enable row level security; grant usage on schema storage to authenticated; grant select on storage.objects to authenticated; grant truncate,references,trigger on all tables in schema public to authenticated,anon;`);
+await db.exec(await readFile(new URL('supabase/migrations/20261008013107_owner_data_access.sql',root),'utf8'));
+await q("insert into physique_private.owner_bootstrap(email,claimed_by,claimed_at) values('owner@example.com',$1,now())",[owner]);
+await q("update memberships set role='client' where user_id=$1 and organization_id=$2",[other,org.id]);
+await t.test('only the privately verified project owner can inspect all accounts and operational records',async()=>{
+ const [{page}]=await asUser(owner,()=>q("select owner_data_page('accounts',0) page"));
+ assert.ok(page.rows.some(r=>r.user_id===other));assert.ok(page.rows.every(r=>!('raw_user_meta_data' in r)&&!('encrypted_password' in r)));
+ const [{notes}]=await asUser(owner,()=>q("select owner_data_page('coach_notes',0) notes"));assert.ok(notes.rows.some(r=>r.body==='private'));
+ const [{invites}]=await asUser(owner,()=>q("select owner_data_page('invites',0) invites"));assert.ok(invites.rows.every(r=>!('token_hash' in r)));
+ const [{emails}]=await asUser(owner,()=>q("select owner_data_page('email_outbox',0) emails"));assert.ok(emails.rows.length>0);assert.ok(emails.rows.every(r=>!('lease_token' in r)));
+ for(const id of [uid,coach,unassigned])await assert.rejects(()=>asUser(id,()=>q("select owner_data_page('accounts',0)")),/Verified PhysiqueOS owner/);
+ await q("insert into memberships(organization_id,user_id,role) values($1,$2,'owner')",[isolated.id,other]);
+ await assert.rejects(()=>asUser(other,()=>q("select owner_data_page('profiles',0)")),/Verified PhysiqueOS owner/);
+ await assert.rejects(()=>asUser(null,()=>q("select owner_data_page('profiles',0)"),'anon'),/permission denied/);
+});
+await t.test('owner pages are bounded, audited, reject arbitrary SQL and survive inactive target memberships',async()=>{
+ const [{first}]=await asUser(owner,()=>q("select owner_data_page('daily_checkins',0) first"));assert.equal(first.rows.length,100);assert.equal(first.next_offset,100);
+ const [{page_two:second}]=await asUser(owner,()=>q("select owner_data_page('daily_checkins',100) as page_two"));assert.ok(second.rows.length>0);assert.equal(second.next_offset,null);
+ await assert.rejects(()=>asUser(owner,()=>q("select owner_data_page('auth.users',0)")),/Unknown owner data/);
+ await assert.rejects(()=>asUser(owner,()=>q("select owner_data_page('profiles',-1)")),/Invalid owner/);
+ await assert.rejects(()=>asUser(owner,()=>q("select owner_data_page('profiles',null)")),/Invalid owner/);
+ await q("update memberships set status='suspended' where user_id=$1",[uid]);
+ const [{archived}]=await asUser(owner,()=>q("select owner_data_page('client_profiles',0) archived"));assert.ok(archived.rows.some(r=>r.user_id===uid));
+ assert.equal((await q("select count(*)::int n from audit_log where action='owner.data_read'"))[0].n,7);
+ await q("update memberships set status='suspended' where user_id=$1",[owner]);
+ await assert.rejects(()=>asUser(owner,()=>q("select owner_data_page('accounts',0)")),/Verified PhysiqueOS owner/);
+ await q("update memberships set status='active' where user_id=$1",[owner]);
+});
+await t.test('owner photo reads require exact registered paths; bulk destructive grants are removed',async()=>{
+ const path=uid+'/test.jpg';await q("insert into progress_photos(user_id,organization_id,storage_path,pose) values($1,$2,$3,'front')",[uid,org.id,path]);
+ await q("insert into storage.objects(bucket_id,name) values('progress-photos',$1),('progress-photos','unregistered/test.jpg'),('other-bucket',$1)",[path]);
+ const objects=await asUser(owner,()=>q('select * from storage.objects'));assert.equal(objects.length,1);assert.equal(objects[0].name,path);
+ assert.equal((await asUser(coach,()=>q('select * from storage.objects'))).length,0);
+ assert.equal((await asUser(uid,()=>q('select * from storage.objects'))).length,0);
+ assert.equal((await q("select count(*)::int n from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and (has_table_privilege('authenticated',c.oid,'TRUNCATE') or has_table_privilege('anon',c.oid,'TRUNCATE'))"))[0].n,0);
+});
 await db.close();
 });
