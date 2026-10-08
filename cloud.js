@@ -152,6 +152,17 @@ async function afterAuth(user){
   cloud.ready=true;
   const {error:ownerError}=await sb.rpc("claim_owner_access");
   if(ownerError)throw ownerError;
+  // Confirmation redirects can create a new session after the original sign-up.
+  // Claim a pending invitation after verified authentication, not only on the sign-up click.
+  const pendingInvite=sessionStorage.getItem("physiqueOS_invite");
+  if(pendingInvite){
+    try{
+      await claimInvite(pendingInvite);
+      sessionStorage.removeItem("physiqueOS_invite");
+    }catch(error){
+      message("Account ready, but your beta invitation was not claimed: "+(error?.message||"Please try again."),true);
+    }
+  }
   await loadAccess();
   const {data:members,error:memberError}=await sb.from("memberships").select("role").eq("user_id",user.id).eq("status","active");
   if(memberError)throw memberError;
