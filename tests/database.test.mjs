@@ -230,5 +230,42 @@ await t.test('owner photo reads require exact registered paths; bulk destructive
  assert.equal((await asUser(uid,()=>q('select * from storage.objects'))).length,0);
  assert.equal((await q("select count(*)::int n from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and (has_table_privilege('authenticated',c.oid,'TRUNCATE') or has_table_privilege('anon',c.oid,'TRUNCATE'))"))[0].n,0);
 });
+await db.exec(await readFile(new URL('supabase/migrations/20261009002759_deletion_request_review.sql',root),'utf8'));
+await t.test('members withdraw only their own pending deletion request, once, without erasing data',async()=>{
+ const [{id}]=await asUser(uid,()=>q('select request_account_deletion() id'));
+ await assert.rejects(()=>asUser(other,()=>q('select withdraw_account_deletion($1)',[id])),/unavailable/);
+ await assert.rejects(()=>asUser(null,()=>q('select withdraw_account_deletion($1)',[id]),'anon'),/permission denied/);
+ await asUser(uid,()=>q('select withdraw_account_deletion($1)',[id]));
+ await asUser(uid,()=>q('select withdraw_account_deletion($1)',[id]));
+ assert.equal((await q('select status from account_deletion_requests where id=$1',[id]))[0].status,'canceled');
+ assert.equal((await q("select count(*)::int n from audit_log where action='account.deletion_withdrawn' and entity_id=$1",[id]))[0].n,1);
+ assert.equal((await q('select count(*)::int n from auth.users where id=$1',[uid]))[0].n,1);
+ assert.equal((await q("select count(*)::int n from physique_private.email_outbox where kind='deletion_withdrawn'"))[0].n,0);
+});
+await t.test('only the verified owner can start review, including requests from inactive clients',async()=>{
+ const [{id}]=await asUser(uid,()=>q('select request_account_deletion() id'));
+ for(const user of [uid,coach,other])await assert.rejects(()=>asUser(user,()=>q('select begin_account_deletion_review($1)',[id])),/Verified PhysiqueOS owner/);
+ await assert.rejects(()=>asUser(null,()=>q('select begin_account_deletion_review($1)',[id]),'anon'),/permission denied/);
+ const [{review}]=await asUser(owner,()=>q('select begin_account_deletion_review($1) review',[id]));
+ assert.equal(review.user_id,uid);assert.equal(review.status,'in_progress');assert.equal(review.erased,false);assert.equal(review.billing_verified,false);
+ assert.equal(Number(review.photo_records),1);assert.equal(Number(review.storage_objects),1);
+ assert.ok((await asUser(owner,()=>q('select * from account_deletion_requests'))).some(r=>r.id===id));
+ await asUser(owner,()=>q('select begin_account_deletion_review($1)',[id]));
+ assert.equal((await q("select count(*)::int n from audit_log where action='account.deletion_review_started' and entity_id=$1",[id]))[0].n,1);
+ await assert.rejects(()=>asUser(uid,()=>q('select withdraw_account_deletion($1)',[id])),/Review has started/);
+ await assert.rejects(()=>asUser(owner,()=>q("update account_deletion_requests set status='completed'")),/permission denied/);
+});
+await t.test('review protects owner accounts, refuses closed requests and does not cancel subscriptions',async()=>{
+ const [{own}]=await asUser(owner,()=>q('select request_account_deletion() own'));
+ await assert.rejects(()=>asUser(owner,()=>q('select begin_account_deletion_review($1)',[own])),/ownership transfer/);
+ await asUser(owner,()=>q('select withdraw_account_deletion($1)',[own]));
+ await assert.rejects(()=>asUser(owner,()=>q('select begin_account_deletion_review($1)',[own])),/closed/);
+ const [{id}]=await asUser(unassigned,()=>q('select request_account_deletion() id'));
+ await q("insert into subscriptions(user_id,stripe_subscription_id,status,cancel_at_period_end,plan_code) values($1,'sub_review_active','active',false,'core')",[unassigned]);
+ const [{review}]=await asUser(owner,()=>q('select begin_account_deletion_review($1) review',[id]));
+ assert.equal(review.recorded_subscriptions[0].subscription_id,'sub_review_active');
+ assert.equal((await q("select status,cancel_at_period_end from subscriptions where stripe_subscription_id='sub_review_active'"))[0].cancel_at_period_end,false);
+ await assert.rejects(()=>asUser(owner,()=>q('select begin_account_deletion_review(null)')),/unavailable/);
+});
 await db.close();
 });

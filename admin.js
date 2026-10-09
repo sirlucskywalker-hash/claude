@@ -42,8 +42,17 @@ async function deletionQueue(){
   if(error)throw error;
   document.getElementById("deletionQueue").innerHTML=(data||[]).map(r=>{
     const member=members.find(m=>m.user_id===r.user_id);
-    return `<article class="tierCard"><strong>${esc(member?.email||r.user_id)}</strong><p>${esc(r.status)} • requested ${esc(r.requested_at)}</p><small>Request ${esc(r.id)}</small></article>`;
+    return `<article class="tierCard"><strong>${esc(member?.email||r.user_id)}</strong><p>${esc(r.status)} • requested ${esc(r.requested_at)}</p><small>Request ${esc(r.id)}</small>${projectOwner?`<button data-deletion-review="${esc(r.id)}">${r.status==='pending'?'Begin review':'Refresh review checklist'}</button><pre data-deletion-result="${esc(r.id)}"></pre>`:''}</article>`;
   }).join("")||"<p>No open deletion requests.</p>";
+  document.querySelectorAll('[data-deletion-review]').forEach(button=>button.onclick=async()=>{
+   button.disabled=true;const output=button.parentElement.querySelector('pre');output.textContent='Loading review…';
+   try{
+    const {data:review,error}=await sb.rpc('begin_account_deletion_review',{request_id:button.dataset.deletionReview});
+    if(error)throw error;
+    button.textContent='Refresh review checklist';button.parentElement.querySelector('p').textContent='In progress • review started';
+    output.textContent='Review started. Verify billing directly with Stripe, confirm identity and retention, and remove private files before erasure. No account has been erased.\n'+JSON.stringify(review,null,2);
+   }catch(e){output.textContent=e.message;}finally{button.disabled=false;}
+  });
 }
 async function queue(){
   const {data,error}=await sb.from("support_tickets").select("*").order("created_at");
@@ -56,7 +65,7 @@ async function queue(){
   });
 }
 const ownerSections=['accounts','profiles','memberships','client_profiles','daily_checkins','measurements','progress_photos','meal_plans','training_programs','workout_sessions','coach_notes','user_state_snapshots','user_app_state','billing_customers','subscriptions','entitlements','billing_events','checkout_reservations','invites','invite_claims','attribution_events','product_events','support_tickets','support_replies','account_notifications','communication_preferences','consent_events','account_deletion_requests','audit_log','beta_import_receipts','email_outbox','email_delivery_events','email_suppressions','organizations','plans','features','plan_features','plan_catalog','coach_client_assignments'];
-let ownerPage,ownerVersion=0;
+let ownerPage,ownerVersion=0,projectOwner=false;
 async function loadOwnerPage(offset=0){
  const version=++ownerVersion,section=document.getElementById("ownerSection").value;
  const status=document.getElementById("ownerDataStatus"),data=document.getElementById("ownerData"),photos=document.getElementById("ownerPhotos");
@@ -82,7 +91,7 @@ async function loadOwnerPage(offset=0){
  }
 }
 async function initOwnerExplorer(){
- const {data:allowed,error}=await sb.rpc('is_physiqueos_owner');if(error)throw error;if(!allowed)return;
+ const {data:allowed,error}=await sb.rpc('is_physiqueos_owner');if(error)throw error;projectOwner=Boolean(allowed);if(!allowed)return;
  const select=document.getElementById('ownerSection');
  for(const section of ownerSections){const option=document.createElement('option');option.value=section;option.textContent=section.replaceAll('_',' ');select.append(option);}
  select.onchange=()=>loadOwnerPage();
@@ -109,7 +118,7 @@ async function init(){
   document.getElementById("adminStats").innerHTML=[["Members",members.length],["Paid",members.filter(m=>m.access_source==="stripe"&&m.has_app_access).length],["Beta",members.filter(m=>m.access_source==="beta"&&m.has_app_access).length],["Needs check-in",members.filter(m=>!m.last_checkin_date||Date.now()-Date.parse(m.last_checkin_date)>7*86400000).length]].map(([label,value])=>`<article class="tierCard"><span>${label}</span><h2>${value}</h2></article>`).join("");
   const {data:health,error:healthError}=await sb.rpc("operations_health",{org});if(healthError)throw healthError;
   document.getElementById("operationsHealth").innerHTML=Object.entries(health).map(([key,value])=>`<article class="tierCard"><span>${esc(key.replaceAll("_"," "))}</span><h2>${esc(value)}</h2></article>`).join("");
-  renderMembers();await queue();await deletionQueue();await initOwnerExplorer();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
+  renderMembers();await queue();await initOwnerExplorer();await deletionQueue();document.getElementById("adminContent").classList.remove("hidden");document.getElementById("adminStatus").textContent="Only members you are authorized to manage appear here.";
   document.getElementById("memberSearch").oninput=renderMembers;
   document.getElementById("inviteForm").onsubmit=async(e)=>{
     e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;

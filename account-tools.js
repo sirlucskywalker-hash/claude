@@ -1,7 +1,7 @@
 (()=>{
 const $=id=>document.getElementById(id), bucket='progress-photos';
 const sections=['profiles','memberships','client_profiles','daily_checkins','measurements','progress_photos','meal_plans','training_programs','workout_sessions','billing_customers','subscriptions','entitlements','consent_events','attribution_events','product_events','beta_import_receipts','user_state_snapshots','user_app_state','support_tickets','support_replies','coach_notes','account_deletion_requests','account_notifications','communication_preferences'];
-let offset=0,generation=0;
+let offset=0,generation=0,deletionRequest=null,deletionGeneration=0;
 function account(){const c=window.physiqueCloud;if(!c?.ready||!c.user)throw new Error('Sign in first.');return c;}
 function same(id){if(window.physiqueCloud?.user?.id!==id)throw new Error('Account changed. Please retry.');}
 function notice(id,text){$(id).textContent=text;}
@@ -24,8 +24,27 @@ async function exportAccount(){
 async function requestDeletion(){
  if(!confirm('Request deletion of your PhysiqueOS account? The owner must process the request and confirm any subscription cancellation and required record retention. Submitting this request does not immediately erase data or stop billing.'))return;
  const b=$('deleteAccountRequestBtn');b.disabled=true;
- try{const id=await rpc('request_account_deletion');notice('accountToolsMessage','Deletion request saved: '+id+'. Your account remains active until the owner processes the request.');}
+ try{const user=account().user.id;const id=await rpc('request_account_deletion');same(user);notice('accountToolsMessage','Deletion request saved: '+id+'. Your account remains active until the owner processes the request.');await deletionStatus();}
  catch(e){notice('accountToolsMessage',e.message);}finally{b.disabled=false;}
+}
+async function deletionStatus(){
+ const version=++deletionGeneration;deletionRequest=null;$('withdrawDeletionRequestBtn').disabled=true;
+ try{
+  const c=account(),id=c.user.id;
+  const {data,error}=await c.client.from('account_deletion_requests').select('id,status,requested_at').eq('user_id',id).in('status',['pending','in_progress']).order('requested_at',{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;same(id);if(version!==deletionGeneration)return;
+  deletionRequest=data?{...data,user:id}:null;
+  notice('deletionRequestStatus',data?(data.status==='pending'?'Your deletion request is pending. You can withdraw it below.':'Your deletion request is under review. Contact support to change it.'):'You have no open deletion request.');
+  $('withdrawDeletionRequestBtn').disabled=data?.status!=='pending';
+ }catch(e){if(version===deletionGeneration)notice('deletionRequestStatus',e.message);}
+}
+async function withdrawDeletion(){
+ const b=$('withdrawDeletionRequestBtn');b.disabled=true;
+ try{
+  const request=deletionRequest;if(!request||request.status!=='pending')throw new Error('Check your deletion request first.');same(request.user);
+  await rpc('withdraw_account_deletion',{request_id:request.id});same(request.user);
+  notice('accountToolsMessage','Your deletion request was withdrawn. Your account and billing remain unchanged.');await deletionStatus();
+ }catch(e){notice('accountToolsMessage',e.message);await deletionStatus();}
 }
 async function uploadPhotos(){
  const b=$('uploadCloudPhotosBtn');b.disabled=true;
@@ -79,6 +98,7 @@ async function gallery(){
 function init(){
  if(!$('accountToolsMessage'))return;
  $('exportAccountBtn').onclick=exportAccount;$('deleteAccountRequestBtn').onclick=requestDeletion;
+ $('checkDeletionRequestBtn').onclick=deletionStatus;$('withdrawDeletionRequestBtn').onclick=withdrawDeletion;
  $('uploadCloudPhotosBtn').onclick=uploadPhotos;$('refreshCloudPhotosBtn').onclick=()=>{offset=0;gallery();};
  $('cloudPhotosPrev').onclick=()=>{offset=Math.max(0,offset-12);gallery();};$('cloudPhotosNext').onclick=()=>{offset+=12;gallery();};
  const dialog=document.createElement('dialog');dialog.className='membershipDialog';dialog.id='accountNotificationsDialog';
@@ -108,6 +128,7 @@ function init(){
   try{await rpc('set_communication_preferences',{nudges:$('coachingNudgesPreference').checked,marketing:false});notice('accountNotificationsMessage','Communication preference saved.');}catch(e){notice('accountNotificationsMessage',e.message);}finally{b.disabled=false;}
  };
  document.addEventListener('physique:account-ready',async()=>{
+  deletionGeneration++;deletionRequest=null;$('withdrawDeletionRequestBtn').disabled=true;notice('deletionRequestStatus','Check your current account’s deletion request above.');
   try{const c=account(),id=c.user.id;const {data,error}=await c.client.from('account_notifications').select('id').eq('user_id',id).eq('event_key','welcome').is('read_at',null).limit(1);if(error)throw error;same(id);if(data?.length&&!$('membershipDialog')?.open)await notifications();}catch{/* Notifications remain available from the account menu when offline. */}
  });
 }
