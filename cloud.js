@@ -86,7 +86,9 @@ async function showPlans(){
     ["Progress analysis","Monthly","Weekly","Advanced","Advanced + review"],
     ["Support","Standard","Priority","Priority","Direct touchpoint"],
     ["Lucas oversight","—","—","—","Included"],
-    ["Automated form / vision analysis","—","Planned add-on","Planned","Planned"],
+    ["Written starting assessment","Included","Included","Included","Included"],
+    ["Guided posing checkpoints","—","Included","Included","Included"],
+    ["Premium AI video assessment","—","—","Planned premium","Planned premium"],
     ["Wearable sync","Planned","Planned","Planned","Planned"]
   ];
   document.getElementById("membershipBody").innerHTML=`<div class="tierCards">${plans.map(p=>`<article class="tierCard ${p.code===cloud.plan?"selected":""}"><span class="kicker">${esc(p.name)}</span><h3>$${p.monthly_cents/100}<small>/month</small></h3>${p.annual_cents?`<p>$${p.annual_cents/100} billed yearly</p>`:""}<ul>${(p.features||[]).map(f=>`<li>${esc(f)}</li>`).join("")}</ul><button data-buy="${esc(p.code)}_monthly" ${p.public?"":"disabled"}>${p.public?"Choose monthly":"Enrollment closed"}</button>${p.annual_cents&&p.public?`<button data-buy="${esc(p.code)}_annual">Choose annual</button>`:""}</article>`).join("")}</div><p>Paid members can upgrade, downgrade, or cancel in Manage billing. Upgrades use prorated billing; downgrades and cancellations take effect at the end of the paid period. Stripe shows the charge and date before confirmation. Leaving Founding ends its locked rate.</p><p>Founding 100 includes the current Pro bundle at $39 monthly while continuously active. Future services with material costs may be add-ons.</p><div class="tableScroll"><table><thead><tr><th>Capability</th><th>Core</th><th>Pro</th><th>Elite</th><th>Concierge</th></tr></thead><tbody>${rows.map(r=>"<tr>"+r.map(v=>"<td>"+esc(v)+"</td>").join("")+"</tr>").join("")}</tbody></table></div>`;
@@ -152,17 +154,6 @@ async function afterAuth(user){
   cloud.ready=true;
   const {error:ownerError}=await sb.rpc("claim_owner_access");
   if(ownerError)throw ownerError;
-  // Confirmation redirects can create a new session after the original sign-up.
-  // Claim a pending invitation after verified authentication, not only on the sign-up click.
-  const pendingInvite=sessionStorage.getItem("physiqueOS_invite");
-  if(pendingInvite){
-    try{
-      await claimInvite(pendingInvite);
-      sessionStorage.removeItem("physiqueOS_invite");
-    }catch(error){
-      message("Account ready, but your beta invitation was not claimed: "+(error?.message||"Please try again."),true);
-    }
-  }
   await loadAccess();
   const {data:members,error:memberError}=await sb.from("memberships").select("role").eq("user_id",user.id).eq("status","active");
   if(memberError)throw memberError;

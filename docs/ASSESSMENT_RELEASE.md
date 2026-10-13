@@ -1,0 +1,11 @@
+# Starting assessment release — October 13, 2026
+
+Written screening collects experience, current pain/restrictions, mobility, symptoms, schedule and goals. Conservative starter volume/effort caps apply to novices and returning users; current restrictions pause automated generation for qualified review. Saved assessments synchronize through the existing account snapshot, and older answers are bounded to ten local snapshot entries. This is not clinical diagnosis or clearance.
+
+Pro/Founding and higher access includes self-reported guided posing checkpoints. Core uses the written assessment. Elite/Concierge premium AI integration combines local MediaPipe pose observations with six sampled frames and the synchronized written baseline through OpenAI. The feature remains planned; owner preview is gated separately. Reports are marked needs_review and never automatically change programs. Recording clips are not cloud stored by the app; only optional numeric summaries, written answers, processing consent and reports persist.
+
+Backend: analyze-video-assessment requires validated confirmed user authentication, feature/owner authorization, configured enable flag, bounded frames, saved screening, per-user quota reservation, idempotency and a strict provider response schema. assessment_records is RLS protected; client report writes are denied. Owner exports and member exports include records. No API provider account/key or paid inference was provisioned by this change.
+
+Activation gates: configure approved OPENAI_API_KEY, AI_VIDEO_MODEL and AI_VIDEO_ENABLED only after funding/retention review; test supported browsers/camera/model inference and real provider results; obtain appropriate domain-specific safety/quality review and signed-in isolation tests; then change feature delivery_status through reviewed operations. No model accuracy, iPhone support, clinical outcomes or real provider calls were validated by unit tests. Paid enrollment stays closed; Cloudflare, real auth/email and sandbox billing still require completion.
+
+Legal/IP preparation: safety.html is public. LEGAL_AND_IP_PREPARATION.md and TERMS_PRIVACY_BILLING_DRAFT.md are review drafts excluded from static artifacts. Existing same-name app/site require clearance before trademark filing. No registration or legal compliance certification is claimed.
