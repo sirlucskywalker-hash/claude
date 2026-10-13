@@ -54,6 +54,31 @@ async function deletionQueue(){
    }catch(e){output.textContent=e.message;}finally{button.disabled=false;}
   });
 }
+async function assessmentQueue(){
+ if(!projectOwner)return;
+ const status=document.getElementById('assessmentReviewStatus'),host=document.getElementById('assessmentReviewQueue');
+ status.textContent='Loading recent reports…';host.replaceChildren();
+ const {data,error}=await sb.from('assessment_records').select('*').eq('kind','ai_video').eq('status','needs_review').order('created_at',{ascending:false}).limit(100);
+ if(error){status.textContent=error.message;return;}
+ const rows=data||[];status.textContent=rows.length===100?'Showing 100 recent reports. Use the owner explorer for the complete history.':`${rows.length} recent reports.`;
+ for(const r of rows){
+  const article=document.createElement('article');article.className='tierCard';host.append(article);
+  const title=document.createElement('h3');title.textContent=members.find(m=>m.user_id===r.user_id)?.email||r.user_id;article.append(title);
+  const detail=document.createElement('p');detail.textContent=`Recorded ${r.created_at} · ${r.reviewed_at?'Feedback recorded '+r.reviewed_at:'Awaiting owner feedback'}`;article.append(detail);
+  const report=document.createElement('pre');report.style.whiteSpace='pre-wrap';report.textContent=JSON.stringify({written_baseline:r.input,report:r.report},null,2);article.append(report);
+  if(r.reviewed_at){const feedback=document.createElement('p');feedback.textContent=`${r.review_outcome}: ${r.review_note}`;article.append(feedback);continue;}
+  const form=document.createElement('form');form.dataset.assessment=r.id;
+  form.innerHTML='<label>Review outcome<select name="outcome"><option value="follow_up_needed">Follow-up needed</option><option value="feedback_recorded">Feedback recorded</option></select></label><label>Feedback visible to this member<textarea name="note" required maxlength="3000" rows="3"></textarea></label><button>Record review</button><p role="status"></p>';article.append(form);
+  form.onsubmit=async(e)=>{
+   e.preventDefault();const button=form.querySelector('button'),result=form.querySelector('[role=status]');button.disabled=true;
+   try{
+    const {error}=await sb.rpc('record_assessment_review',{assessment_id:r.id,outcome:form.elements.outcome.value,note:form.elements.note.value});
+    if(error)throw error;result.textContent='Feedback recorded. No program or medical restriction changed.';await assessmentQueue();
+   }catch(e){result.textContent=e.message;button.disabled=false;}
+  };
+ }
+ if(!rows.length)host.textContent='No preliminary reports are recorded yet. Premium AI remains awaiting activation.';
+}
 async function queue(){
   const {data,error}=await sb.from("support_tickets").select("*").order("created_at");
   if(error)throw error;
@@ -103,6 +128,7 @@ async function initOwnerExplorer(){
   link.href=url;link.download=`physiqueos-${ownerPage.section}-${ownerPage.offset}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  };
  document.getElementById('ownerExplorer').classList.remove('hidden');await loadOwnerPage();
+ document.getElementById('assessmentReviewPanel').classList.remove('hidden');document.getElementById('refreshAssessmentQueue').onclick=assessmentQueue;await assessmentQueue();
 }
 async function init(){
  try{
@@ -131,5 +157,12 @@ async function init(){
   };
  }catch(e){document.getElementById("adminStatus").textContent=e.message;}
 }
+sb.auth.onAuthStateChange?.((event,session)=>{
+ if(event==='INITIAL_SESSION'||!accountUser||session?.user?.id===accountUser.id)return;
+ // Clear rendered private data immediately; a new identity must reauthorize on reload.
+ detailVersion++;ownerVersion++;ownerPage=null;projectOwner=false;members=[];coaches=[];org=null;accountUser=null;
+ const content=document.getElementById('adminContent');content.classList.add('hidden');content.replaceChildren();
+ document.getElementById('adminStatus').textContent='Account changed or signed out. Reload this page after signing in to recheck owner access.';
+});
 init();
 })();
