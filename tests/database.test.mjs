@@ -298,5 +298,30 @@ await t.test('premium reservations require consent, are idempotent, enforce quot
  const [{owned}]=await asUser(owner,()=>q("select owner_data_page('assessment_records',0) owned"));assert.equal(owned.rows.length,3);
  await q("update features set delivery_status='planned' where code='ai_video_assessment'");
 });
+await db.exec(await readFile(new URL('supabase/migrations/20261013182246_assessment_owner_review.sql',root),'utf8'));
+await t.test('only the verified owner records member-visible assessment feedback, with one audit and notification',async()=>{
+ await q("update assessment_records set status='needs_review',report=$2 where id=$1",[requestOne,JSON.stringify({summary:"Preliminary"})]);
+ for(const actor of [uid,other,coach])await assert.rejects(()=>asUser(actor,()=>q("select record_assessment_review($1,'feedback_recorded','Contact your coach')",[requestOne])),/Verified PhysiqueOS owner/);
+ await assert.rejects(()=>asUser(null,()=>q("select record_assessment_review($1,'feedback_recorded','note')",[requestOne]),'anon'),/permission denied/);
+ const before=await q('select user_id,state from user_state_snapshots order by user_id');
+ await asUser(owner,()=>q("select record_assessment_review($1,'follow_up_needed','Discuss your restrictions with your clinician')",[requestOne]));
+ await asUser(owner,()=>q("select record_assessment_review($1,'follow_up_needed','Discuss your restrictions with your clinician')",[requestOne]));
+ assert.equal((await q("select count(*)::int n from audit_log where action='assessment.review_recorded'"))[0].n,1);
+ const notices=await asUser(other,()=>q("select * from account_notifications where event_key=$1",['assessment_review:'+requestOne]));assert.equal(notices.length,1);assert.match(notices[0].body,/not medical clearance/);
+ assert.equal((await q("select count(*)::int n from physique_private.email_outbox where kind='assessment_review'"))[0].n,0);
+ const [{exported}]=await asUser(other,()=>q("select export_account_page('assessment_records',0) exported"));assert.equal(exported.rows.find(r=>r.id===requestOne).review_note,'Discuss your restrictions with your clinician');
+ assert.deepEqual(await q('select user_id,state from user_state_snapshots order by user_id'),before);
+ await assert.rejects(()=>asUser(owner,()=>q("select record_assessment_review($1,'feedback_recorded','Different')",[requestOne])),/already recorded/);
+ await assert.rejects(()=>asUser(other,()=>q("update assessment_records set review_note='Forged'")),/permission denied/);
+});
+await t.test('assessment review rejects incomplete, failed, missing and posing records and does not waive screening',async()=>{
+ for(const [outcome,note] of [['cleared','x'],['feedback_recorded',' '],['feedback_recorded',null],['follow_up_needed','x'.repeat(3001)]])await assert.rejects(()=>asUser(owner,()=>q('select record_assessment_review($1,$2,$3)',[requestTwo,outcome,note])),/review outcome/);
+ await assert.rejects(()=>asUser(owner,()=>q("select record_assessment_review($1,'feedback_recorded','note')",[requestTwo])),/unavailable/);
+ const [{id:pose}]=await q("select id from assessment_records where kind='posing' limit 1");
+ await assert.rejects(()=>asUser(owner,()=>q("select record_assessment_review($1,'feedback_recorded','note')",[pose])),/unavailable/);
+ await assert.rejects(()=>asUser(owner,()=>q("select record_assessment_review($1,'feedback_recorded','note')",[requestThree])),/unavailable/);
+ assert.equal((await q("select delivery_status from features where code='ai_video_assessment'"))[0].delivery_status,'planned');
+ assert.equal((await q('select status from assessment_records where id=$1',[requestOne]))[0].status,'needs_review');
+});
 await db.close();
 });

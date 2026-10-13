@@ -81,3 +81,23 @@ test('premium handler saves a review-required report, marks failures and serves 
  s=server({existing:{created:false,status:'needs_review',report:report()}});assert.equal((await s.call()).status,200);assert.equal(s.calls.includes('provider'),false);
  delete globalThis.Deno;
 });
+
+test('member report history uses account ownership and renders feedback as text',async()=>{
+ const t=mount();try{
+  let ownerFilter;const query={select:()=>query,eq:(key,value)=>{ownerFilter={key,value};return query;},order:()=>query,limit:async()=>({data:[{kind:'ai_video',created_at:'today',report:{summary:'<img src=x onerror=alert(1)>'},review_note:'<script>bad()</script>'}]})};
+  t.w.physiqueCloud={ready:true,user:{id:'member'},client:{from:table=>{assert.equal(table,'assessment_records');return query;}}};
+  await t.w.document.getElementById('refreshAssessmentHistory').onclick();assert.deepEqual(ownerFilter,{key:'user_id',value:'member'});
+  assert.match(t.w.document.getElementById('assessmentHistory').textContent,/bad/);assert.equal(t.w.document.querySelector('#assessmentHistory script'),null);assert.equal(t.w.document.querySelector('#assessmentHistory img'),null);
+ }finally{await new Promise(r=>setImmediate(r));t.dom.window.close();}
+});
+test('a response from a previous account cannot reappear in assessment history',async()=>{
+ const t=mount();try{
+  let resolve;const pending=new Promise(r=>resolve=r);const query={select:()=>query,eq:()=>query,order:()=>query,limit:()=>pending};
+  t.w.physiqueCloud={ready:true,user:{id:'previous'},client:{from:()=>query}};
+  const read=t.w.document.getElementById('refreshAssessmentHistory').onclick();
+  t.w.physiqueCloud={ready:false,user:null};await t.w.document.getElementById('refreshAssessmentHistory').onclick();
+  resolve({data:[{kind:'ai_video',report:{summary:'PREVIOUS_ACCOUNT_PRIVATE_REPORT'}}]});await read;
+  assert.doesNotMatch(t.w.document.getElementById('assessmentHistory').textContent,/PREVIOUS_ACCOUNT/);
+  assert.match(t.w.document.getElementById('assessmentHistoryStatus').textContent,/Sign in/);
+ }finally{await new Promise(r=>setImmediate(r));t.dom.window.close();}
+});
