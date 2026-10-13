@@ -4,7 +4,7 @@ import {join} from 'node:path';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=join(root,'dist-pages');
 // Explicit public allowlist: never publish the repository root or server files.
-const files=['index.html','safety.html','admin.html','styles.css','cloud.css','coaching.css','data.js','app.js','cloud.js','admin.js','account-tools.js','coach-engine.js','coaching.js','assessment-engine.js','assessment.js','assessment-worker.js','manifest.webmanifest','sw.js','_headers','404.html'];
+const files=['index.html','safety.html','admin.html','coaches.html','coach-workspace.js','styles.css','cloud.css','coaching.css','data.js','app.js','cloud.js','admin.js','account-tools.js','coach-engine.js','coaching.js','assessment-engine.js','assessment.js','assessment-worker.js','manifest.webmanifest','sw.js','_headers','404.html'];
 const assets=await readdir(join(root,'assets'),{withFileTypes:true});
 for(const asset of assets){
  if(!asset.isFile()||! /\.(png|jpe?g|webp|svg|ico)$/i.test(asset.name)||asset.name.startsWith('.'))throw new Error(`Unexpected public asset: ${asset.name}`);

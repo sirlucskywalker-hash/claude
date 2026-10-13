@@ -21,3 +21,6 @@ Use authenticated administration with the exact request and account UUID. Never 
 7. Verify account/session denial, no remaining wellness records/files, and required retained records only. Deliver a confirmation through the approved support channel. Address backups and provider-side copies according to the approved retention policy.
 
 This release supplies request review and withdrawal, not an automated erasure implementation or a verified legal retention policy. Paid launch remains blocked until a disposable account passes the complete operator procedure and the other launch gates.
+
+## Coach workspace records
+Review coach_workspace_clients, coach_workspace_content, coach_workspace_messages and scoped coach-sharing consent records. Coach-owner deletion cascades the business workspace and ends client sponsorship; confirm continuity and communications before execution. Client deletion cascades that seat and associated workspace records. Include permitted retention/backups and independent billing review. See COACH_WORKSPACE_OPERATIONS.md; no new automatic erasure operation is introduced.
