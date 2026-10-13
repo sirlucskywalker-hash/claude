@@ -35,7 +35,7 @@ jobs:
       - name: Stage public app files
         run: |
           mkdir -p public-artifact/tests
-          cp index.html admin.html styles.css cloud.css coaching.css data.js app.js cloud.js admin.js account-tools.js coach-engine.js coaching.js manifest.webmanifest sw.js public-artifact/
+          cp index.html safety.html admin.html styles.css cloud.css coaching.css data.js app.js cloud.js admin.js account-tools.js coach-engine.js coaching.js assessment-engine.js assessment.js assessment-worker.js manifest.webmanifest sw.js public-artifact/
           cp -R assets public-artifact/assets
           cp tests/coaching-preview.html public-artifact/tests/
       - name: Upload static site

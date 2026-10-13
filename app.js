@@ -495,7 +495,7 @@ function safetyBlockers(p){
   if(p.redFlag)out.push('Training/nutrition automation is paused for potentially serious symptoms. Seek appropriate medical evaluation.');
   return out;
 }
-function trainingBlocked(p){return !!(p.redFlag||p.acuteInjury)}
+function trainingBlocked(p){return !!(p.redFlag||p.acuteInjury||window.PhysiqueAssessment?.evaluate(state.startingAssessment?.answers,p)?.paused)}
 function calcMacro(p){
   const kg=p.weight/2.20462,cm=p.heightCm;
   let bmr=10*kg+6.25*cm-5*p.age+(p.sex==='male'?5:-161);
@@ -1158,9 +1158,10 @@ function split(days){
   return[['Push',['chest','delts','triceps']],['Pull',['back','biceps','delts']],['Legs',['quads','hamstrings','glutes','calves']],['Upper',['chest','back','delts','biceps','triceps']],['Lower',['quads','hamstrings','glutes','calves','core']],['Full Body',['quads','chest','back','hamstrings','delts','core']]].slice(0,days);
 }
 function chooseEx(m,i){
-  const s=(state.profile.injuries||'').toLowerCase(),owned=state.profile.equipment||[],recoveryKey=recoveryPlanAreaKey();
+  const assessment=state.startingAssessment?.answers,s=((state.profile.injuries||'')+' '+(assessment?.areas||[]).join(' ')).toLowerCase(),owned=state.profile.equipment||[],recoveryKey=recoveryPlanAreaKey();
   const safe=x=>!x.avoid.some(z=>s.includes(z)||(recoveryKey&&(recoveryKey.includes(z)||z.includes(recoveryKey))));
   let a=EXERCISES.filter(x=>x.m===m&&x.eq.some(e=>owned.includes(e))&&safe(x));
+  if(!a.length&&assessment)return null;
   if(!a.length)a=EXERCISES.filter(x=>x.m===m&&safe(x));return a[i%a.length]?.name||('Pain-free '+m+' movement');
 }
 function activeRecoveryPlan(){
@@ -1216,15 +1217,18 @@ function renderRecoveryPlanner(){
     '<button class="primary" onclick="saveRecoveryPlan()">Save & adapt training</button></div></details>';
 }
 function generateTraining(){
-  if(trainingBlocked(state.profile))return alert('Training generation is paused by the safety screening until the acute issue is evaluated/resolved.');
+  if(trainingBlocked(state.profile))return alert('Training generation is paused. Review your starting assessment and profile safety screening before proceeding.');
   if(!state.profile.age)return alert('Complete onboarding first.');
-  const exp=state.profile.experience,goal=state.profile.trainingGoal,baseSets=exp==='beginner'?2:exp==='advanced'?4:3;
+  const assessment=window.PhysiqueAssessment?.evaluate(state.startingAssessment?.answers,state.profile),exp=state.profile.experience,goal=state.profile.trainingGoal,baseSets=Math.min(exp==='beginner'?2:exp==='advanced'?4:3,assessment?.maxSets||4);
   const limit=state.profile.sessionLength<=30?4:state.profile.sessionLength<=45?5:state.profile.sessionLength<=60?6:7;
-  state.trainingPlan=split(state.profile.days||4).map((d,di)=>({name:d[0],preferredDay:(state.profile.preferredDays||'').split(',')[di]?.trim()||'',items:d[1].slice(0,limit).map((m,i)=>{
-    const compound=['chest','back','quads','hamstrings','glutes'].includes(m),range=goal==='strength'&&compound?[4,8]:goal==='performance'&&compound?[5,10]:compound?[6,12]:[10,20];
-    return{name:chooseEx(m,di+i),muscle:m,sets:baseSets,minReps:range[0],maxReps:range[1],rir:exp==='advanced'?2:3};
-  })
+  const assessmentDays=assessment?.days||state.profile.days||4,assessmentLimit=assessment?Math.max(2,Math.min(limit,Math.floor(assessment.minutes/8))):limit;
+  const nextPlan=split(assessmentDays).slice(0,assessmentDays).map((d,di)=>({name:d[0],preferredDay:(state.profile.preferredDays||'').split(',')[di]?.trim()||'',items:d[1].slice(0,assessmentLimit).map((m,i)=>{
+    const compound=['chest','back','quads','hamstrings','glutes'].includes(m),range=assessment?.beginner?[8,12]:goal==='strength'&&compound?[4,8]:goal==='performance'&&compound?[5,10]:compound?[6,12]:[10,20];
+    return{name:chooseEx(m,di+i),muscle:m,sets:baseSets,minReps:range[0],maxReps:range[1],rir:Math.max(exp==='advanced'?2:3,assessment?.minRir||0)};
+  }).filter(item=>item.name)
 }));
+  if(nextPlan.some(day=>!day.items.length))return alert('No compatible movements were found for your equipment and limitations. Review your setup with your coach.');
+  state.trainingPlan=nextPlan;
   if(tacticalIsActive())buildTacticalPlan();save();renderTraining();
 }
 function lastExerciseLogs(name){return state.workoutLogs.flatMap(w=>w.exercises||[]).filter(x=>x.name===name).slice(-2)}

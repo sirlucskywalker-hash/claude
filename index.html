@@ -236,6 +236,7 @@
 </section>
 
 <section id="onboarding" class="tab">
+<div id="startingAssessment" class="premiumCard"></div>
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZATION</span><h2>Build your profile</h2></div></div>
 <div class="profileIdentity">
   <div id="profilePhotoPreview" class="profilePhotoPreview"><span>P</span></div>
@@ -259,7 +260,7 @@
 <label>Aggressiveness<select id="aggr"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></label>
 
 <label>Training priority<select id="trainingGoal"><option value="hypertrophy">Build muscle</option><option value="strength">Strength</option><option value="general">General fitness</option><option value="performance">Performance</option></select></label>
-<label>Training days/week<select id="days"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+<label>Training days/week<select id="days"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
 <label>Experience<select id="experience"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></label>
 <label>Session length<select id="sessionLength"><option value="30">~30 min</option><option value="45">~45 min</option><option value="60" selected>~60 min</option><option value="75">75+ min</option></select></label>
 <label>Training environment<select id="trainingEnvironment"><option value="gym">Commercial gym</option><option value="home">Home gym</option><option value="mixed">Mixed</option></select></label>
@@ -335,7 +336,7 @@
 <div class="premiumCard"><div class="sectionHead"><div><span class="kicker">PERSONALIZED NUTRITION</span><h2>Meal planner</h2></div></div>
 <p>Choose how you actually like to eat. PhysiqueOS redistributes the same daily calorie and macro targets across meals and snacks instead of forcing one meal frequency.</p>
 <div class="mealStructureControls">
-  <label>Main meals<select id="planMealsPerDay" onchange="previewMealStructure()"><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
+  <label>Main meals<select id="planMealsPerDay" onchange="previewMealStructure()"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option></select></label>
   <label>Snacks<select id="planSnacksPerDay" onchange="previewMealStructure()"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select></label>
   <label>Distribution<select id="mealDistribution" onchange="previewMealStructure()"><option value="balanced">Balanced</option><option value="largerDinner">Larger dinner</option><option value="largerBreakfast">Larger breakfast</option><option value="training">Training-focused</option></select></label>
 
@@ -472,6 +473,6 @@
   </details>
 </div>
 
-<footer>PhysiqueOS Beta • adaptive • cloud-synced • secure account access</footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script><script src="data.js?v=54"></script><script src="coach-engine.js?v=1"></script><script src="app.js?v=62"></script><script src="coaching.js?v=2"></script><script src="cloud.js?v=6"></script><script src="account-tools.js?v=2"></script>
+<footer>PhysiqueOS Beta · <a href="safety.html">Health and AI disclosures</a></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script><script src="assessment-engine.js?v=1"></script><script src="data.js?v=54"></script><script src="coach-engine.js?v=1"></script><script src="app.js?v=63"></script><script src="coaching.js?v=2"></script><script src="cloud.js?v=7"></script><script src="account-tools.js?v=3"></script><script src="assessment.js?v=1"></script>
 </body></html>

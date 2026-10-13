@@ -1,6 +1,6 @@
 (()=>{
 const $=id=>document.getElementById(id), bucket='progress-photos';
-const sections=['profiles','memberships','client_profiles','daily_checkins','measurements','progress_photos','meal_plans','training_programs','workout_sessions','billing_customers','subscriptions','entitlements','consent_events','attribution_events','product_events','beta_import_receipts','user_state_snapshots','user_app_state','support_tickets','support_replies','coach_notes','account_deletion_requests','account_notifications','communication_preferences'];
+const sections=['profiles','memberships','client_profiles','daily_checkins','measurements','progress_photos','meal_plans','training_programs','workout_sessions','billing_customers','subscriptions','entitlements','consent_events','attribution_events','product_events','beta_import_receipts','user_state_snapshots','user_app_state','support_tickets','support_replies','coach_notes','account_deletion_requests','assessment_records','account_notifications','communication_preferences'];
 let offset=0,generation=0,deletionRequest=null,deletionGeneration=0;
 function account(){const c=window.physiqueCloud;if(!c?.ready||!c.user)throw new Error('Sign in first.');return c;}
 function same(id){if(window.physiqueCloud?.user?.id!==id)throw new Error('Account changed. Please retry.');}

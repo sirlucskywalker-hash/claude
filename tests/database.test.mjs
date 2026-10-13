@@ -267,5 +267,36 @@ await t.test('review protects owner accounts, refuses closed requests and does n
  assert.equal((await q("select status,cancel_at_period_end from subscriptions where stripe_subscription_id='sub_review_active'"))[0].cancel_at_period_end,false);
  await assert.rejects(()=>asUser(owner,()=>q('select begin_account_deletion_review(null)')),/unavailable/);
 });
+await db.exec(await readFile(new URL('supabase/migrations/20261013175231_premium_assessment_access.sql',root),'utf8'));
+const written={experience:'new',breakLength:'none',pain:'no',injury:'none',mobility:'comfortable',symptoms:'no',condition:'no',days:2,minutes:30,areas:[],notes:''};
+const requestOne='30000000-0000-4000-8000-000000000001',requestTwo='30000000-0000-4000-8000-000000000002',requestThree='30000000-0000-4000-8000-000000000003';
+await t.test('Core gets written access, Pro gets posing, premium AI remains planned and server protected',async()=>{
+ await q("update entitlements set metadata=jsonb_build_object('tier','core') where user_id=$1 and source='admin'",[other]);
+ assert.equal((await asUser(other,()=>q("select has_feature('starting_assessment') ok")))[0].ok,true);
+ await assert.rejects(()=>asUser(other,()=>q("select record_posing_assessment(array['front'],'note')")),/Pro posing/);
+ await assert.rejects(()=>asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1')",[requestOne,JSON.stringify(written)])),/Premium AI/);
+ await q("update entitlements set metadata=jsonb_build_object('tier','pro') where user_id=$1 and source='admin'",[other]);
+ const [{record}]=await asUser(other,()=>q("select record_posing_assessment(array['front','side'],'comfortable') record"));assert.ok(record);
+ await assert.rejects(()=>asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1')",[requestOne,JSON.stringify(written)])),/Premium AI/);
+ assert.equal((await q("select delivery_status from features where code='ai_video_assessment'"))[0].delivery_status,'planned');
+ await assert.rejects(()=>asUser(null,()=>q("select record_posing_assessment(array['front'],'')"),'anon'),/permission denied/);
+});
+await t.test('premium reservations require consent, are idempotent, enforce quota and disallow fabricated reports',async()=>{
+ await q("update features set delivery_status='available' where code='ai_video_assessment'");
+ await q("update entitlements set metadata=jsonb_build_object('tier','elite') where user_id=$1 and source='admin'",[other]);
+ await assert.rejects(()=>asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','invalid')",[requestOne,JSON.stringify(written)])),/consent/);
+ await assert.rejects(()=>asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1')",[requestOne,JSON.stringify({...written,pain:'yes'})])),/review first/);
+ const [{result}]=await asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1') result",[requestOne,JSON.stringify(written)]));assert.equal(result.created,true);
+ const [{again}]=await asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1') again",[requestOne,JSON.stringify(written)]));assert.equal(again.created,false);
+ await asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1')",[requestTwo,JSON.stringify(written)]));
+ await assert.rejects(()=>asUser(other,()=>q("select reserve_ai_video_assessment($1,$2,'side','ai-video-v1')",[requestThree,JSON.stringify(written)])),/daily attempt limit/);
+ await assert.rejects(()=>asUser(other,()=>q("update assessment_records set status='needs_review',report='{}'")),/permission denied/);
+ assert.equal((await q("select count(*)::int n from consent_events where user_id=$1 and consent_type='ai_video_processing'",[other]))[0].n,2);
+ assert.equal((await asUser(uid,()=>q('select * from assessment_records'))).length,0);
+ assert.equal((await asUser(coach,()=>q('select * from assessment_records'))).length,0);
+ const [{exported}]=await asUser(other,()=>q("select export_account_page('assessment_records',0) exported"));assert.equal(exported.rows.length,3);
+ const [{owned}]=await asUser(owner,()=>q("select owner_data_page('assessment_records',0) owned"));assert.equal(owned.rows.length,3);
+ await q("update features set delivery_status='planned' where code='ai_video_assessment'");
+});
 await db.close();
 });
