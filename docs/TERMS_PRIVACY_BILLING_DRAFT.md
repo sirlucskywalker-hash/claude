@@ -43,3 +43,11 @@ Confirm actual portal configuration, taxes, trials if any, billing descriptors, 
 ## Acceptance implementation gate
 
 After final approval: immutable versioned documents, unchecked separate terms/privacy acceptance where legally appropriate, separately optional marketing opt-in, server-recorded versions/timestamps/user IDs, accessible documents before signup/payment, separate explicit AI processing consent, and logs of material changes. Existing consent tables alone do not establish valid acceptance. Test this with real registration, mobile and recovery flows before enabling public paid enrollment.
+
+## Coach membership addendum — owner/legal review required
+
+A separate membership includes active client seats at 5/15/30/60/100/custom ceilings. Currently only owner-approved expiring free pilots are available; prices, paid renewals, Stripe proration and scheduled downgrades are unconfigured. Included client access is Core essentials plus workspace written plans and messaging; personal subscriptions remain separate and premium AI is excluded. Pending invitations reserve capacity, and archived clients free capacity without erasing records.
+
+Coach terms must define legal operator, coach qualifications/scope, client eligibility and consent, seat definitions, taxes/renewals/cancellation, client data responsibility, permitted processing, portability, expiry/continuity, subprocessors, retention and incident handling. Do not assume the platform and each coach have the same privacy role in every jurisdiction. No coach contract or data-processing agreement has been accepted or published by this draft.
+
+Client sharing is scoped to a confirmed email invitation and workspace-specific coach-sharing-v1 consent. Relevant fitness profile, written assessment, check-ins and workouts are shared through a controlled projection; global private support, billing, other staff notes and photo gallery are excluded. Leaving stops fresh sharing/sponsorship but retained workspace conversations/assignments require a lawful documented retention policy and deletion workflow. Separate clinical clearance, AI consent and marketing permission remain necessary where applicable.

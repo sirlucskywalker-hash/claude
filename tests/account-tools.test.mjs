@@ -20,7 +20,7 @@ test('private photo upload cleans up an object when metadata cannot be saved',as
 });
 test('account export remains available without a paid tier and covers all record sections',async()=>{
  const {w,dom,calls}=await mount();w.physiqueCloud.plan='none';await w.document.getElementById('exportAccountBtn').onclick();
- assert.equal(calls.filter(x=>x[0]==='export_account_page').length,25);assert.ok(w.document.getElementById('accountToolsMessage').textContent.includes('downloaded'));dom.window.close();
+ assert.equal(calls.filter(x=>x[0]==='export_account_page').length,30);assert.ok(w.document.getElementById('accountToolsMessage').textContent.includes('downloaded'));dom.window.close();
 });
 test('account notifications render untrusted text safely and record read preferences through RPC',async()=>{
  const {w,dom,calls}=await mount({notes:[{id:'note-1',title:'<img src=x>',body:'<script>bad</script>',created_at:new Date().toISOString(),read_at:null}]});

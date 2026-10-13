@@ -9,7 +9,7 @@ const run=promisify(execFile),root=new URL('../',import.meta.url);
 test('Pages build stages a working public app without repository, server or secret files',async()=>{
  const temp=await mkdtemp(join(tmpdir(),'physiqueos-pages-'));
  try{
-  const files=['index.html','safety.html','admin.html','styles.css','cloud.css','coaching.css','data.js','app.js','cloud.js','admin.js','account-tools.js','coach-engine.js','coaching.js','assessment-engine.js','assessment.js','assessment-worker.js','manifest.webmanifest','sw.js','_headers','404.html'];
+  const files=['index.html','safety.html','admin.html','coaches.html','coach-workspace.js','styles.css','cloud.css','coaching.css','data.js','app.js','cloud.js','admin.js','account-tools.js','coach-engine.js','coaching.js','assessment-engine.js','assessment.js','assessment-worker.js','manifest.webmanifest','sw.js','_headers','404.html'];
   await mkdir(join(temp,'scripts'));await mkdir(join(temp,'supabase'));
   await cp(new URL('scripts/build-pages.mjs',root),join(temp,'scripts/build-pages.mjs'));
   for(const file of files)await cp(new URL(file,root),join(temp,file));
