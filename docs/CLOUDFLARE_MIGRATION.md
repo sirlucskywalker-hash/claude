@@ -1,6 +1,6 @@
 # Cloudflare Pages migration
 
-Status: deployment preparation only. No Cloudflare account, project or hostname has been verified. GitHub Pages remains available until the migration passes its gates. Paid enrollment stays closed.
+Status (October 15, 2026 UTC): the existing Cloudflare account is connected. The `physiqueos` Pages project is connected to `sirlucskywalker-hash/claude`, production branch `main`, with automatic production deployments enabled and preview deployments disabled. The first Git build deployed commit `706dae4c11e196693e9e30a5b060193219ffc9cb` successfully to https://physiqueos.pages.dev. Authentication, server origin settings, real account/device tests and automatic rebuild verification remain cutover gates. GitHub Pages remains available. Paid enrollment stays closed.
 
 ## Production setup
 
@@ -35,4 +35,4 @@ Keep GitHub Pages and its successful deployment available during validation. If 
 
 ## Remaining account actions
 
-Cloudflare sign-in and any displayed terms acceptance; inspect/reuse or create the project; authorize narrowly scoped GitHub integration if absent; verify actual production deployment and automatic rebuild; authenticate to Supabase to update Auth and server-only settings; real account/device validation; then retire GitHub Pages and optionally make the repo private. These account operations have not been performed by the preparation commit.
+Verify an automatic deployment from a subsequent main commit. Then set Supabase Auth Site URL to `https://physiqueos.pages.dev/` and add exact redirects `https://physiqueos.pages.dev/` and `https://physiqueos.pages.dev/index.html`, temporarily retaining the existing GitHub redirects. Coordinate server-only `SITE_URL`, portal return links and lifecycle email settings as described above. Verify real account/device behavior before retiring GitHub Pages or changing repository privacy. No provider secrets belong in the repository or Pages build variables.
