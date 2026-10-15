@@ -25,6 +25,20 @@ test('Pages build stages a working public app without repository, server or secr
   }
   const manifest=JSON.parse(await readFile(join(out,'manifest.webmanifest'),'utf8'));assert.equal(manifest.start_url,'./');assert.equal(manifest.scope,'./');
   for(const icon of manifest.icons)await readFile(join(out,icon.src));
+  const stagingEnv={...process.env,PHYSIQUEOS_BUILD_ENV:'staging',PHYSIQUEOS_STAGING_SUPABASE_URL:'https://abcdefghijklmnopqrst.supabase.co/',PHYSIQUEOS_STAGING_SUPABASE_KEY:'sb_publishable_staging_test_key_12345'};
+  await run(process.execPath,[join(temp,'scripts/build-pages.mjs')],{env:stagingEnv});
+  for(const file of ['cloud.js','admin.js','coach-workspace.js']){
+   const source=await readFile(join(out,file),'utf8');
+   assert.ok(source.includes('https://abcdefghijklmnopqrst.supabase.co'));
+   assert.ok(source.includes(stagingEnv.PHYSIQUEOS_STAGING_SUPABASE_KEY));
+   assert.equal(source.includes('oyrtpvtzaoftinqoossn'),false);
+  }
+  assert.ok((await readFile(join(out,'index.html'),'utf8')).includes('synthetic test data only'));
+  assert.ok((await readFile(join(out,'_headers'),'utf8')).includes('X-Robots-Tag: noindex'));
+  await assert.rejects(()=>run(process.execPath,[join(temp,'scripts/build-pages.mjs')],{env:{...stagingEnv,PHYSIQUEOS_STAGING_SUPABASE_KEY:'sb_secret_forbidden'}}),/browser-safe publishable key/);
+  await assert.rejects(()=>run(process.execPath,[join(temp,'scripts/build-pages.mjs')],{env:{...stagingEnv,PHYSIQUEOS_STAGING_SUPABASE_URL:'https://oyrtpvtzaoftinqoossn.supabase.co'}}),/separate Supabase project/);
+  await assert.rejects(()=>run(process.execPath,[join(temp,'scripts/build-pages.mjs')],{env:{...stagingEnv,PHYSIQUEOS_BUILD_ENV:'production'}}),/explicit staging build/);
+  await run(process.execPath,[join(temp,'scripts/build-pages.mjs')]);
   await writeFile(join(temp,'assets','unexpected.env'),'SECRET');
   await assert.rejects(()=>run(process.execPath,[join(temp,'scripts/build-pages.mjs')]),/Unexpected public asset/);
   assert.equal(await readFile(join(out,'admin.js'),'utf8'),await readFile(new URL('admin.js',root),'utf8'));
