@@ -411,5 +411,23 @@ await t.test('revoked/expired invitations release capacity; downgrades never sil
  await asUser(seats[1],()=>q("select claim_coach_client_invite($1,'coach-sharing-v1')",[otherToken]));
  assert.equal((await asUser(seats[1],()=>q('select current_plan_code() tier')))[0].tier,'core');
 });
+await t.test('owner sync reporting follows current snapshots without exposing another client',async()=>{
+ await q("update memberships set status='active' where user_id=$1 and organization_id=$2",[uid,org.id]);
+ // These original deployment objects predate the tracked migration fixture.
+ await db.exec(`create policy profiles_staff_select on public.profiles for select using(user_id=auth.uid() or public.can_manage_user(user_id));
+ create table public.user_app_state(user_id uuid primary key references auth.users(id),updated_at timestamptz not null);
+ alter table public.user_app_state enable row level security;
+ grant select on public.user_app_state to authenticated;
+ create policy legacy_state_read on public.user_app_state for select to authenticated using(user_id=auth.uid() or public.can_admin_user(user_id));`);
+ await db.exec(await readFile(new URL('supabase/migrations/20261015035849_snapshot_sync_reporting.sql',root),'utf8'));
+ await q("insert into user_app_state(user_id,updated_at) values($1,'2020-01-01')",[uid]);
+ const [snapshot]=await q('select updated_at from user_state_snapshots where user_id=$1',[uid]);
+ const [reported]=await asUser(owner,()=>q('select last_cloud_sync from admin_client_overview_v2 where user_id=$1',[uid]));
+ assert.equal(reported.last_cloud_sync.getTime(),snapshot.updated_at.getTime());
+ assert.equal((await asUser(other,()=>q('select * from admin_client_overview_v2 where user_id=$1',[uid]))).length,0);
+ await assert.rejects(()=>asUser(null,()=>q('select * from admin_client_overview_v2'),'anon'),/permission denied/);
+ await q("update user_app_state set updated_at='2099-01-01' where user_id=$1",[uid]);
+ assert.equal((await asUser(owner,()=>q('select last_cloud_sync from admin_client_overview_v2 where user_id=$1',[uid])))[0].last_cloud_sync.getUTCFullYear(),2099);
+});
 await db.close();
 });
