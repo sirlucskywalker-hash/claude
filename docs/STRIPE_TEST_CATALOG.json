@@ -1,0 +1,77 @@
+{
+  "environment": "test",
+  "stripe_account": "acct_1QJ2NoQbcyKGduUY",
+  "livemode": false,
+  "products": {
+    "core": "prod_VRZ2mpTnRAb2IT",
+    "pro": "prod_VRZ3nt6HwWHdLV",
+    "elite": "prod_VRZ39YxWw27KDU"
+  },
+  "portal_configuration": "bpc_1UQfvZQbcyKGduUYplYsXA3G",
+  "prices": {
+    "core_monthly": {
+      "id": "price_1UQfuDQbcyKGduUYx3wvqgKQ",
+      "product": "prod_VRZ2mpTnRAb2IT",
+      "unit_amount": 2900,
+      "currency": "usd",
+      "interval": "month"
+    },
+    "core_annual": {
+      "id": "price_1UQfuGQbcyKGduUYbm0ZIDin",
+      "product": "prod_VRZ2mpTnRAb2IT",
+      "unit_amount": 29000,
+      "currency": "usd",
+      "interval": "year"
+    },
+    "founding_monthly": {
+      "id": "price_1UQfuKQbcyKGduUYxLOGbsqT",
+      "product": "prod_VRZ2mpTnRAb2IT",
+      "unit_amount": 3900,
+      "currency": "usd",
+      "interval": "month"
+    },
+    "pro_monthly": {
+      "id": "price_1UQfvEQbcyKGduUYKHWXO9ym",
+      "product": "prod_VRZ3nt6HwWHdLV",
+      "unit_amount": 5900,
+      "currency": "usd",
+      "interval": "month"
+    },
+    "pro_annual": {
+      "id": "price_1UQfvIQbcyKGduUYa8uZiosg",
+      "product": "prod_VRZ3nt6HwWHdLV",
+      "unit_amount": 49900,
+      "currency": "usd",
+      "interval": "year"
+    },
+    "elite_monthly": {
+      "id": "price_1UQfvMQbcyKGduUYMAFDH5O9",
+      "product": "prod_VRZ39YxWw27KDU",
+      "unit_amount": 11900,
+      "currency": "usd",
+      "interval": "month"
+    },
+    "elite_annual": {
+      "id": "price_1UQfvPQbcyKGduUY1M3nhmEL",
+      "product": "prod_VRZ39YxWw27KDU",
+      "unit_amount": 99900,
+      "currency": "usd",
+      "interval": "year"
+    },
+    "concierge_monthly": {
+      "id": "price_1UQfuaQbcyKGduUYZ9JWPH6P",
+      "product": "prod_VRZ2mpTnRAb2IT",
+      "unit_amount": 34900,
+      "currency": "usd",
+      "interval": "month"
+    }
+  },
+  "superseded_test_prices": {
+    "pro_monthly": "price_1UQfuNQbcyKGduUYGEbMOccc",
+    "pro_annual": "price_1UQfuQQbcyKGduUY3VVN341y",
+    "elite_monthly": "price_1UQfuTQbcyKGduUYLGhaTT6j",
+    "elite_annual": "price_1UQfuWQbcyKGduUY5Z72Y7tX"
+  },
+  "production_catalog_changed": false,
+  "end_to_end_verified": false
+}
